@@ -4,35 +4,43 @@ import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 
-export async function login(formData: FormData) {
+// Single user credentials
+const SINGLE_USER_EMAIL = 'admin@drss.app'
+const SINGLE_USER_PASSWORD = 'drss-admin-2025'
+
+export async function autoLogin() {
   const supabase = await createClient()
 
-  const data = {
-    email: formData.get('email') as string,
-    password: formData.get('password') as string,
-  }
+  // Try to sign in
+  let { error } = await supabase.auth.signInWithPassword({
+    email: SINGLE_USER_EMAIL,
+    password: SINGLE_USER_PASSWORD,
+  })
 
-  const { error } = await supabase.auth.signInWithPassword(data)
+  // If user doesn't exist, create the account
+  if (error?.message.includes('Invalid login credentials')) {
+    const { error: signupError } = await supabase.auth.signUp({
+      email: SINGLE_USER_EMAIL,
+      password: SINGLE_USER_PASSWORD,
+      options: {
+        emailRedirectTo: undefined, // Disable email confirmation
+      }
+    })
 
-  if (error) {
-    return { error: error.message }
-  }
+    if (signupError) {
+      return { error: signupError.message }
+    }
 
-  revalidatePath('/', 'layout')
-  redirect('/dashboard')
-}
+    // Sign in after creating account
+    const { error: loginError } = await supabase.auth.signInWithPassword({
+      email: SINGLE_USER_EMAIL,
+      password: SINGLE_USER_PASSWORD,
+    })
 
-export async function signup(formData: FormData) {
-  const supabase = await createClient()
-
-  const data = {
-    email: formData.get('email') as string,
-    password: formData.get('password') as string,
-  }
-
-  const { error } = await supabase.auth.signUp(data)
-
-  if (error) {
+    if (loginError) {
+      return { error: loginError.message }
+    }
+  } else if (error) {
     return { error: error.message }
   }
 
