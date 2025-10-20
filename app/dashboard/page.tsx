@@ -31,7 +31,7 @@ export default async function DashboardPage() {
         <div className="rounded-lg border border-gray-200 bg-white p-6">
           <h3 className="text-lg font-semibold text-gray-900">Database</h3>
           <p className="mt-2 text-sm text-gray-600">
-            10 tables ready with RLS enabled
+            9 tables ready with RLS enabled
           </p>
         </div>
       </div>
