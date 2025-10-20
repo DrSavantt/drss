@@ -40,10 +40,15 @@ DRSS is a comprehensive platform for managing marketing agency operations, inclu
   - Row Level Security (RLS) policies
   - Helper functions and triggers
   - TypeScript type definitions
+  
+- **Feature 0.4**: Authentication System
+  - Email/password authentication with Supabase Auth
+  - Protected dashboard routes with middleware
+  - Login/logout functionality
+  - Server Actions for auth operations
 
 ### 🚧 Upcoming Features
 
-- **Feature 0.4**: Authentication UI
 - **Feature 1.1**: Client Management
 - **Feature 1.2**: Project Kanban
 - **Phase 2**: Multi-client views
@@ -96,7 +101,14 @@ DRSS is a comprehensive platform for managing marketing agency operations, inclu
    
    Open [http://localhost:3000](http://localhost:3000)
 
-6. **Verify setup**
+6. **Create your account**
+   
+   - Visit [http://localhost:3000/login](http://localhost:3000/login)
+   - Click "Sign up" with your email and password
+   - You'll be automatically logged in and redirected to the dashboard
+   - This is a single-user app, so create just one account
+
+7. **Verify setup**
    
    Visit [http://localhost:3000/test](http://localhost:3000/test) to verify Supabase connection
 
@@ -105,8 +117,15 @@ DRSS is a comprehensive platform for managing marketing agency operations, inclu
 ```
 savant-marketing-studio/
 ├── app/                    # Next.js App Router
+│   ├── (auth)/             # Public auth routes
+│   │   └── login/          # Login/signup page
+│   ├── (dashboard)/        # Protected dashboard routes
+│   │   ├── layout.tsx      # Dashboard layout with header
+│   │   └── page.tsx        # Dashboard home
+│   ├── actions/            # Server Actions
+│   │   └── auth.ts         # Auth operations
 │   ├── layout.tsx          # Root layout
-│   ├── page.tsx            # Homepage
+│   ├── page.tsx            # Root (redirects to dashboard)
 │   ├── test/               # Connection test page
 │   └── globals.css         # Global styles
 ├── components/             
@@ -121,6 +140,7 @@ savant-marketing-studio/
 │   └── DATABASE_SETUP.md   # Setup instructions
 ├── types/
 │   └── database.ts         # TypeScript types
+├── middleware.ts           # Auth middleware (route protection)
 └── public/                 # Static assets
 ```
 
