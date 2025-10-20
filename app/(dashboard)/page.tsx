@@ -2,16 +2,14 @@ import { createClient } from '@/lib/supabase/server'
 
 export default async function DashboardPage() {
   const supabase = await createClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+  const { data: { user } } = await supabase.auth.getUser()
 
   return (
     <div className="space-y-8">
       <div>
         <h2 className="text-3xl font-bold text-gray-900">Welcome back!</h2>
         <p className="mt-2 text-gray-600">
-          You&apos;re logged in as {user?.email}
+          You&apos;re logged in as {user?.email || 'user'}
         </p>
       </div>
 
@@ -40,4 +38,3 @@ export default async function DashboardPage() {
     </div>
   )
 }
-

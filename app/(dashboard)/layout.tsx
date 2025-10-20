@@ -7,9 +7,7 @@ export default async function DashboardLayout({
   children: React.ReactNode
 }) {
   const supabase = await createClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+  const { data: { user } } = await supabase.auth.getUser()
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -38,4 +36,3 @@ export default async function DashboardLayout({
     </div>
   )
 }
-

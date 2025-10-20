@@ -5,8 +5,8 @@ import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 
 // Single user credentials
-const SINGLE_USER_EMAIL = 'admin@drss.app'
-const SINGLE_USER_PASSWORD = 'drss-admin-2025'
+const SINGLE_USER_EMAIL = 'drss.admin@gmail.com'
+const SINGLE_USER_PASSWORD = 'drss-admin-2025-secure'
 
 export async function autoLogin() {
   const supabase = await createClient()
