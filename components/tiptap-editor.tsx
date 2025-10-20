@@ -21,6 +21,7 @@ export function TiptapEditor({
     extensions: [StarterKit],
     content,
     editable,
+    immediatelyRender: false,
     onUpdate: ({ editor }) => {
       const html = editor.getHTML()
       onChange?.(html)
