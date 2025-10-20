@@ -1,11 +1,11 @@
 'use server'
 
-import { createClient } from '@/lib/supabase/server'
+import { createClient as createSupabaseClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 
 export async function getClients() {
-  const supabase = await createClient()
+  const supabase = await createSupabaseClient()
   
   const { data: clients, error } = await supabase
     .from('clients')
@@ -21,7 +21,7 @@ export async function getClients() {
 }
 
 export async function getClient(id: string) {
-  const supabase = await createClient()
+  const supabase = await createSupabaseClient()
   
   const { data: client, error } = await supabase
     .from('clients')
@@ -38,7 +38,7 @@ export async function getClient(id: string) {
 }
 
 export async function createClient(formData: FormData) {
-  const supabase = await createClient()
+  const supabase = await createSupabaseClient()
   
   const name = formData.get('name') as string
   const email = formData.get('email') as string
@@ -76,7 +76,7 @@ export async function createClient(formData: FormData) {
 }
 
 export async function updateClient(id: string, formData: FormData) {
-  const supabase = await createClient()
+  const supabase = await createSupabaseClient()
   
   const name = formData.get('name') as string
   const email = formData.get('email') as string
@@ -106,7 +106,7 @@ export async function updateClient(id: string, formData: FormData) {
 }
 
 export async function deleteClient(id: string) {
-  const supabase = await createClient()
+  const supabase = await createSupabaseClient()
   
   const { error } = await supabase
     .from('clients')
