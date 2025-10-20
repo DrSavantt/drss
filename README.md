@@ -1,36 +1,252 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# DRSS - Marketing Agency Operating System
 
-## Getting Started
+A single-user marketing agency operating system built with Next.js 15, TypeScript, and Supabase.
 
-First, run the development server:
+## 🎯 Project Overview
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+DRSS is a comprehensive platform for managing marketing agency operations, including:
+- Client management and intake
+- Project tracking with kanban boards
+- AI-powered content generation
+- Marketing framework library with RAG
+- Landing page builder
+- Brand consistency management
+
+## 🛠️ Tech Stack
+
+- **Framework**: Next.js 15 (App Router)
+- **Language**: TypeScript (strict mode)
+- **Database**: Supabase (PostgreSQL + pgvector)
+- **Styling**: Tailwind CSS
+- **UI Components**: shadcn/ui
+- **Deployment**: Vercel
+
+## 📦 Project Status
+
+### ✅ Completed Features
+
+- **Feature 0.1**: Project Setup
+  - Next.js 15 with TypeScript
+  - Tailwind CSS + shadcn/ui base
+  - ESLint + Prettier configuration
+  
+- **Feature 0.2**: Supabase Connection
+  - Client/server Supabase utilities
+  - Environment variable setup
+  - Connection test page at `/test`
+  
+- **Feature 0.3**: Database Schema
+  - Complete 10-table schema
+  - Row Level Security (RLS) policies
+  - Helper functions and triggers
+  - TypeScript type definitions
+
+### 🚧 Upcoming Features
+
+- **Feature 0.4**: Authentication UI
+- **Feature 1.1**: Client Management
+- **Feature 1.2**: Project Kanban
+- **Phase 2**: Multi-client views
+- **Phase 3**: AI/RAG integration
+- **Phase 4**: Page builder
+
+## 🚀 Getting Started
+
+### Prerequisites
+
+- Node.js 18+ installed
+- Supabase account
+- Vercel account (for deployment)
+
+### Installation
+
+1. **Clone the repository**
+   ```bash
+   git clone https://github.com/DrSavantt/drss.git
+   cd drss/savant-marketing-studio
+   ```
+
+2. **Install dependencies**
+   ```bash
+   npm install
+   ```
+
+3. **Set up environment variables**
+   
+   Create `.env.local` in the project root:
+   ```env
+   NEXT_PUBLIC_SUPABASE_URL=your_supabase_project_url
+   NEXT_PUBLIC_SUPABASE_ANON_KEY=your_anon_public_key
+   ```
+   
+   Get these values from your Supabase project: **Settings** → **API**
+
+4. **Set up the database**
+   
+   Follow the complete guide in `supabase/DATABASE_SETUP.md`:
+   - Enable pgvector extension
+   - Run schema.sql in Supabase SQL Editor
+   - Generate TypeScript types
+   - Verify all tables created
+
+5. **Run the development server**
+   ```bash
+   npm run dev
+   ```
+   
+   Open [http://localhost:3000](http://localhost:3000)
+
+6. **Verify setup**
+   
+   Visit [http://localhost:3000/test](http://localhost:3000/test) to verify Supabase connection
+
+## 📁 Project Structure
+
+```
+savant-marketing-studio/
+├── app/                    # Next.js App Router
+│   ├── layout.tsx          # Root layout
+│   ├── page.tsx            # Homepage
+│   ├── test/               # Connection test page
+│   └── globals.css         # Global styles
+├── components/             
+│   └── ui/                 # shadcn/ui components
+├── lib/
+│   ├── supabase/           # Supabase utilities
+│   │   ├── client.ts       # Browser client
+│   │   └── server.ts       # Server client
+│   └── utils.ts            # Helper functions
+├── supabase/
+│   ├── schema.sql          # Complete database schema
+│   └── DATABASE_SETUP.md   # Setup instructions
+├── types/
+│   └── database.ts         # TypeScript types
+└── public/                 # Static assets
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## 🗄️ Database Schema
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+The database includes 10 tables supporting all application phases:
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+**Core Tables:**
+- `clients` - Client information and brand data
+- `projects` - Project management
+- `content_assets` - Generated content
 
-## Learn More
+**AI/RAG Tables:**
+- `frameworks` - Marketing frameworks
+- `framework_embeddings` - Vector embeddings
+- `ai_generations` - AI generation history
 
-To learn more about Next.js, take a look at the following resources:
+**Page Builder Tables:**
+- `component_templates` - Component definitions
+- `pages` - Landing pages
+- `component_instances` - Page content
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+All tables use Row Level Security (RLS) to ensure data isolation per user.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## 🔒 Security
 
-## Deploy on Vercel
+- **Row Level Security**: All tables filtered by authenticated user
+- **Environment Variables**: Sensitive data in `.env.local` (gitignored)
+- **Type Safety**: TypeScript strict mode enabled
+- **API Security**: Supabase RLS policies enforce access control
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## 🧪 Development
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+### Available Scripts
+
+```bash
+npm run dev      # Start development server
+npm run build    # Build for production
+npm run start    # Start production server
+npm run lint     # Run ESLint
+```
+
+### Testing Supabase Connection
+
+Visit `/test` route to verify:
+- ✅ Environment variables loaded
+- ✅ Supabase client initialized
+- ✅ Connection successful
+
+### Code Quality
+
+- **TypeScript**: Strict mode enabled
+- **ESLint**: Next.js recommended rules
+- **Prettier**: Consistent formatting
+- **Tailwind**: Utility-first CSS
+
+## 📚 Documentation
+
+- **Database Setup**: `supabase/DATABASE_SETUP.md`
+- **Feature Checklist**: `feature_checklist.md`
+- **Project Blueprint**: `final_blueprint.md`
+
+## 🚢 Deployment
+
+### Vercel (Recommended)
+
+1. Push code to GitHub
+2. Import repository in Vercel
+3. Add environment variables in Vercel dashboard
+4. Deploy automatically
+
+### Environment Variables for Production
+
+Add these in Vercel dashboard:
+- `NEXT_PUBLIC_SUPABASE_URL`
+- `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+
+## 🐛 Troubleshooting
+
+### Supabase Connection Issues
+
+1. Verify `.env.local` exists in project root
+2. Check environment variables are correct (no quotes)
+3. Restart dev server after changing `.env.local`
+4. Visit `/test` to see connection status
+
+### Database Issues
+
+1. Ensure pgvector extension is enabled
+2. Verify schema.sql ran without errors
+3. Check RLS policies are active (green shields)
+4. Review `supabase/DATABASE_SETUP.md`
+
+### Build Errors
+
+```bash
+# Clear Next.js cache
+rm -rf .next
+
+# Reinstall dependencies
+rm -rf node_modules package-lock.json
+npm install
+
+# Rebuild
+npm run build
+```
+
+## 📝 License
+
+Private project - All rights reserved
+
+## 🔗 Links
+
+- **Repository**: https://github.com/DrSavantt/drss
+- **Supabase**: https://supabase.com/dashboard
+- **Vercel**: https://vercel.com
+
+## 🙏 Acknowledgments
+
+- Next.js team for the amazing framework
+- Supabase for the database infrastructure
+- shadcn/ui for the component library
+- Vercel for the hosting platform
+
+---
+
+**Current Version**: 0.3.0  
+**Status**: Database Schema Complete ✅  
+**Next**: Feature 0.4 - Authentication UI
