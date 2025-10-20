@@ -1,5 +1,6 @@
 import { logout } from '@/app/actions/auth'
 import { createClient } from '@/lib/supabase/server'
+import Link from 'next/link'
 
 export default async function DashboardLayout({
   children,
@@ -13,9 +14,25 @@ export default async function DashboardLayout({
     <div className="min-h-screen bg-gray-50">
       <header className="border-b border-gray-200 bg-white">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-4">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">DRSS</h1>
-            <p className="text-sm text-gray-600">Marketing Agency OS</p>
+          <div className="flex items-center gap-8">
+            <div>
+              <h1 className="text-2xl font-bold text-gray-900">DRSS</h1>
+              <p className="text-sm text-gray-600">Marketing Agency OS</p>
+            </div>
+            <nav className="flex gap-6">
+              <Link 
+                href="/dashboard" 
+                className="text-sm font-medium text-gray-600 hover:text-gray-900"
+              >
+                Dashboard
+              </Link>
+              <Link 
+                href="/dashboard/clients" 
+                className="text-sm font-medium text-gray-600 hover:text-gray-900"
+              >
+                Clients
+              </Link>
+            </nav>
           </div>
 
           <div className="flex items-center gap-4">
