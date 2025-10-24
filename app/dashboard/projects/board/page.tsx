@@ -1,6 +1,8 @@
 import { createClient as createSupabaseClient } from '@/lib/supabase/server'
 import Link from 'next/link'
+import { Suspense } from 'react'
 import { KanbanBoard } from './kanban-board'
+import { LoadingSpinner } from '@/components/loading-spinner'
 
 export default async function KanbanBoardPage() {
   const supabase = await createSupabaseClient()
@@ -40,7 +42,13 @@ export default async function KanbanBoardPage() {
           </Link>
         </div>
       ) : (
-        <KanbanBoard initialProjects={projects} />
+        <Suspense fallback={
+          <div className="flex items-center justify-center h-96">
+            <LoadingSpinner size="lg" />
+          </div>
+        }>
+          <KanbanBoard initialProjects={projects} />
+        </Suspense>
       )}
     </div>
   )
