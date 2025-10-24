@@ -42,20 +42,28 @@ export async function GET(request: NextRequest) {
         type: 'client' as const,
         url: `/dashboard/clients/${client.id}`,
       })),
-      ...(projects || []).map(project => ({
-        id: project.id,
-        title: project.name,
-        type: 'project' as const,
-        subtitle: Array.isArray(project.clients) ? project.clients[0]?.name : project.clients?.name,
-        url: `/dashboard/projects/board`,
-      })),
-      ...(content || []).map(item => ({
-        id: item.id,
-        title: item.title,
-        type: 'content' as const,
-        subtitle: Array.isArray(item.clients) ? item.clients[0]?.name : item.clients?.name,
-        url: `/dashboard/content/${item.id}`,
-      })),
+      ...(projects || []).map(project => {
+        const clientData = project.clients as { name: string } | { name: string }[] | null
+        const clientName = Array.isArray(clientData) ? clientData[0]?.name : clientData?.name
+        return {
+          id: project.id,
+          title: project.name,
+          type: 'project' as const,
+          subtitle: clientName,
+          url: `/dashboard/projects/board`,
+        }
+      }),
+      ...(content || []).map(item => {
+        const clientData = item.clients as { name: string } | { name: string }[] | null
+        const clientName = Array.isArray(clientData) ? clientData[0]?.name : clientData?.name
+        return {
+          id: item.id,
+          title: item.title,
+          type: 'content' as const,
+          subtitle: clientName,
+          url: `/dashboard/content/${item.id}`,
+        }
+      }),
     ]
 
     return NextResponse.json({ results })
