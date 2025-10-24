@@ -197,7 +197,7 @@ export default async function DashboardPage() {
                       <div className="flex items-center gap-2 mt-1">
                         {project.clients && (
                           <span className="text-xs text-gray-600">
-                            {project.clients.name}
+                            {Array.isArray(project.clients) ? project.clients[0]?.name : project.clients.name}
                           </span>
                         )}
                         <span
