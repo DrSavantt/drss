@@ -21,9 +21,10 @@ interface Project {
 interface ProjectModalProps {
   project: Project
   onClose: () => void
+  onUpdate?: (updatedProject: Project) => void
 }
 
-export function ProjectModal({ project, onClose }: ProjectModalProps) {
+export function ProjectModal({ project, onClose, onUpdate }: ProjectModalProps) {
   const router = useRouter()
   const [isEditing, setIsEditing] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
@@ -42,6 +43,20 @@ export function ProjectModal({ project, onClose }: ProjectModalProps) {
       } else {
         setIsEditing(false)
         setLoading(false)
+        
+        // Update local state immediately
+        if (onUpdate) {
+          const formValues = {
+            ...project,
+            name: formData.get('name') as string,
+            description: formData.get('description') as string,
+            status: formData.get('status') as string,
+            priority: formData.get('priority') as string,
+            due_date: formData.get('due_date') as string,
+          }
+          onUpdate(formValues)
+        }
+        
         router.refresh()
       }
     } catch (err) {
@@ -83,7 +98,7 @@ export function ProjectModal({ project, onClose }: ProjectModalProps) {
         if (e.target === e.currentTarget) onClose()
       }}
     >
-      <div className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+      <div className="bg-white rounded-lg shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
         {/* Modal Header */}
         <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
           <h2 className="text-xl font-semibold text-gray-900">

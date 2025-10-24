@@ -282,6 +282,16 @@ export function KanbanBoard({ initialProjects }: KanbanBoardProps) {
       <ProjectModal
         project={selectedProject}
         onClose={() => setSelectedProject(null)}
+        onUpdate={(updatedProject) => {
+          // Update local state immediately
+          setProjects(prevProjects =>
+            prevProjects.map(p =>
+              p.id === updatedProject.id ? { ...p, ...updatedProject } : p
+            )
+          )
+          // Update the selected project so modal shows new data
+          setSelectedProject(updatedProject)
+        }}
       />
     )}
     </>
