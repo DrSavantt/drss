@@ -2,6 +2,7 @@
 
 import { useState, useMemo } from 'react'
 import Link from 'next/link'
+import { getClientName } from '@/lib/supabase/types'
 
 interface ContentAsset {
   id: string
@@ -156,9 +157,9 @@ export function ContentLibraryClient({ initialContent }: ContentLibraryClientPro
                 >
                   {item.asset_type.replace('_', ' ')}
                 </span>
-                {item.clients && (
+                {getClientName(item.clients) && (
                   <span className="px-2 py-1 text-xs font-medium rounded-full bg-purple-100 text-purple-800">
-                    {item.clients.name}
+                    {getClientName(item.clients)}
                   </span>
                 )}
                 {item.projects && (

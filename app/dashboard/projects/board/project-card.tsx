@@ -7,8 +7,12 @@ interface Project {
   id: string
   name: string
   description: string | null
+  status: string
   priority: string
   due_date: string | null
+  position: number
+  created_at: string
+  client_id: string
   clients: {
     name: string
   } | null

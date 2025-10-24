@@ -5,6 +5,7 @@ import { updateContentAsset, deleteContentAsset, getClientProjects } from '@/app
 import { TiptapEditor } from '@/components/tiptap-editor'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import { getClientName } from '@/lib/supabase/types'
 
 interface Content {
   id: string
@@ -137,9 +138,9 @@ export function ContentDetailClient({ content }: ContentDetailClientProps) {
                   >
                     {content.asset_type.replace('_', ' ')}
                   </span>
-                  {content.clients && (
+                  {getClientName(content.clients) && (
                     <span className="px-3 py-1 text-sm font-medium rounded-full bg-purple-100 text-purple-800">
-                      {content.clients.name}
+                      {getClientName(content.clients)}
                     </span>
                   )}
                   {content.projects && (

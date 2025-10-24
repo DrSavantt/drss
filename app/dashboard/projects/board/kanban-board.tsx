@@ -290,7 +290,7 @@ export function KanbanBoard({ initialProjects }: KanbanBoardProps) {
             )
           )
           // Update the selected project so modal shows new data
-          setSelectedProject(updatedProject)
+          setSelectedProject(selectedProject ? { ...selectedProject, ...updatedProject } : updatedProject)
         }}
         onDelete={(projectId) => {
           // Remove project from local state immediately

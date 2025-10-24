@@ -11,6 +11,7 @@ interface Project {
   status: string
   priority: string
   due_date: string | null
+  position: number
   created_at: string
   client_id: string
   clients: {
