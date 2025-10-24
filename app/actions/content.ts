@@ -197,7 +197,7 @@ export async function createFileAsset(clientId: string, formData: FormData) {
   redirect(`/dashboard/clients/${clientId}`)
 }
 
-export async function getUploadUrl(fileName: string, clientId: string, _fileType: string) {
+export async function getUploadUrl(fileName: string, clientId: string) {
   const supabase = await createSupabaseClient()
   
   // Create unique file path: clientId/timestamp-filename

@@ -70,7 +70,7 @@ export default function NewFilePage() {
       const formData = new FormData(e.currentTarget)
       
       // Step 1: Get signed upload URL
-      const urlResult = await getUploadUrl(file.name, clientId, file.type)
+      const urlResult = await getUploadUrl(file.name, clientId)
       
       if (urlResult.error || !urlResult.signedUrl) {
         setError(urlResult.error || 'Failed to get upload URL')

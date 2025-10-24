@@ -32,7 +32,7 @@ export default async function KanbanBoardPage() {
         <div className="rounded-lg border-2 border-dashed border-gray-300 p-12 text-center">
           <h3 className="text-lg font-semibold text-gray-900">No projects yet</h3>
           <p className="mt-2 text-sm text-gray-600">
-            Create a project from a client's page to get started.
+            Create a project from a client&apos;s page to get started.
           </p>
           <Link
             href="/dashboard/clients"

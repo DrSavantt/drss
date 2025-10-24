@@ -82,7 +82,7 @@ export default function LandingPage() {
               <h3 className="text-2xl font-bold mb-3">Custom AI Agents</h3>
               <p className="text-gray-400 leading-relaxed">
                 AI trained specifically on your business data, processes, and goals. Make decisions, 
-                write SOPs, analyze financials, optimize operations—all based on YOUR company's reality.
+                write SOPs, analyze financials, optimize operations—all based on YOUR company&apos;s reality.
               </p>
             </div>
 
@@ -227,7 +227,7 @@ export default function LandingPage() {
           </h2>
           <p className="text-xl text-gray-400 mb-12">
             Get a free AI audit + sample work. No charge. No obligation. 
-            See exactly how we'll transform your operations.
+            See exactly how we&apos;ll transform your operations.
           </p>
           <a
             href="/audit-form"

@@ -37,7 +37,7 @@ export default function TestPage() {
               <li>• Make text bold and italic</li>
               <li>• Create H1, H2, H3 headings</li>
               <li>• Add bullet and numbered lists</li>
-              <li>• Click "Show HTML" to see output</li>
+              <li>• Click &quot;Show HTML&quot; to see output</li>
             </ul>
           </div>
         </div>

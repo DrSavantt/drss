@@ -19,7 +19,7 @@ export default async function ContentLibraryPage() {
         <div className="rounded-lg border-2 border-dashed border-gray-300 p-12 text-center">
           <h3 className="text-lg font-semibold text-gray-900">No content yet</h3>
           <p className="mt-2 text-sm text-gray-600">
-            Create content from a client's page to get started.
+            Create content from a client&apos;s page to get started.
           </p>
         </div>
       ) : (
