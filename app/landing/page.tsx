@@ -1,5 +1,7 @@
 import Link from 'next/link'
 
+export const dynamic = 'force-static'
+
 export default function LandingPage() {
   return (
     <div className="min-h-screen bg-[#0A0A0B] text-white">
