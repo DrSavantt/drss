@@ -104,6 +104,30 @@ export async function updateProject(id: string, formData: FormData) {
   return { success: true }
 }
 
+export async function updateProjectStatus(
+  projectId: string,
+  newStatus: string,
+  newPosition: number
+) {
+  const supabase = await createSupabaseClient()
+  
+  const { error } = await supabase
+    .from('projects')
+    .update({
+      status: newStatus,
+      position: newPosition
+    })
+    .eq('id', projectId)
+  
+  if (error) {
+    console.error('Error updating project status:', error)
+    return { error: 'Failed to update project' }
+  }
+  
+  revalidatePath('/dashboard/projects/board')
+  return { success: true }
+}
+
 export async function deleteProject(id: string, clientId: string) {
   const supabase = await createSupabaseClient()
   
