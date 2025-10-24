@@ -292,6 +292,13 @@ export function KanbanBoard({ initialProjects }: KanbanBoardProps) {
           // Update the selected project so modal shows new data
           setSelectedProject(updatedProject)
         }}
+        onDelete={(projectId) => {
+          // Remove project from local state immediately
+          setProjects(prevProjects =>
+            prevProjects.filter(p => p.id !== projectId)
+          )
+          // Modal will close automatically via onClose in handleDelete
+        }}
       />
     )}
     </>

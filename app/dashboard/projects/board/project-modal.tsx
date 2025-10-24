@@ -22,9 +22,10 @@ interface ProjectModalProps {
   project: Project
   onClose: () => void
   onUpdate?: (updatedProject: Project) => void
+  onDelete?: (projectId: string) => void
 }
 
-export function ProjectModal({ project, onClose, onUpdate }: ProjectModalProps) {
+export function ProjectModal({ project, onClose, onUpdate, onDelete }: ProjectModalProps) {
   const router = useRouter()
   const [isEditing, setIsEditing] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
@@ -69,6 +70,12 @@ export function ProjectModal({ project, onClose, onUpdate }: ProjectModalProps) 
     setLoading(true)
     try {
       await deleteProject(project.id, project.client_id)
+      
+      // Update local state immediately
+      if (onDelete) {
+        onDelete(project.id)
+      }
+      
       onClose()
       router.refresh()
     } catch (err) {
