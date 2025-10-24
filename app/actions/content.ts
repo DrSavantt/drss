@@ -121,6 +121,23 @@ export async function deleteContentAsset(id: string, clientId: string) {
   return { success: true }
 }
 
+export async function getAllContentAssets() {
+  const supabase = await createSupabaseClient()
+  
+  const { data: content, error } = await supabase
+    .from('content_assets')
+    .select('*, clients(name), projects(name)')
+    .eq('is_archived', false)
+    .order('created_at', { ascending: false })
+  
+  if (error) {
+    console.error('Error fetching all content:', error)
+    return []
+  }
+  
+  return content
+}
+
 export async function getClientProjects(clientId: string) {
   const supabase = await createSupabaseClient()
   
