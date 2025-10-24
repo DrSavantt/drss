@@ -44,20 +44,28 @@ export default async function DashboardPage() {
 
   // Recent activity (combine projects and content, sort by date)
   const recentActivity = [
-    ...(projects?.slice(0, 5).map(p => ({
-      id: p.id,
-      title: p.name,
-      type: 'project' as const,
-      client: p.clients?.name,
-      created_at: p.created_at,
-    })) || []),
-    ...(content?.slice(0, 5).map(c => ({
-      id: c.id,
-      title: c.title,
-      type: 'content' as const,
-      client: c.clients?.name,
-      created_at: c.created_at,
-    })) || []),
+    ...(projects?.slice(0, 5).map(p => {
+      const clientData = p.clients as { name: string } | { name: string }[] | null
+      const clientName = Array.isArray(clientData) ? clientData[0]?.name : clientData?.name
+      return {
+        id: p.id,
+        title: p.name,
+        type: 'project' as const,
+        client: clientName,
+        created_at: p.created_at,
+      }
+    }) || []),
+    ...(content?.slice(0, 5).map(c => {
+      const clientData = c.clients as { name: string } | { name: string }[] | null
+      const clientName = Array.isArray(clientData) ? clientData[0]?.name : clientData?.name
+      return {
+        id: c.id,
+        title: c.title,
+        type: 'content' as const,
+        client: clientName,
+        created_at: c.created_at,
+      }
+    }) || []),
   ]
     .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
     .slice(0, 10)
