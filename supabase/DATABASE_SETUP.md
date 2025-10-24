@@ -206,6 +206,43 @@ Should still show "✅ Supabase Connected!"
 
 ---
 
+## 📁 Step 6: Setup Storage for File Uploads (Feature 1.9)
+
+**Required for file upload functionality.**
+
+### Create Storage Bucket
+
+1. Go to Supabase Dashboard → **Storage** (left sidebar)
+2. Click **"New bucket"**
+3. Enter bucket name: `client-files` (exactly this, case-sensitive)
+4. Check **"Public bucket"** (allows public download URLs)
+5. Click **"Create bucket"**
+
+### Add Storage RLS Policies
+
+Storage buckets also use RLS policies. Run these in the SQL Editor:
+
+1. Navigate to **SQL Editor**
+2. Click **"+ New Query"**
+3. Open the file: `supabase/storage-policies.sql` from this project
+4. Copy and paste the contents
+5. Click **"Run"**
+
+This creates three policies:
+- ✅ Allow authenticated users to upload files
+- ✅ Allow public downloads
+- ✅ Allow authenticated users to delete their files
+
+### Verify Storage Setup
+
+1. Go to **Storage** → **Policies**
+2. You should see the three policies listed
+3. Try uploading a test file to verify
+
+**Common Error**: If you see "new row violates row-level security policy" when uploading, the storage policies are missing or incorrect.
+
+---
+
 ## 📝 Next Steps
 
 After completing these steps:
@@ -214,11 +251,13 @@ After completing these steps:
 2. ✅ RLS policies active
 3. ✅ Helper functions deployed
 4. ✅ TypeScript types generated
+5. ✅ Storage bucket created (for file uploads)
 
 You're ready for:
 - **Feature 0.4**: Authentication UI
 - **Feature 1.1**: Client management
 - **Feature 1.2**: Project kanban
+- **Feature 1.9**: File uploads
 
 ---
 

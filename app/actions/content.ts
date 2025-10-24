@@ -154,3 +154,69 @@ export async function getClientProjects(clientId: string) {
   
   return projects
 }
+
+export async function createFileAsset(clientId: string, formData: FormData) {
+  const supabase = await createSupabaseClient()
+  
+  const title = formData.get('title') as string
+  const project_id = formData.get('project_id') as string
+  const file_url = formData.get('file_url') as string
+  const file_size = parseInt(formData.get('file_size') as string)
+  const file_type = formData.get('file_type') as string
+  const asset_type = formData.get('asset_type') as string
+  
+  if (!title) {
+    return { error: 'Title is required' }
+  }
+  
+  if (!file_url) {
+    return { error: 'File is required' }
+  }
+  
+  const { data, error } = await supabase
+    .from('content_assets')
+    .insert({
+      client_id: clientId,
+      project_id: project_id || null,
+      title,
+      asset_type,
+      file_url,
+      file_size,
+      file_type,
+      metadata: {}
+    })
+    .select()
+    .single()
+  
+  if (error) {
+    console.error('Error creating file asset:', error)
+    return { error: 'Failed to create file asset' }
+  }
+  
+  revalidatePath(`/dashboard/clients/${clientId}`)
+  redirect(`/dashboard/clients/${clientId}`)
+}
+
+export async function getUploadUrl(fileName: string, clientId: string, fileType: string) {
+  const supabase = await createSupabaseClient()
+  
+  // Create unique file path: clientId/timestamp-filename
+  const timestamp = Date.now()
+  const sanitizedFileName = fileName.replace(/[^a-zA-Z0-9.-]/g, '_')
+  const filePath = `${clientId}/${timestamp}-${sanitizedFileName}`
+  
+  const { data, error } = await supabase.storage
+    .from('client-files')
+    .createSignedUploadUrl(filePath)
+  
+  if (error) {
+    console.error('Error creating upload URL:', error)
+    return { error: 'Failed to create upload URL' }
+  }
+  
+  return { 
+    signedUrl: data.signedUrl, 
+    path: data.path,
+    token: data.token 
+  }
+}

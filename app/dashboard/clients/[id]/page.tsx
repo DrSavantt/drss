@@ -8,12 +8,11 @@ import { DeleteClientButton } from './delete-button'
 export default async function ClientDetailPage({
   params,
 }: {
-  params: Promise<{ id: string }>
+  params: { id: string }
 }) {
-  const { id } = await params
-  const client = await getClient(id)
-  const projects = await getProjects(id)
-  const content = await getContentAssets(id)
+  const client = await getClient(params.id)
+  const projects = await getProjects(params.id)
+  const content = await getContentAssets(params.id)
 
   if (!client) {
     notFound()
@@ -99,10 +98,90 @@ export default async function ClientDetailPage({
         </div>
       </div>
 
+      {/* Quick Stats Dashboard */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+        {/* Total Projects */}
+        <div className="bg-white rounded-lg border border-gray-200 p-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-gray-600">Total Projects</p>
+              <p className="text-3xl font-bold text-gray-900 mt-2">{projects.length}</p>
+            </div>
+            <div className="h-12 w-12 bg-blue-100 rounded-lg flex items-center justify-center">
+              <svg className="h-6 w-6 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+              </svg>
+            </div>
+          </div>
+        </div>
+
+        {/* Projects by Status */}
+        <div className="bg-white rounded-lg border border-gray-200 p-6">
+          <p className="text-sm font-medium text-gray-600 mb-3">Projects by Status</p>
+          <div className="space-y-2">
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-gray-600">In Progress</span>
+              <span className="font-semibold text-blue-600">
+                {projects.filter(p => p.status === 'in_progress').length}
+              </span>
+            </div>
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-gray-600">In Review</span>
+              <span className="font-semibold text-yellow-600">
+                {projects.filter(p => p.status === 'in_review').length}
+              </span>
+            </div>
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-gray-600">Done</span>
+              <span className="font-semibold text-green-600">
+                {projects.filter(p => p.status === 'done').length}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        {/* Total Content */}
+        <div className="bg-white rounded-lg border border-gray-200 p-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-gray-600">Total Content</p>
+              <p className="text-3xl font-bold text-gray-900 mt-2">{content.length}</p>
+            </div>
+            <div className="h-12 w-12 bg-green-100 rounded-lg flex items-center justify-center">
+              <svg className="h-6 w-6 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+            </div>
+          </div>
+        </div>
+
+        {/* Content by Type */}
+        <div className="bg-white rounded-lg border border-gray-200 p-6">
+          <p className="text-sm font-medium text-gray-600 mb-3">Content by Type</p>
+          <div className="space-y-2">
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-gray-600">Notes</span>
+              <span className="font-semibold text-green-600">
+                {content.filter(c => c.asset_type === 'note').length}
+              </span>
+            </div>
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-gray-600">Files</span>
+              <span className="font-semibold text-purple-600">
+                {content.filter(c => c.file_url).length}
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+
       {/* Projects Section */}
       <div className="bg-white rounded-lg border border-gray-200 p-6">
         <div className="flex items-center justify-between mb-6">
-          <h2 className="text-xl font-semibold text-gray-900">Projects</h2>
+          <div>
+            <h2 className="text-xl font-semibold text-gray-900">Recent Projects</h2>
+            <p className="text-sm text-gray-600 mt-1">Last 5 projects</p>
+          </div>
           <Link
             href={`/dashboard/clients/${client.id}/projects/new`}
             className="rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-500"
@@ -126,7 +205,7 @@ export default async function ClientDetailPage({
           </div>
         ) : (
           <div className="space-y-4">
-            {projects.map((project) => (
+            {projects.slice(0, 5).map((project) => (
               <div
                 key={project.id}
                 className="border border-gray-200 rounded-lg p-4 hover:border-blue-300 hover:shadow-sm transition-all"
@@ -167,6 +246,17 @@ export default async function ClientDetailPage({
                 </div>
               </div>
             ))}
+
+            {projects.length > 5 && (
+              <div className="mt-4 text-center">
+                <Link
+                  href="/dashboard/projects/board"
+                  className="text-sm text-blue-600 hover:text-blue-700 font-medium"
+                >
+                  View all {projects.length} projects →
+                </Link>
+              </div>
+            )}
           </div>
         )}
       </div>
@@ -174,13 +264,24 @@ export default async function ClientDetailPage({
       {/* Content Section */}
       <div className="bg-white rounded-lg border border-gray-200 p-6 mt-8">
         <div className="flex items-center justify-between mb-6">
-          <h2 className="text-xl font-semibold text-gray-900">Content Library</h2>
-          <Link
-            href={`/dashboard/clients/${client.id}/content/new`}
-            className="rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-500"
-          >
-            + New Content
-          </Link>
+          <div>
+            <h2 className="text-xl font-semibold text-gray-900">Recent Content</h2>
+            <p className="text-sm text-gray-600 mt-1">Last 5 items</p>
+          </div>
+          <div className="flex gap-2">
+            <Link
+              href={`/dashboard/clients/${client.id}/content/new`}
+              className="rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-500"
+            >
+              + New Content
+            </Link>
+            <Link
+              href={`/dashboard/clients/${client.id}/files/new`}
+              className="rounded-md bg-green-600 px-4 py-2 text-sm font-semibold text-white hover:bg-green-500"
+            >
+              ↑ Upload File
+            </Link>
+          </div>
         </div>
 
         {content.length === 0 ? (
@@ -198,7 +299,7 @@ export default async function ClientDetailPage({
           </div>
         ) : (
           <div className="space-y-4">
-            {content.map((item) => (
+            {content.slice(0, 5).map((item) => (
               <div
                 key={item.id}
                 className="border border-gray-200 rounded-lg p-4 hover:border-blue-300 hover:shadow-sm transition-all"
@@ -222,17 +323,47 @@ export default async function ClientDetailPage({
                       <span>
                         Created: {new Date(item.created_at).toLocaleDateString()}
                       </span>
+                      {item.file_size && (
+                        <span>
+                          Size: {(item.file_size / 1024 / 1024).toFixed(2)} MB
+                        </span>
+                      )}
                     </div>
                   </div>
-                  <Link
-                    href={`/dashboard/content/${item.id}`}
-                    className="text-sm text-blue-600 hover:text-blue-700 font-medium"
-                  >
-                    View →
-                  </Link>
+                  <div className="flex gap-2">
+                    {item.file_url ? (
+                      <a
+                        href={item.file_url}
+                        download
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-sm text-green-600 hover:text-green-700 font-medium"
+                      >
+                        Download ↓
+                      </a>
+                    ) : (
+                      <Link
+                        href={`/dashboard/content/${item.id}`}
+                        className="text-sm text-blue-600 hover:text-blue-700 font-medium"
+                      >
+                        View →
+                      </Link>
+                    )}
+                  </div>
                 </div>
               </div>
             ))}
+
+            {content.length > 5 && (
+              <div className="mt-4 text-center">
+                <Link
+                  href="/dashboard/content"
+                  className="text-sm text-blue-600 hover:text-blue-700 font-medium"
+                >
+                  View all {content.length} items →
+                </Link>
+              </div>
+            )}
           </div>
         )}
       </div>

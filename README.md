@@ -165,6 +165,36 @@ The database includes 10 tables supporting all application phases:
 
 All tables use Row Level Security (RLS) to ensure data isolation per user.
 
+## 📁 File Upload Setup (Feature 1.9)
+
+**MANUAL SETUP REQUIRED:**
+
+1. **Create Supabase Storage Bucket**
+   - Go to Supabase Dashboard → Storage
+   - Click "New bucket"
+   - Name: `client-files` (exactly this, case-sensitive)
+   - Public bucket: YES (checked)
+   - Click "Create bucket"
+
+2. **Add Storage RLS Policies**
+   - Go to Supabase Dashboard → SQL Editor
+   - Click "New query"
+   - Copy and paste the contents of `supabase/storage-policies.sql`
+   - Click "Run" to execute
+   - This creates policies to allow authenticated uploads and public downloads
+
+3. **File Upload Features**
+   - Upload PDFs, images (JPG, PNG, GIF), Word docs (DOC, DOCX)
+   - File size limit: 50MB
+   - Files stored in Supabase Storage with public URLs
+   - Metadata saved to `content_assets` table
+   - Download links in content library
+
+4. **Supported File Types**
+   - PDF documents
+   - Images: JPG, JPEG, PNG, GIF
+   - Documents: DOC, DOCX
+
 ## 🔒 Security
 
 - **Row Level Security**: All tables filtered by authenticated user
