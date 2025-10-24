@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import { getClientName } from '@/lib/supabase/types'
 import { NextRequest, NextResponse } from 'next/server'
 
 export async function GET(request: NextRequest) {
@@ -42,28 +43,20 @@ export async function GET(request: NextRequest) {
         type: 'client' as const,
         url: `/dashboard/clients/${client.id}`,
       })),
-      ...(projects || []).map(project => {
-        const clientData = project.clients as { name: string } | { name: string }[] | null
-        const clientName = Array.isArray(clientData) ? clientData[0]?.name : clientData?.name
-        return {
-          id: project.id,
-          title: project.name,
-          type: 'project' as const,
-          subtitle: clientName,
-          url: `/dashboard/projects/board`,
-        }
-      }),
-      ...(content || []).map(item => {
-        const clientData = item.clients as { name: string } | { name: string }[] | null
-        const clientName = Array.isArray(clientData) ? clientData[0]?.name : clientData?.name
-        return {
-          id: item.id,
-          title: item.title,
-          type: 'content' as const,
-          subtitle: clientName,
-          url: `/dashboard/content/${item.id}`,
-        }
-      }),
+      ...(projects || []).map(project => ({
+        id: project.id,
+        title: project.name,
+        type: 'project' as const,
+        subtitle: getClientName(project.clients),
+        url: `/dashboard/projects/board`,
+      })),
+      ...(content || []).map(item => ({
+        id: item.id,
+        title: item.title,
+        type: 'content' as const,
+        subtitle: getClientName(item.clients),
+        url: `/dashboard/content/${item.id}`,
+      })),
     ]
 
     return NextResponse.json({ results })

@@ -1,4 +1,5 @@
 import { createClient as createSupabaseClient } from '@/lib/supabase/server'
+import { getClientName } from '@/lib/supabase/types'
 import Link from 'next/link'
 
 export default async function DashboardPage() {
@@ -44,28 +45,20 @@ export default async function DashboardPage() {
 
   // Recent activity (combine projects and content, sort by date)
   const recentActivity = [
-    ...(projects?.slice(0, 5).map(p => {
-      const clientData = p.clients as { name: string } | { name: string }[] | null
-      const clientName = Array.isArray(clientData) ? clientData[0]?.name : clientData?.name
-      return {
-        id: p.id,
-        title: p.name,
-        type: 'project' as const,
-        client: clientName,
-        created_at: p.created_at,
-      }
-    }) || []),
-    ...(content?.slice(0, 5).map(c => {
-      const clientData = c.clients as { name: string } | { name: string }[] | null
-      const clientName = Array.isArray(clientData) ? clientData[0]?.name : clientData?.name
-      return {
-        id: c.id,
-        title: c.title,
-        type: 'content' as const,
-        client: clientName,
-        created_at: c.created_at,
-      }
-    }) || []),
+    ...(projects?.slice(0, 5).map(p => ({
+      id: p.id,
+      title: p.name,
+      type: 'project' as const,
+      client: getClientName(p.clients),
+      created_at: p.created_at,
+    })) || []),
+    ...(content?.slice(0, 5).map(c => ({
+      id: c.id,
+      title: c.title,
+      type: 'content' as const,
+      client: getClientName(c.clients),
+      created_at: c.created_at,
+    })) || []),
   ]
     .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
     .slice(0, 10)
@@ -195,9 +188,9 @@ export default async function DashboardPage() {
                         {project.name}
                       </p>
                       <div className="flex items-center gap-2 mt-1">
-                        {project.clients && (
+                        {getClientName(project.clients) && (
                           <span className="text-xs text-gray-600">
-                            {Array.isArray(project.clients) ? project.clients[0]?.name : project.clients.name}
+                            {getClientName(project.clients)}
                           </span>
                         )}
                         <span
