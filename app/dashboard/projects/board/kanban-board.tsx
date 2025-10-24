@@ -14,6 +14,7 @@ import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable'
 import { updateProjectStatus } from '@/app/actions/projects'
 import { ProjectCard } from './project-card'
 import { DroppableColumn } from './droppable-column'
+import { ProjectModal } from './project-modal'
 import { LoadingSpinner } from '@/components/loading-spinner'
 
 interface Project {
@@ -24,6 +25,8 @@ interface Project {
   priority: string
   due_date: string | null
   position: number
+  created_at: string
+  client_id: string
   clients: {
     name: string
   } | null
@@ -38,6 +41,7 @@ export function KanbanBoard({ initialProjects }: KanbanBoardProps) {
   const [activeId, setActiveId] = useState<string | null>(null)
   const [mounted, setMounted] = useState(false)
   const [isUpdating, setIsUpdating] = useState(false)
+  const [selectedProject, setSelectedProject] = useState<Project | null>(null)
 
   // Only render drag & drop after client-side mount
   useEffect(() => {
@@ -251,7 +255,11 @@ export function KanbanBoard({ initialProjects }: KanbanBoardProps) {
                   </div>
                 ) : (
                   columnProjects.map((project) => (
-                    <ProjectCard key={project.id} project={project} />
+                    <ProjectCard
+                      key={project.id}
+                      project={project}
+                      onClick={() => setSelectedProject(project)}
+                    />
                   ))
                 )}
               </SortableContext>
@@ -268,6 +276,14 @@ export function KanbanBoard({ initialProjects }: KanbanBoardProps) {
         ) : null}
       </DragOverlay>
     </DndContext>
+
+    {/* Project Modal */}
+    {selectedProject && (
+      <ProjectModal
+        project={selectedProject}
+        onClose={() => setSelectedProject(null)}
+      />
+    )}
     </>
   )
 }

@@ -16,9 +16,10 @@ interface Project {
 
 interface ProjectCardProps {
   project: Project
+  onClick?: () => void
 }
 
-export function ProjectCard({ project }: ProjectCardProps) {
+export function ProjectCard({ project, onClick }: ProjectCardProps) {
   const {
     attributes,
     listeners,
@@ -47,6 +48,7 @@ export function ProjectCard({ project }: ProjectCardProps) {
       style={style}
       {...attributes}
       {...listeners}
+      onClick={onClick}
       className="bg-white rounded-lg border border-gray-200 p-4 hover:shadow-md transition-shadow cursor-grab active:cursor-grabbing"
     >
       {/* Project Name */}
