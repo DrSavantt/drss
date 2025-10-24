@@ -55,7 +55,7 @@ export async function createClient(formData: FormData) {
     return { error: 'Not authenticated' }
   }
   
-  const { data, error } = await supabase
+  const { error } = await supabase
     .from('clients')
     .insert({
       name,

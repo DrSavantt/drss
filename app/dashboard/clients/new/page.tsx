@@ -19,7 +19,7 @@ export default function NewClientPage() {
         setLoading(false)
       }
       // If successful, the server action will redirect
-    } catch (err) {
+    } catch {
       setError('An unexpected error occurred')
       setLoading(false)
     }

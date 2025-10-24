@@ -13,7 +13,7 @@ export default function NewContentPage() {
   const [content, setContent] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
-  const [projects, setProjects] = useState<any[]>([])
+  const [projects, setProjects] = useState<{ id: string; name: string }[]>([])
 
   useEffect(() => {
     async function loadProjects() {
@@ -43,7 +43,7 @@ export default function NewContentPage() {
         setLoading(false)
       }
       // If successful, the server action will redirect
-    } catch (err) {
+    } catch {
       setError('An unexpected error occurred')
       setLoading(false)
     }

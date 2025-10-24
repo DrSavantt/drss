@@ -54,7 +54,7 @@ export async function createContentAsset(clientId: string, formData: FormData) {
     return { error: 'Content is required' }
   }
   
-  const { data, error } = await supabase
+  const { error } = await supabase
     .from('content_assets')
     .insert({
       client_id: clientId,
@@ -173,7 +173,7 @@ export async function createFileAsset(clientId: string, formData: FormData) {
     return { error: 'File is required' }
   }
   
-  const { data, error } = await supabase
+  const { error } = await supabase
     .from('content_assets')
     .insert({
       client_id: clientId,
@@ -197,7 +197,7 @@ export async function createFileAsset(clientId: string, formData: FormData) {
   redirect(`/dashboard/clients/${clientId}`)
 }
 
-export async function getUploadUrl(fileName: string, clientId: string, fileType: string) {
+export async function getUploadUrl(fileName: string, clientId: string, _fileType: string) {
   const supabase = await createSupabaseClient()
   
   // Create unique file path: clientId/timestamp-filename

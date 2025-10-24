@@ -95,7 +95,7 @@ export function SearchBar() {
             </div>
           ) : results.length === 0 ? (
             <div className="p-4 text-center text-sm text-gray-500">
-              No results found for "{query}"
+              No results found for &quot;{query}&quot;
             </div>
           ) : (
             <div className="py-2">

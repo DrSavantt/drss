@@ -12,7 +12,7 @@ export async function autoLogin() {
   const supabase = await createClient()
 
   // Try to sign in
-  let { error } = await supabase.auth.signInWithPassword({
+  const { error } = await supabase.auth.signInWithPassword({
     email: SINGLE_USER_EMAIL,
     password: SINGLE_USER_PASSWORD,
   })

@@ -37,7 +37,7 @@ export default function LandingPage() {
             
             <p className="text-xl md:text-2xl text-gray-400 mb-12 leading-relaxed">
               Get AI agents trained on your company data, complete funnel builds, 
-              market research, and internal automation. We don't just create content—we 
+              market research, and internal automation. We don&apos;t just create content—we 
               transform how your business operates.
             </p>
             
@@ -138,7 +138,7 @@ export default function LandingPage() {
               </div>
               <h3 className="text-2xl font-bold mb-3">Project Dashboard</h3>
               <p className="text-gray-400 leading-relaxed">
-                Track everything in one place. See what's in progress, what's done, communicate async. 
+                Track everything in one place. See what&apos;s in progress, what&apos;s done, communicate async. 
                 Full transparency on all deliverables.
               </p>
             </div>
@@ -236,7 +236,7 @@ export default function LandingPage() {
             Get Your Free AI Audit
           </a>
           <p className="mt-6 text-sm text-gray-500">
-            Takes 3 minutes. We'll respond within 24 hours.
+            Takes 3 minutes. We&apos;ll respond within 24 hours.
           </p>
         </div>
       </div>

@@ -10,7 +10,7 @@ export default function EditClientPage() {
   const router = useRouter()
   const clientId = params.id as string
 
-  const [client, setClient] = useState<any>(null)
+  const [client, setClient] = useState<{ id: string; name: string; email: string | null; website: string | null } | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
 
@@ -38,7 +38,7 @@ export default function EditClientPage() {
       } else {
         router.push(`/dashboard/clients/${clientId}`)
       }
-    } catch (err) {
+    } catch {
       setError('An unexpected error occurred')
       setLoading(false)
     }

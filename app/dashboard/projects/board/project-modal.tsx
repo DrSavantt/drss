@@ -60,7 +60,7 @@ export function ProjectModal({ project, onClose, onUpdate, onDelete }: ProjectMo
         
         router.refresh()
       }
-    } catch (err) {
+    } catch {
       setError('Failed to update project')
       setLoading(false)
     }
@@ -78,7 +78,7 @@ export function ProjectModal({ project, onClose, onUpdate, onDelete }: ProjectMo
       
       onClose()
       router.refresh()
-    } catch (err) {
+    } catch {
       setError('Failed to delete project')
       setLoading(false)
     }

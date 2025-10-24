@@ -50,7 +50,7 @@ export async function createProject(clientId: string, formData: FormData) {
     return { error: 'Project name is required' }
   }
   
-  const { data, error } = await supabase
+  const { error } = await supabase
     .from('projects')
     .insert({
       client_id: clientId,

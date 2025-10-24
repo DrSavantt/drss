@@ -9,7 +9,7 @@ import Link from 'next/link'
 interface Content {
   id: string
   title: string
-  content_json: any
+  content_json: string | Record<string, unknown>
   asset_type: string
   created_at: string
   updated_at: string
@@ -34,7 +34,7 @@ export function ContentDetailClient({ content }: ContentDetailClientProps) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [editorContent, setEditorContent] = useState('')
-  const [projects, setProjects] = useState<any[]>([])
+  const [projects, setProjects] = useState<{ id: string; name: string }[]>([])
 
   useEffect(() => {
     async function loadProjects() {
@@ -77,7 +77,7 @@ export function ContentDetailClient({ content }: ContentDetailClientProps) {
         setLoading(false)
         router.refresh()
       }
-    } catch (err) {
+    } catch {
       setError('Failed to update content')
       setLoading(false)
     }
@@ -88,7 +88,7 @@ export function ContentDetailClient({ content }: ContentDetailClientProps) {
     try {
       await deleteContentAsset(content.id, content.client_id)
       router.push(`/dashboard/clients/${content.client_id}`)
-    } catch (err) {
+    } catch {
       setError('Failed to delete content')
       setLoading(false)
     }

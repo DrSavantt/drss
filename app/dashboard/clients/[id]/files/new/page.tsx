@@ -13,7 +13,7 @@ export default function NewFilePage() {
   const [uploading, setUploading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [uploadProgress, setUploadProgress] = useState(0)
-  const [projects, setProjects] = useState<any[]>([])
+  const [projects, setProjects] = useState<{ id: string; name: string }[]>([])
 
   useEffect(() => {
     async function loadProjects() {
