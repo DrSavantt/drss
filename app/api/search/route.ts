@@ -46,14 +46,14 @@ export async function GET(request: NextRequest) {
         id: project.id,
         title: project.name,
         type: 'project' as const,
-        subtitle: project.clients?.name,
+        subtitle: Array.isArray(project.clients) ? project.clients[0]?.name : project.clients?.name,
         url: `/dashboard/projects/board`,
       })),
       ...(content || []).map(item => ({
         id: item.id,
         title: item.title,
         type: 'content' as const,
-        subtitle: item.clients?.name,
+        subtitle: Array.isArray(item.clients) ? item.clients[0]?.name : item.clients?.name,
         url: `/dashboard/content/${item.id}`,
       })),
     ]
