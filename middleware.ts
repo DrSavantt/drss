@@ -41,6 +41,11 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(url)
   }
 
+  // Allow landing page without authentication
+  if (request.nextUrl.pathname === '/landing') {
+    return NextResponse.next()
+  }
+
   // Redirect to dashboard if logged in and trying to access login
   if (request.nextUrl.pathname === '/login' && user) {
     const url = request.nextUrl.clone()
