@@ -6,11 +6,11 @@ import { UrgentItems } from '@/components/urgent-items'
 import { QuickActions } from '@/components/quick-actions'
 import { EmptyState } from '@/components/empty-state'
 import { ProgressRing } from '@/components/progress-ring'
-import { ScrollReveal } from '@/components/scroll-reveal'
 import { Users, FolderKanban, FileText, TrendingUp, Clock } from 'lucide-react'
 import Link from 'next/link'
 import { formatDistanceToNow } from 'date-fns'
-import { fadeInUp, staggerContainer, pageTransition } from '@/lib/animations'
+import { DashboardSkeleton } from '@/components/skeleton-loader'
+import { Suspense } from 'react'
 import { useState, useEffect } from 'react'
 
 export default function DashboardPage() {
@@ -44,18 +44,7 @@ export default function DashboardPage() {
   }, [])
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center h-96">
-        <div className="text-center">
-          <motion.div
-            animate={{ rotate: 360 }}
-            transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
-            className="w-16 h-16 border-4 border-slate-800 border-t-coral rounded-full mx-auto mb-4"
-          />
-          <p className="text-slate-400">Loading your dashboard...</p>
-        </div>
-      </div>
-    )
+    return <DashboardSkeleton />
   }
 
   const {
@@ -72,20 +61,14 @@ export default function DashboardPage() {
   } = stats
 
   return (
-    <motion.div 
-      className="space-y-8 pb-8"
-      initial="initial"
-      animate="animate"
-      exit="exit"
-      variants={pageTransition}
-    >
-      {/* Hero Section - Animated entrance */}
+    <div className="space-y-8 pb-8">
+      {/* Hero Section - Instant load with subtle hover */}
       <motion.div 
         className="bg-gradient-to-br from-coral via-coral-dark to-coral rounded-2xl p-8 shadow-2xl shadow-coral/20"
-        initial={{ opacity: 0, scale: 0.95 }}
-        animate={{ opacity: 1, scale: 1 }}
-        transition={{ duration: 0.5 }}
-        whileHover={{ scale: 1.01, boxShadow: '0 25px 50px rgba(255, 107, 107, 0.3)' }}
+        whileHover={{ 
+          scale: 1.005,  // Barely noticeable
+          transition: { duration: 0.2 }
+        }}
       >
         <div className="flex flex-col sm:flex-row items-center justify-between gap-6">
           <div className="text-center sm:text-left">
@@ -93,44 +76,24 @@ export default function DashboardPage() {
               This Week&apos;s Progress
             </p>
             <div className="flex items-baseline gap-3">
-              <motion.h2 
-                className="text-6xl font-bold text-white"
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.2, duration: 0.5 }}
-              >
+              <h2 className="text-6xl font-bold text-white">
                 {totalActivityThisWeek}
-              </motion.h2>
+              </h2>
               <span className="text-2xl text-white/80">items created</span>
             </div>
             <p className="mt-2 text-white/70 text-sm">
               Keep the momentum going! You&apos;re crushing it 🚀
             </p>
           </div>
-          <motion.div 
-            className="flex-shrink-0"
-            animate={{ 
-              y: [0, -10, 0],
-            }}
-            transition={{
-              duration: 2,
-              repeat: Infinity,
-              ease: 'easeInOut'
-            }}
-          >
+          <div className="flex-shrink-0">
             <TrendingUp size={64} className="text-white/30" />
-          </motion.div>
+          </div>
         </div>
       </motion.div>
 
-      {/* Primary Metrics Grid - Stagger animation */}
-      <motion.div 
-        className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4"
-        variants={staggerContainer}
-        initial="hidden"
-        animate="visible"
-      >
-        <motion.div variants={fadeInUp}>
+      {/* Primary Metrics Grid - Instant load */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div>
           <StatCard
             label="Total Clients"
             value={totalClients}
@@ -145,9 +108,9 @@ export default function DashboardPage() {
             }}
             icon={<Users size={24} />}
           />
-        </motion.div>
+        </div>
 
-        <motion.div variants={fadeInUp}>
+        <div>
           <div className="bg-slate-900 rounded-xl p-6 border border-slate-800 hover:border-mint/30 transition-all">
             <div className="flex items-center justify-between mb-4">
               <p className="text-xs text-slate-400 uppercase tracking-wide font-medium">
@@ -156,13 +119,9 @@ export default function DashboardPage() {
               <FolderKanban size={20} className="text-slate-600" />
             </div>
             <div className="flex items-center gap-6">
-              <motion.div
-                initial={{ scale: 0, rotate: -90 }}
-                animate={{ scale: 1, rotate: 0 }}
-                transition={{ duration: 0.8, delay: 0.3, type: 'spring' }}
-              >
+              <div>
                 <ProgressRing value={completionPercentage} size={80} color="#00D9A3" />
-              </motion.div>
+              </div>
               <div>
                 <p className="text-3xl font-bold text-white">{projectsByStatus.done}</p>
                 <p className="text-sm text-slate-400">of {totalProjects} done</p>
@@ -175,9 +134,9 @@ export default function DashboardPage() {
               View board →
             </Link>
           </div>
-        </motion.div>
+        </div>
 
-        <motion.div variants={fadeInUp}>
+        <div>
           <StatCard
             label="Content Assets"
             value={totalContent}
@@ -192,24 +151,24 @@ export default function DashboardPage() {
             }}
             icon={<FileText size={24} />}
           />
-        </motion.div>
+        </div>
 
-        <motion.div variants={fadeInUp}>
+        <div>
           <div className="bg-slate-900 rounded-xl p-6 border border-slate-800">
             <p className="text-xs text-slate-400 uppercase tracking-wide font-medium mb-2">
               Active Projects
             </p>
             <div className="grid grid-cols-2 gap-3 mb-4">
               <motion.div
-                whileHover={{ scale: 1.05 }}
-                transition={{ duration: 0.2 }}
+                whileHover={{ scale: 1.02 }}
+                transition={{ duration: 0.15 }}
               >
                 <p className="text-3xl font-bold text-blue-400">{projectsByStatus.in_progress}</p>
                 <p className="text-xs text-slate-500">In Progress</p>
               </motion.div>
               <motion.div
-                whileHover={{ scale: 1.05 }}
-                transition={{ duration: 0.2 }}
+                whileHover={{ scale: 1.02 }}
+                transition={{ duration: 0.15 }}
               >
                 <p className="text-3xl font-bold text-amber">{projectsByStatus.in_review}</p>
                 <p className="text-xs text-slate-500">In Review</p>
@@ -219,31 +178,23 @@ export default function DashboardPage() {
               {projectsByStatus.backlog} in backlog
             </div>
           </div>
-        </motion.div>
-      </motion.div>
+        </div>
+      </div>
 
       {/* Urgent Items Section */}
       {urgentItems.length > 0 && (
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.4 }}
-        >
+        <div>
           <UrgentItems items={urgentItems} />
-        </motion.div>
+        </div>
       )}
 
       {/* Quick Actions */}
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ delay: 0.6 }}
-      >
+      <div>
         <QuickActions />
-      </motion.div>
+      </div>
 
-      {/* Recent Activity - Scroll reveal */}
-      <ScrollReveal>
+      {/* Recent Activity - Instant load */}
+      <div>
         <div className="bg-slate-900 rounded-xl p-6 border border-slate-800">
           <div className="flex items-center justify-between mb-6">
             <h3 className="text-lg font-semibold text-white">Recent Activity</h3>
@@ -268,11 +219,8 @@ export default function DashboardPage() {
                 const iconColor = isProject ? 'text-blue-400' : 'text-mint'
                 
                 return (
-                  <motion.div
+                  <div
                     key={`${activity.type}-${activity.id}`}
-                    initial={{ opacity: 0, x: -20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: index * 0.05 }}
                   >
                     <Link
                       href={activity.href}
@@ -280,8 +228,8 @@ export default function DashboardPage() {
                     >
                       <motion.div 
                         className={`w-10 h-10 ${iconBg} rounded-lg flex items-center justify-center flex-shrink-0`}
-                        whileHover={{ scale: 1.1, rotate: 5 }}
-                        transition={{ duration: 0.2 }}
+                        whileHover={{ scale: 1.05 }}
+                        transition={{ duration: 0.15 }}
                       >
                         {isProject ? (
                           <FolderKanban size={18} className={iconColor} />
@@ -311,21 +259,17 @@ export default function DashboardPage() {
                         </div>
                       </div>
                     </Link>
-                  </motion.div>
+                  </div>
                 )
               })}
             </div>
           )}
         </div>
-      </ScrollReveal>
+      </div>
 
       {/* Empty State for No Clients */}
       {totalClients === 0 && (
-        <motion.div
-          initial={{ opacity: 0, scale: 0.9 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ delay: 0.8 }}
-        >
+        <div>
           <EmptyState
             icon={Users}
             title="Welcome to DRSS!"
@@ -335,8 +279,8 @@ export default function DashboardPage() {
               href: '/dashboard/clients/new'
             }}
           />
-        </motion.div>
+        </div>
       )}
-    </motion.div>
+    </div>
   )
 }

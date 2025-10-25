@@ -1,11 +1,11 @@
 'use client'
 
-import { motion, AnimatePresence } from 'framer-motion'
+import { motion } from 'framer-motion'
 import { logout } from '@/app/actions/auth'
 import { SearchBar } from '@/components/search-bar'
 import { MobileNav } from '@/components/mobile-nav'
+import { PerfMonitor } from '@/components/perf-monitor'
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
 import { useState, useEffect } from 'react'
 
 export default function DashboardLayout({
@@ -13,7 +13,6 @@ export default function DashboardLayout({
 }: {
   children: React.ReactNode
 }) {
-  const pathname = usePathname()
   const [userEmail, setUserEmail] = useState<string | null>(null)
 
   useEffect(() => {
@@ -101,21 +100,15 @@ export default function DashboardLayout({
         </div>
       </header>
 
-      {/* Animated page transitions */}
-      <AnimatePresence mode="wait">
-        <motion.main
-          key={pathname}
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: -20 }}
-          transition={{ duration: 0.3 }}
-          className="pt-16 lg:pt-0 px-4 lg:px-0 py-6 lg:py-8"
-        >
-          <div className="max-w-7xl mx-auto lg:px-4">
-            {children}
-          </div>
-        </motion.main>
-      </AnimatePresence>
+      {/* Instant page loads - no blocking transitions */}
+      <main className="pt-16 lg:pt-0 px-4 lg:px-0 py-6 lg:py-8 transition-opacity duration-150">
+        <div className="max-w-7xl mx-auto lg:px-4">
+          {children}
+        </div>
+      </main>
+      
+      {/* Performance monitor for development */}
+      <PerfMonitor />
     </div>
   )
 }

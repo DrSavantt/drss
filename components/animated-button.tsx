@@ -21,7 +21,7 @@ export function AnimatedButton({
   type = 'button',
   disabled = false
 }: AnimatedButtonProps) {
-  const baseStyles = 'px-6 py-3 rounded-xl font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed'
+  const baseStyles = 'px-6 py-3 rounded-xl font-medium transition-all duration-150 disabled:opacity-50 disabled:cursor-not-allowed'
   
   const variantStyles = {
     primary: 'bg-coral text-white shadow-lg shadow-coral/20 hover:bg-coral-dark',

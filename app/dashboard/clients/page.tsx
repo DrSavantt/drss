@@ -4,7 +4,7 @@ import { motion } from 'framer-motion'
 import { InteractiveCard } from '@/components/interactive-card'
 import { AnimatedButton } from '@/components/animated-button'
 import { EmptyState } from '@/components/empty-state'
-import { staggerContainer, fadeInUp, pageTransition } from '@/lib/animations'
+import { ClientGridSkeleton } from '@/components/skeleton-loader'
 import { Building2, Mail, Globe, ArrowRight, Users, PlusCircle } from 'lucide-react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
@@ -31,33 +31,13 @@ export default function ClientsPage() {
   }, [])
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center h-96">
-        <div className="text-center">
-          <motion.div
-            animate={{ rotate: 360 }}
-            transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
-            className="w-16 h-16 border-4 border-slate-800 border-t-coral rounded-full mx-auto mb-4"
-          />
-          <p className="text-slate-400">Loading clients...</p>
-        </div>
-      </div>
-    )
+    return <ClientGridSkeleton />
   }
 
   return (
-    <motion.div
-      initial="initial"
-      animate="animate"
-      exit="exit"
-      variants={pageTransition}
-      className="space-y-6"
-    >
+    <div className="space-y-6">
       {/* Page Header */}
-      <motion.div 
-        variants={fadeInUp}
-        className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4"
-      >
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold text-white">Clients</h1>
           <p className="text-slate-400 mt-1">Manage all your client accounts</p>
@@ -68,15 +48,11 @@ export default function ClientsPage() {
             Add Client
           </AnimatedButton>
         </Link>
-      </motion.div>
+      </div>
 
       {/* Client Grid */}
       {clients.length === 0 ? (
-        <motion.div
-          initial={{ opacity: 0, scale: 0.9 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ delay: 0.2 }}
-        >
+        <div>
           <EmptyState
             icon={Users}
             title="No clients yet"
@@ -86,20 +62,11 @@ export default function ClientsPage() {
               href: '/dashboard/clients/new'
             }}
           />
-        </motion.div>
+        </div>
       ) : (
-        <motion.div 
-          className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
-          variants={staggerContainer}
-          initial="hidden"
-          animate="visible"
-        >
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {clients.map((client, index) => (
-            <motion.div
-              key={client.id}
-              variants={fadeInUp}
-              custom={index}
-            >
+            <div key={client.id}>
               <InteractiveCard 
                 className="p-6 group relative overflow-hidden"
                 onClick={() => router.push(`/dashboard/clients/${client.id}`)}
@@ -154,10 +121,10 @@ export default function ClientsPage() {
                   </p>
                 </div>
               </InteractiveCard>
-            </motion.div>
+            </div>
           ))}
-        </motion.div>
+        </div>
       )}
-    </motion.div>
+    </div>
   )
 }

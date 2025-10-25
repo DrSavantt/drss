@@ -15,7 +15,7 @@ export function InteractiveCard({ children, className = '', onClick }: Interacti
     <motion.div
       className={`
         bg-slate-900 rounded-xl border border-slate-800 
-        cursor-pointer
+        cursor-pointer hover:shadow-lg transition-shadow duration-150
         ${className}
       `}
       whileHover={cardHover}

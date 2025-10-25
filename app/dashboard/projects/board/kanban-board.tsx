@@ -293,8 +293,11 @@ export function KanbanBoard({ initialProjects }: KanbanBoardProps) {
 
           <DragOverlay>
             {activeProject ? (
-              <div className="bg-white rounded-lg border-2 border-blue-500 p-4 shadow-lg opacity-90">
+              <div className="bg-white rounded-lg border-2 border-blue-500 p-4 shadow-xl opacity-95 transform scale-105">
                 <h3 className="font-semibold text-gray-900">{activeProject.name}</h3>
+                <p className="text-sm text-gray-600 mt-1">
+                  {activeProject.clients?.name || 'Unknown Client'}
+                </p>
               </div>
             ) : null}
           </DragOverlay>
@@ -315,7 +318,7 @@ export function KanbanBoard({ initialProjects }: KanbanBoardProps) {
             return (
               <div
                 key={project.id}
-                className="bg-gray-900 rounded-lg p-4 border border-gray-800 active:scale-95 transition-transform"
+                className="bg-gray-900 rounded-lg p-4 border border-gray-800 active:scale-98 transition-transform duration-100"
                 onClick={() => setSelectedProject(project)}
               >
                 <div className="flex items-start justify-between mb-2 gap-2">
