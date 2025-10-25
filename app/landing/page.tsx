@@ -30,14 +30,14 @@ export default function LandingPage() {
               </span>
             </div>
             
-            <h1 className="text-5xl md:text-7xl font-bold mb-6 leading-tight">
+            <h1 className="text-3xl sm:text-5xl md:text-7xl font-bold mb-6 leading-tight">
               Custom AI Agents
               <span className="block text-transparent bg-clip-text bg-gradient-to-r from-[#FF5A5F] to-[#F4C430]">
                 Built For Your Business
               </span>
             </h1>
             
-            <p className="text-xl md:text-2xl text-gray-400 mb-12 leading-relaxed">
+            <p className="text-base sm:text-xl md:text-2xl text-gray-400 mb-12 leading-relaxed">
               Get AI agents trained on your company data, complete funnel builds, 
               market research, and internal automation. We don&apos;t just create content—we 
               transform how your business operates.
@@ -65,15 +65,15 @@ export default function LandingPage() {
       <div id="services" className="border-b border-gray-800 py-24">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
-            <h2 className="text-4xl md:text-5xl font-bold mb-4">
+            <h2 className="text-2xl sm:text-4xl md:text-5xl font-bold mb-4">
               What We Build For You
             </h2>
-            <p className="text-xl text-gray-400 max-w-3xl mx-auto">
+            <p className="text-base sm:text-xl text-gray-400 max-w-3xl mx-auto">
               Complete AI transformation, not just templates
             </p>
           </div>
           
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {/* Service 1 */}
             <div className="bg-white bg-opacity-5 backdrop-blur rounded-xl p-8 border border-gray-800 hover:border-[#FF5A5F] transition-all group">
               <div className="h-12 w-12 bg-[#FF5A5F] bg-opacity-10 rounded-lg flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
