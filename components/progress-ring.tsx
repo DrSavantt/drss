@@ -46,7 +46,7 @@ export function ProgressRing({
       
       {/* Center label */}
       <div className="absolute inset-0 flex flex-col items-center justify-center">
-        <span className="text-2xl font-bold text-white">
+        <span className="text-base font-bold text-white">
           {Math.round(value)}%
         </span>
         {label && (
