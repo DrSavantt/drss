@@ -40,10 +40,10 @@ export function ProjectCard({ project, onClick }: ProjectCardProps) {
   }
 
   const priorityColors = {
-    low: 'bg-gray-100 text-gray-800',
-    medium: 'bg-blue-100 text-blue-800',
-    high: 'bg-orange-100 text-orange-800',
-    urgent: 'bg-red-100 text-red-800',
+    low: 'bg-gray-700/50 text-gray-300',
+    medium: 'bg-blue-600/20 text-blue-300 border border-blue-600/30',
+    high: 'bg-orange-600/20 text-orange-300 border border-orange-600/30',
+    urgent: 'bg-red-600/20 text-red-300 border border-red-600/30',
   }
 
   return (
@@ -53,39 +53,39 @@ export function ProjectCard({ project, onClick }: ProjectCardProps) {
       {...attributes}
       {...listeners}
       onClick={onClick}
-      className="bg-white rounded-lg border border-gray-200 p-4 hover:shadow-lg transition-shadow duration-150 cursor-grab active:cursor-grabbing"
+      className="bg-[#1a1a1a] border border-gray-700 rounded-lg p-4 hover:border-[#4ECDC4]/50 transition-all duration-200 cursor-grab active:cursor-grabbing"
     >
       {/* Project Name */}
-      <h3 className="font-semibold text-gray-900 mb-2">
+      <h3 className="font-semibold text-white mb-2">
         {project.name}
       </h3>
 
       {/* Description Preview */}
       {project.description && (
-        <p className="text-sm text-gray-600 mb-3 line-clamp-2">
+        <p className="text-sm text-gray-400 mb-3 line-clamp-2">
           {project.description}
         </p>
       )}
 
       {/* Client Badge */}
       <div className="mb-3">
-        <span className="inline-block px-2 py-1 text-xs font-medium rounded-full bg-purple-100 text-purple-800">
+        <span className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium rounded bg-[#4ECDC4]/10 text-[#4ECDC4] border border-[#4ECDC4]/30">
           {project.clients?.name || 'Unknown Client'}
         </span>
       </div>
 
       {/* Priority & Due Date */}
-      <div className="flex items-center justify-between text-xs">
+      <div className="flex items-center justify-between gap-2 text-xs">
         <span
-          className={`px-2 py-1 rounded-full font-medium ${
+          className={`px-2 py-1 rounded font-medium ${
             priorityColors[project.priority as keyof typeof priorityColors]
           }`}
         >
           {project.priority}
         </span>
         {project.due_date && (
-          <span className="text-gray-500">
-            Due: {new Date(project.due_date).toLocaleDateString('en-US', {
+          <span className="text-gray-400">
+            {new Date(project.due_date).toLocaleDateString('en-US', {
               month: 'short',
               day: 'numeric'
             })}

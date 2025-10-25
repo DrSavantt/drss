@@ -57,10 +57,10 @@ export function KanbanBoard({ initialProjects }: KanbanBoardProps) {
   )
 
   const columns = [
-    { id: 'backlog', title: 'Backlog', color: 'bg-gray-100' },
-    { id: 'in_progress', title: 'In Progress', color: 'bg-blue-100' },
-    { id: 'in_review', title: 'In Review', color: 'bg-yellow-100' },
-    { id: 'done', title: 'Done', color: 'bg-green-100' },
+    { id: 'backlog', title: 'Backlog' },
+    { id: 'in_progress', title: 'In Progress' },
+    { id: 'in_review', title: 'In Review' },
+    { id: 'done', title: 'Done' },
   ]
 
   function handleDragStart(event: DragStartEvent) {
@@ -162,45 +162,45 @@ export function KanbanBoard({ initialProjects }: KanbanBoardProps) {
           
           return (
             <div key={column.id} className="flex flex-col">
-              <div className={`${column.color} rounded-t-lg px-4 py-3 border-b-2 border-gray-300`}>
+              <div className="bg-[#111111] border border-gray-800 rounded-t-lg px-4 py-3 border-b border-gray-700">
                 <div className="flex items-center justify-between">
-                  <h2 className="font-semibold text-gray-900">{column.title}</h2>
-                  <span className="text-sm font-medium text-gray-600">
+                  <h2 className="font-semibold text-white">{column.title}</h2>
+                  <span className="text-xs font-medium text-gray-500">
                     {columnProjects.length}
                   </span>
                 </div>
               </div>
-              <div className="flex-1 bg-gray-50 rounded-b-lg p-4 space-y-3 min-h-[500px]">
+              <div className="flex-1 bg-[#111111] rounded-b-lg p-4 space-y-3 min-h-[500px]">
                 {columnProjects.length === 0 ? (
                   <div className="flex items-center justify-center h-32 text-sm text-gray-500">
-                    No projects
+                    Drop projects here
                   </div>
                 ) : (
                   columnProjects.map((project) => (
                     <div
                       key={project.id}
-                      className="bg-white rounded-lg border border-gray-200 p-4"
+                      className="bg-[#1a1a1a] border border-gray-700 rounded-lg p-4"
                     >
-                      <h3 className="font-semibold text-gray-900 mb-2">
+                      <h3 className="font-semibold text-white mb-2">
                         {project.name}
                       </h3>
                       {project.description && (
-                        <p className="text-sm text-gray-600 mb-3 line-clamp-2">
+                        <p className="text-sm text-gray-400 mb-3 line-clamp-2">
                           {project.description}
                         </p>
                       )}
                       <div className="mb-3">
-                        <span className="inline-block px-2 py-1 text-xs font-medium rounded-full bg-purple-100 text-purple-800">
+                        <span className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium rounded bg-[#4ECDC4]/10 text-[#4ECDC4] border border-[#4ECDC4]/30">
                           {project.clients?.name || 'Unknown Client'}
                         </span>
                       </div>
-                      <div className="flex items-center justify-between text-xs">
-                        <span className="px-2 py-1 rounded-full font-medium bg-blue-100 text-blue-800">
+                      <div className="flex items-center justify-between text-xs gap-2">
+                        <span className="px-2 py-1 rounded font-medium bg-blue-600/20 text-blue-300 border border-blue-600/30">
                           {project.priority}
                         </span>
                         {project.due_date && (
-                          <span className="text-gray-500">
-                            Due: {new Date(project.due_date).toLocaleDateString('en-US', {
+                          <span className="text-gray-400">
+                            {new Date(project.due_date).toLocaleDateString('en-US', {
                               month: 'short',
                               day: 'numeric'
                             })}
@@ -265,7 +265,6 @@ export function KanbanBoard({ initialProjects }: KanbanBoardProps) {
                   key={column.id}
                   id={column.id}
                   title={column.title}
-                  color={column.color}
                   count={columnProjects.length}
                 >
                   <SortableContext
@@ -274,7 +273,7 @@ export function KanbanBoard({ initialProjects }: KanbanBoardProps) {
                   >
                     {columnProjects.length === 0 ? (
                       <div className="flex items-center justify-center h-32 text-sm text-gray-500">
-                        No projects
+                        Drop projects here
                       </div>
                     ) : (
                       columnProjects.map((project) => (
@@ -307,7 +306,7 @@ export function KanbanBoard({ initialProjects }: KanbanBoardProps) {
       {/* Mobile: List View */}
       <div className="lg:hidden space-y-2 pb-20">
         {projects.length === 0 ? (
-          <div className="flex items-center justify-center h-32 text-sm text-gray-500">
+          <div className="flex items-center justify-center h-32 text-sm text-gray-400">
             No projects yet
           </div>
         ) : (
