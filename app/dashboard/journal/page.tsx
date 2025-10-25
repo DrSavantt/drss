@@ -1,112 +1,75 @@
 import { createClient } from '@/lib/supabase/server'
-import { JournalCapture } from '@/components/journal-capture'
-import { JournalFeed } from '@/components/journal-feed'
-import { getOrCreateInbox, getJournalChats, getJournalEntries } from '@/app/actions/journal'
 
 export default async function JournalPage() {
   const supabase = await createClient()
   
-  // Ensure user has an Inbox
-  const defaultChatId = await getOrCreateInbox()
-  
-  // Fetch all data
-  const { data: clients } = await supabase
-    .from('clients')
-    .select('id, name')
-    .order('name', { ascending: true })
-  
-  const { data: projects } = await supabase
-    .from('projects')
-    .select('id, name')
-    .order('name', { ascending: true })
-  
-  // Get all chats
-  const chats = await getJournalChats()
-  
-  // Get all entries (not filtered by chat yet)
-  const entries = await getJournalEntries()
+  // Check if user has any journal chats
+  const { data: chats, error: chatsError } = await supabase
+    .from('journal_chats')
+    .select('*')
+    .order('created_at', { ascending: false })
+
+  const { data: entries, error: entriesError } = await supabase
+    .from('journal_entries')
+    .select('*')
+    .order('created_at', { ascending: false })
+    .limit(20)
+
+  if (chatsError) console.error('Chats fetch error:', chatsError)
+  if (entriesError) console.error('Entries fetch error:', entriesError)
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div>
-        <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Quick Capture Journal</h1>
-        <p className="text-sm sm:text-base text-gray-600 mt-2">
-          Capture ideas instantly. @mention clients/projects. Organize into chats.
+    <div className="space-y-6 max-w-2xl mx-auto">
+      <div className="text-center">
+        <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-4">Quick Capture Journal</h1>
+        <p className="text-sm sm:text-base text-gray-600 max-w-md mx-auto">
+          Get ready for a powerful note-taking experience with @mentions, #tags, and smart organization.
         </p>
       </div>
 
-      {/* Info Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-          <div className="flex items-center gap-2">
-            <span className="text-2xl">💬</span>
-            <div>
-              <div className="text-sm font-medium text-blue-900">Chats</div>
-              <div className="text-2xl font-bold text-blue-600">{chats.length}</div>
-            </div>
+      {/* Placeholder UI */}
+      <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-8 text-center">
+        <div className="text-6xl mb-6 animate-pulse">📝</div>
+        <h2 className="text-xl font-semibold text-gray-900 mb-3">
+          Journal Feature Coming Soon
+        </h2>
+        <p className="text-gray-600 mb-4 text-sm">
+          We&apos;re building an intelligent journaling system that will revolutionize how you capture and organize ideas.
+        </p>
+        
+        <div className="grid grid-cols-2 gap-4 max-w-xs mx-auto mb-6">
+          <div className="bg-blue-50 p-3 rounded-lg">
+            <div className="text-2xl font-bold text-blue-600">{chats?.length || 0}</div>
+            <div className="text-xs text-blue-800">Chats</div>
+          </div>
+          <div className="bg-purple-50 p-3 rounded-lg">
+            <div className="text-2xl font-bold text-purple-600">{entries?.length || 0}</div>
+            <div className="text-xs text-purple-800">Entries</div>
           </div>
         </div>
-        <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
-          <div className="flex items-center gap-2">
-            <span className="text-2xl">📝</span>
-            <div>
-              <div className="text-sm font-medium text-purple-900">Entries</div>
-              <div className="text-2xl font-bold text-purple-600">{entries?.length || 0}</div>
-            </div>
-          </div>
-        </div>
-        <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-          <div className="flex items-center gap-2">
-            <span className="text-2xl">@</span>
-            <div>
-              <div className="text-sm font-medium text-green-900">Mentionables</div>
-              <div className="text-2xl font-bold text-green-600">
-                {(clients?.length || 0) + (projects?.length || 0)}
-              </div>
-            </div>
-          </div>
+
+        <div className="text-sm text-gray-500 italic">
+          Stay tuned for an epic note-taking experience! 🚀
         </div>
       </div>
 
-      {/* Capture Form */}
-      <JournalCapture 
-        clients={clients || []} 
-        projects={projects || []}
-        chats={chats}
-        defaultChatId={defaultChatId}
-      />
-      
-      {/* Entries Feed */}
-      <div>
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg sm:text-xl font-semibold text-gray-900">Recent Entries</h2>
-          <span className="text-sm text-gray-500">All Chats</span>
+      {/* Sneak Peek Features */}
+      <div className="grid sm:grid-cols-3 gap-4 text-center">
+        <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
+          <div className="text-3xl mb-2">@</div>
+          <h3 className="text-sm font-semibold text-gray-800 mb-1">Smart Mentions</h3>
+          <p className="text-xs text-gray-600">Link notes to clients and projects</p>
         </div>
-        <JournalFeed entries={entries || []} />
-      </div>
-
-      {/* How to Use Guide */}
-      <div className="bg-gray-50 border border-gray-200 rounded-lg p-6">
-        <h3 className="font-semibold text-gray-900 mb-3">📚 How to Use</h3>
-        <ul className="space-y-2 text-sm text-gray-700">
-          <li className="flex items-start gap-2">
-            <span className="text-blue-600 font-bold">1.</span>
-            <span><strong>Choose a Chat:</strong> Click the dropdown to select Inbox, a client chat, or project chat.</span>
-          </li>
-          <li className="flex items-start gap-2">
-            <span className="text-blue-600 font-bold">2.</span>
-            <span><strong>Type Your Note:</strong> Write freely. Type <code className="bg-white px-1 rounded">@</code> to mention clients or projects.</span>
-          </li>
-          <li className="flex items-start gap-2">
-            <span className="text-blue-600 font-bold">3.</span>
-            <span><strong>Mentions Auto-Link:</strong> @mentions create clickable links to clients/projects.</span>
-          </li>
-          <li className="flex items-start gap-2">
-            <span className="text-blue-600 font-bold">4.</span>
-            <span><strong>Voice Notes:</strong> 🎤 Coming soon - record voice memos on the go.</span>
-          </li>
-        </ul>
+        <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
+          <div className="text-3xl mb-2">🏷️</div>
+          <h3 className="text-sm font-semibold text-gray-800 mb-1">#Tags</h3>
+          <p className="text-xs text-gray-600">Organize and find notes instantly</p>
+        </div>
+        <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
+          <div className="text-3xl mb-2">🎤</div>
+          <h3 className="text-sm font-semibold text-gray-800 mb-1">Voice Notes</h3>
+          <p className="text-xs text-gray-600">Capture ideas on the go</p>
+        </div>
       </div>
     </div>
   )
