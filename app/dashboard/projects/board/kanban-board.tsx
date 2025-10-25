@@ -7,6 +7,7 @@ import {
   DragOverlay,
   DragStartEvent,
   PointerSensor,
+  TouchSensor,
   useSensor,
   useSensors,
 } from '@dnd-kit/core'
@@ -52,6 +53,12 @@ export function KanbanBoard({ initialProjects }: KanbanBoardProps) {
     useSensor(PointerSensor, {
       activationConstraint: {
         distance: 8,
+      },
+    }),
+    useSensor(TouchSensor, {
+      activationConstraint: {
+        delay: 250,
+        tolerance: 5,
       },
     })
   )
@@ -292,57 +299,27 @@ export function KanbanBoard({ initialProjects }: KanbanBoardProps) {
 
           <DragOverlay>
             {activeProject ? (
-              <div className="bg-white rounded-lg border-2 border-blue-500 p-4 shadow-xl opacity-95 transform scale-105">
-                <h3 className="font-semibold text-gray-900">{activeProject.name}</h3>
-                <p className="text-sm text-gray-600 mt-1">
-                  {activeProject.clients?.name || 'Unknown Client'}
-                </p>
-              </div>
-            ) : null}
-          </DragOverlay>
-        </DndContext>
-      </div>
-
-      {/* Mobile: List View */}
-      <div className="lg:hidden space-y-2 pb-20">
-        {projects.length === 0 ? (
-          <div className="flex items-center justify-center h-32 text-sm text-gray-400">
-            No projects yet
-          </div>
-        ) : (
-          projects.map((project) => {
-            const statusColors = getStatusColors(project.status)
-            const priorityColors = getPriorityColors(project.priority)
-            
-            return (
-              <div
-                key={project.id}
-                className="bg-gray-900 rounded-lg p-4 border border-gray-800 active:scale-98 transition-transform duration-100"
-                onClick={() => setSelectedProject(project)}
-              >
-                <div className="flex items-start justify-between mb-2 gap-2">
-                  <h3 className="font-medium text-white flex-1">{project.name}</h3>
-                  <span className={`px-2 py-1 rounded text-xs font-medium whitespace-nowrap ${statusColors.bg} ${statusColors.text}`}>
-                    {project.status.replace('_', ' ')}
-                  </span>
-                </div>
-                
-                {project.description && (
+              <div className="bg-[#1a1a1a] border-2 border-[#4ECDC4] rounded-lg p-4 shadow-2xl opacity-80 cursor-grabbing transform rotate-3">
+                <h3 className="font-semibold text-white mb-2">
+                  {activeProject.name}
+                </h3>
+                {activeProject.description && (
                   <p className="text-sm text-gray-400 mb-3 line-clamp-2">
-                    {project.description}
+                    {activeProject.description}
                   </p>
                 )}
-                
-                <div className="flex items-center justify-between text-xs flex-wrap gap-2">
-                  <div className="flex items-center gap-2">
-                    <span className="text-gray-500">{project.clients?.name || 'Unknown Client'}</span>
-                    <span className={`px-2 py-1 rounded font-medium ${priorityColors.bg} ${priorityColors.text}`}>
-                      {project.priority}
-                    </span>
-                  </div>
-                  {project.due_date && (
-                    <span className="text-gray-500">
-                      Due: {new Date(project.due_date).toLocaleDateString('en-US', {
+                <div className="mb-3">
+                  <span className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium rounded bg-[#4ECDC4]/10 text-[#4ECDC4] border border-[#4ECDC4]/30">
+                    {activeProject.clients?.name || 'Unknown Client'}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between text-xs gap-2">
+                  <span className="px-2 py-1 rounded font-medium bg-blue-600/20 text-blue-300 border border-blue-600/30">
+                    {activeProject.priority}
+                  </span>
+                  {activeProject.due_date && (
+                    <span className="text-gray-400">
+                      {new Date(activeProject.due_date).toLocaleDateString('en-US', {
                         month: 'short',
                         day: 'numeric'
                       })}
@@ -350,9 +327,51 @@ export function KanbanBoard({ initialProjects }: KanbanBoardProps) {
                   )}
                 </div>
               </div>
-            )
-          })
-        )}
+            ) : null}
+          </DragOverlay>
+        </DndContext>
+      </div>
+
+      {/* Mobile: Horizontal Scroll Columns */}
+      <div className="lg:hidden pb-20">
+        <div className="overflow-x-auto scrollbar-hide" style={{ WebkitOverflowScrolling: 'touch', scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+          <div className="flex gap-4 min-w-max px-4 py-4">
+            {columns.map((column) => {
+              const columnProjects = getProjectsByStatus(column.id)
+              
+              return (
+                <div key={column.id} className="w-[85vw] flex-shrink-0">
+                  <div className="flex flex-col h-full">
+                    {/* Column Header */}
+                    <div className="bg-[#111111] border border-gray-800 rounded-t-lg px-4 py-3 border-b border-gray-700">
+                      <div className="flex items-center justify-between">
+                        <h2 className="font-semibold text-white">{column.title}</h2>
+                        <span className="text-xs font-medium text-gray-500">{columnProjects.length}</span>
+                      </div>
+                    </div>
+                    
+                    {/* Column Content */}
+                    <div className="bg-[#111111] border-l border-r border-b border-gray-800 rounded-b-lg p-4 space-y-3 min-h-[400px]">
+                      {columnProjects.length === 0 ? (
+                        <div className="flex items-center justify-center h-32 text-sm text-gray-500">
+                          No projects
+                        </div>
+                      ) : (
+                        columnProjects.map((project) => (
+                          <ProjectCard
+                            key={project.id}
+                            project={project}
+                            onClick={() => setSelectedProject(project)}
+                          />
+                        ))
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </div>
       </div>
 
       {/* Project Modal */}
