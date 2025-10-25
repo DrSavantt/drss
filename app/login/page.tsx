@@ -15,14 +15,21 @@ export default function LoginPage() {
       const result = await autoLogin()
       if (result?.error) {
         setError(result.error)
+        setLoading(false)
       }
+      // If no error, redirect is happening (don't set loading to false)
     } catch (err) {
+      // Handle NEXT_REDIRECT which is expected behavior
+      if (err instanceof Error && err.message === 'NEXT_REDIRECT') {
+        // This is normal - redirect is happening, keep loading state
+        return
+      }
+      
       if (err instanceof Error && err.message.includes('Missing Supabase environment variables')) {
         setError('Configuration error: Supabase is not properly set up. Please check your environment variables.')
       } else {
         setError('An unexpected error occurred: ' + (err instanceof Error ? err.message : String(err)))
       }
-    } finally {
       setLoading(false)
     }
   }
