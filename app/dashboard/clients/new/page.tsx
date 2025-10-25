@@ -27,28 +27,33 @@ export default function NewClientPage() {
 
   return (
     <div className="max-w-2xl mx-auto">
+      {/* Header */}
       <div className="mb-8">
         <Link
           href="/dashboard/clients"
-          className="text-sm text-blue-600 hover:text-blue-700"
+          className="text-sm text-gray-400 hover:text-[#4ECDC4] transition-colors inline-flex items-center gap-2"
         >
           ← Back to Clients
         </Link>
-        <h1 className="mt-4 text-3xl font-bold text-gray-900">New Client</h1>
-        <p className="mt-2 text-gray-600">
+        <h1 className="mt-6 text-4xl font-bold mb-2 bg-gradient-to-r from-[#4ECDC4] to-[#FF6B6B] bg-clip-text text-transparent">
+          New Client
+        </h1>
+        <p className="text-gray-400">
           Add a new client to your workspace
         </p>
       </div>
 
+      {/* Error Message */}
       {error && (
-        <div className="mb-6 rounded-md bg-red-50 p-4">
-          <p className="text-sm text-red-800">{error}</p>
+        <div className="mb-6 rounded-lg bg-red-600/10 border border-red-600/50 p-4">
+          <p className="text-sm text-red-300">{error}</p>
         </div>
       )}
 
-      <form action={handleSubmit} className="space-y-6 bg-white rounded-lg border border-gray-200 p-6">
+      {/* Form */}
+      <form action={handleSubmit} className="space-y-6 bg-[#111111] border border-gray-800 rounded-xl p-8 hover:border-[#4ECDC4]/50 transition-all duration-200">
         <div>
-          <label htmlFor="name" className="block text-sm font-medium text-gray-700">
+          <label htmlFor="name" className="block text-sm font-medium text-gray-300 mb-2">
             Client Name *
           </label>
           <input
@@ -57,13 +62,13 @@ export default function NewClientPage() {
             id="name"
             required
             disabled={loading}
-            className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-blue-500 disabled:bg-gray-100"
+            className="mt-1 block w-full bg-[#1a1a1a] border border-gray-700 text-white rounded-lg px-4 py-2.5 shadow-sm focus:border-[#4ECDC4] focus:outline-none focus:ring-1 focus:ring-[#4ECDC4] disabled:bg-gray-900 disabled:text-gray-500 transition-colors"
             placeholder="Acme Corporation"
           />
         </div>
 
         <div>
-          <label htmlFor="email" className="block text-sm font-medium text-gray-700">
+          <label htmlFor="email" className="block text-sm font-medium text-gray-300 mb-2">
             Email
           </label>
           <input
@@ -71,13 +76,13 @@ export default function NewClientPage() {
             name="email"
             id="email"
             disabled={loading}
-            className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-blue-500 disabled:bg-gray-100"
+            className="mt-1 block w-full bg-[#1a1a1a] border border-gray-700 text-white rounded-lg px-4 py-2.5 shadow-sm focus:border-[#4ECDC4] focus:outline-none focus:ring-1 focus:ring-[#4ECDC4] disabled:bg-gray-900 disabled:text-gray-500 transition-colors"
             placeholder="contact@acme.com"
           />
         </div>
 
         <div>
-          <label htmlFor="website" className="block text-sm font-medium text-gray-700">
+          <label htmlFor="website" className="block text-sm font-medium text-gray-300 mb-2">
             Website
           </label>
           <input
@@ -85,22 +90,22 @@ export default function NewClientPage() {
             name="website"
             id="website"
             disabled={loading}
-            className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-blue-500 disabled:bg-gray-100"
+            className="mt-1 block w-full bg-[#1a1a1a] border border-gray-700 text-white rounded-lg px-4 py-2.5 shadow-sm focus:border-[#4ECDC4] focus:outline-none focus:ring-1 focus:ring-[#4ECDC4] disabled:bg-gray-900 disabled:text-gray-500 transition-colors"
             placeholder="https://acme.com"
           />
         </div>
 
-        <div className="flex gap-4">
+        <div className="flex gap-4 pt-4">
           <button
             type="submit"
             disabled={loading}
-            className="flex-1 rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-500 disabled:bg-blue-300 disabled:cursor-not-allowed"
+            className="flex-1 bg-gradient-to-r from-[#4ECDC4] to-[#FF6B6B] text-white px-6 py-2.5 rounded-lg hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 font-medium"
           >
             {loading ? 'Creating...' : 'Create Client'}
           </button>
           <Link
             href="/dashboard/clients"
-            className="flex-1 text-center rounded-md bg-gray-200 px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-300"
+            className="flex-1 text-center bg-[#1a1a1a] border border-gray-700 text-white px-6 py-2.5 rounded-lg hover:border-[#4ECDC4]/50 transition-all duration-200 font-medium"
           >
             Cancel
           </Link>
