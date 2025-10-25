@@ -9,11 +9,19 @@ import { EmptyState } from '@/components/empty-state'
 import { ProgressRing } from '@/components/progress-ring'
 import { Users, FolderKanban, FileText, TrendingUp, Clock, Plus, CheckCircle, Database, Zap } from 'lucide-react'
 import Link from 'next/link'
-import { formatDistanceToNow } from 'date-fns'
+import { formatDistanceToNow, format } from 'date-fns'
 import { DashboardSkeleton } from '@/components/skeleton-loader'
 import { useState, useEffect } from 'react'
 
 export default function DashboardPage() {
+  // Helper functions
+  function getGreeting() {
+    const hour = new Date().getHours()
+    if (hour < 12) return 'Good morning'
+    if (hour < 18) return 'Good afternoon'
+    return 'Good evening'
+  }
+
   interface ActivityItem {
     id: string
     type: string
@@ -98,35 +106,59 @@ export default function DashboardPage() {
   } = stats
 
   return (
-    <div className="space-y-8 pb-8">
-      {/* Hero Section - Instant load with subtle hover */}
-      <motion.div 
-        className="bg-gradient-to-br from-coral via-coral-dark to-coral rounded-2xl p-8 shadow-2xl shadow-coral/20"
-        whileHover={{ 
-          scale: 1.005,  // Barely noticeable
-          transition: { duration: 0.2 }
-        }}
-      >
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-6">
-          <div className="text-center sm:text-left">
-            <p className="text-white/70 text-sm font-medium uppercase tracking-wide mb-2">
-              This Week&apos;s Progress
-            </p>
-            <div className="flex items-baseline gap-3">
-              <h2 className="text-6xl font-bold text-white">
-                {totalActivityThisWeek}
-              </h2>
-              <span className="text-2xl text-white/80">items created</span>
+    <div className="space-y-8 pb-8 pt-4">
+      {/* Welcome + Today's Focus */}
+      <div className="mb-8">
+        {/* Welcome message */}
+        <div className="mb-6">
+          <h1 className="text-3xl font-bold bg-gradient-to-r from-[#4ECDC4] to-[#FF6B6B] bg-clip-text text-transparent">
+            Welcome back
+          </h1>
+          <p className="text-gray-400 mt-1">
+            {getGreeting()} • {format(new Date(), 'EEEE, MMMM d, yyyy')}
+          </p>
+        </div>
+
+        {/* Today's focus - compact 3-card row */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          {/* This week card */}
+          <div className="bg-gradient-to-br from-[#4ECDC4]/20 to-[#4ECDC4]/5 border border-[#4ECDC4]/30 rounded-lg p-4">
+            <div className="flex items-center gap-2 mb-2">
+              <TrendingUp className="w-4 h-4 text-[#4ECDC4]" />
+              <span className="text-sm text-gray-400">This Week</span>
             </div>
-            <p className="mt-2 text-white/70 text-sm">
-              Keep the momentum going! You&apos;re crushing it 🚀
-            </p>
+            <div className="text-2xl font-bold text-white">{totalActivityThisWeek}</div>
+            <div className="text-xs text-[#4ECDC4] mt-1">
+              Keep the momentum going!
+            </div>
           </div>
-          <div className="flex-shrink-0">
-            <TrendingUp size={64} className="text-white/30" />
+
+          {/* Due today card */}
+          <div className="bg-gradient-to-br from-[#FF6B6B]/20 to-[#FF6B6B]/5 border border-[#FF6B6B]/30 rounded-lg p-4">
+            <div className="flex items-center gap-2 mb-2">
+              <Clock className="w-4 h-4 text-[#FF6B6B]" />
+              <span className="text-sm text-gray-400">Due This Week</span>
+            </div>
+            <div className="text-2xl font-bold text-white">{dueThisWeek}</div>
+            <div className="text-xs text-[#FF6B6B] mt-1">
+              {dueThisWeek === 0 ? 'Nothing urgent' : 'Needs attention'}
+            </div>
+          </div>
+
+          {/* Quick win card */}
+          <div className="bg-gradient-to-br from-[#FFE66D]/20 to-[#FFE66D]/5 border border-[#FFE66D]/30 rounded-lg p-4">
+            <div className="flex items-center gap-2 mb-2">
+              <Zap className="w-4 h-4 text-[#FFE66D]" />
+              <span className="text-sm text-gray-400">Focus</span>
+            </div>
+            <div className="text-sm text-white font-medium line-clamp-2">
+              {projectsByStatus.in_progress > 0 
+                ? `${projectsByStatus.in_progress} projects in motion` 
+                : 'All systems go! 🚀'}
+            </div>
           </div>
         </div>
-      </motion.div>
+      </div>
 
       {/* Primary Metrics Grid - Instant load */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
