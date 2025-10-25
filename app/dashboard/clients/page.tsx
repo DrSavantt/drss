@@ -1,64 +1,163 @@
-import { getClients } from '@/app/actions/clients'
-import Link from 'next/link'
+'use client'
 
-export default async function ClientsPage() {
-  const clients = await getClients()
+import { motion } from 'framer-motion'
+import { InteractiveCard } from '@/components/interactive-card'
+import { AnimatedButton } from '@/components/animated-button'
+import { EmptyState } from '@/components/empty-state'
+import { staggerContainer, fadeInUp, pageTransition } from '@/lib/animations'
+import { Building2, Mail, Globe, ArrowRight, Users, PlusCircle } from 'lucide-react'
+import Link from 'next/link'
+import { useRouter } from 'next/navigation'
+import { useState, useEffect } from 'react'
+
+export default function ClientsPage() {
+  const router = useRouter()
+  const [clients, setClients] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    async function fetchClients() {
+      try {
+        const response = await fetch('/api/clients')
+        const data = await response.json()
+        setClients(data)
+      } catch (error) {
+        console.error('Failed to fetch clients:', error)
+      } finally {
+        setLoading(false)
+      }
+    }
+    fetchClients()
+  }, [])
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-96">
+        <div className="text-center">
+          <motion.div
+            animate={{ rotate: 360 }}
+            transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
+            className="w-16 h-16 border-4 border-slate-800 border-t-coral rounded-full mx-auto mb-4"
+          />
+          <p className="text-slate-400">Loading clients...</p>
+        </div>
+      </div>
+    )
+  }
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+    <motion.div
+      initial="initial"
+      animate="animate"
+      exit="exit"
+      variants={pageTransition}
+      className="space-y-6"
+    >
+      {/* Page Header */}
+      <motion.div 
+        variants={fadeInUp}
+        className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4"
+      >
         <div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Clients</h1>
-          <p className="mt-2 text-sm sm:text-base text-gray-600">
-            Manage your client relationships
-          </p>
+          <h1 className="text-3xl font-bold text-white">Clients</h1>
+          <p className="text-slate-400 mt-1">Manage all your client accounts</p>
         </div>
-        <Link
-          href="/dashboard/clients/new"
-          className="rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-500 text-center"
-        >
-          + New Client
+        <Link href="/dashboard/clients/new">
+          <AnimatedButton variant="primary" className="flex items-center gap-2">
+            <PlusCircle size={18} />
+            Add Client
+          </AnimatedButton>
         </Link>
-      </div>
+      </motion.div>
 
+      {/* Client Grid */}
       {clients.length === 0 ? (
-        <div className="rounded-lg border-2 border-dashed border-gray-300 p-12 text-center">
-          <h3 className="text-lg font-semibold text-gray-900">No clients yet</h3>
-          <p className="mt-2 text-sm text-gray-600">
-            Get started by creating your first client.
-          </p>
-          <Link
-            href="/dashboard/clients/new"
-            className="mt-4 inline-block rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-500"
-          >
-            + New Client
-          </Link>
-        </div>
+        <motion.div
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ delay: 0.2 }}
+        >
+          <EmptyState
+            icon={Users}
+            title="No clients yet"
+            description="Get started by creating your first client to organize projects and content."
+            cta={{
+              label: 'Add Your First Client',
+              href: '/dashboard/clients/new'
+            }}
+          />
+        </motion.div>
       ) : (
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-          {clients.map((client) => (
-            <Link
+        <motion.div 
+          className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
+          variants={staggerContainer}
+          initial="hidden"
+          animate="visible"
+        >
+          {clients.map((client, index) => (
+            <motion.div
               key={client.id}
-              href={`/dashboard/clients/${client.id}`}
-              className="group rounded-lg border border-gray-200 bg-white p-6 hover:border-blue-500 hover:shadow-md transition-all"
+              variants={fadeInUp}
+              custom={index}
             >
-              <h3 className="text-lg font-semibold text-gray-900 group-hover:text-blue-600">
-                {client.name}
-              </h3>
-              {client.email && (
-                <p className="mt-2 text-sm text-gray-600">{client.email}</p>
-              )}
-              {client.website && (
-                <p className="mt-1 text-sm text-gray-500">{client.website}</p>
-              )}
-              <p className="mt-4 text-xs text-gray-400">
-                Created {new Date(client.created_at).toLocaleDateString()}
-              </p>
-            </Link>
+              <InteractiveCard 
+                className="p-6 group relative overflow-hidden"
+                onClick={() => router.push(`/dashboard/clients/${client.id}`)}
+              >
+                {/* Background gradient on hover */}
+                <div className="absolute inset-0 bg-gradient-to-br from-coral/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                
+                {/* Content */}
+                <div className="relative">
+                  {/* Client avatar with scale on hover */}
+                  <motion.div
+                    className="w-16 h-16 bg-gradient-to-br from-coral to-coral-dark rounded-xl flex items-center justify-center mb-4"
+                    whileHover={{ scale: 1.1, rotate: 5 }}
+                    transition={{ duration: 0.2 }}
+                  >
+                    <Building2 size={28} className="text-white" />
+                  </motion.div>
+
+                  <h3 className="text-xl font-bold text-white mb-2 group-hover:text-coral transition-colors">
+                    {client.name}
+                  </h3>
+
+                  {/* Client info */}
+                  <div className="space-y-2">
+                    {client.email && (
+                      <div className="flex items-center gap-2 text-sm text-slate-400">
+                        <Mail size={14} />
+                        <span className="truncate">{client.email}</span>
+                      </div>
+                    )}
+                    {client.website && (
+                      <div className="flex items-center gap-2 text-sm text-slate-400">
+                        <Globe size={14} />
+                        <span className="truncate">{client.website}</span>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Hover arrow */}
+                  <motion.div
+                    className="absolute top-4 right-4"
+                    initial={{ opacity: 0, x: -10 }}
+                    whileHover={{ opacity: 1, x: 0 }}
+                    transition={{ duration: 0.2 }}
+                  >
+                    <ArrowRight className="text-coral opacity-0 group-hover:opacity-100 transition-opacity" size={20} />
+                  </motion.div>
+
+                  {/* Created date */}
+                  <p className="mt-4 text-xs text-slate-600">
+                    Created {new Date(client.created_at).toLocaleDateString()}
+                  </p>
+                </div>
+              </InteractiveCard>
+            </motion.div>
           ))}
-        </div>
+        </motion.div>
       )}
-    </div>
+    </motion.div>
   )
 }
-

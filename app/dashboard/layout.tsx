@@ -1,9 +1,11 @@
 'use client'
 
+import { motion, AnimatePresence } from 'framer-motion'
 import { logout } from '@/app/actions/auth'
 import { SearchBar } from '@/components/search-bar'
 import { MobileNav } from '@/components/mobile-nav'
 import Link from 'next/link'
+import { usePathname } from 'next/navigation'
 import { useState, useEffect } from 'react'
 
 export default function DashboardLayout({
@@ -11,6 +13,7 @@ export default function DashboardLayout({
 }: {
   children: React.ReactNode
 }) {
+  const pathname = usePathname()
   const [userEmail, setUserEmail] = useState<string | null>(null)
 
   useEffect(() => {
@@ -33,7 +36,13 @@ export default function DashboardLayout({
         <div className="max-w-7xl mx-auto px-4 sm:px-6">
           <div className="flex items-center gap-4 sm:gap-8 h-14">
             <Link href="/dashboard" className="flex-shrink-0">
-              <h1 className="text-lg font-bold text-coral">DRSS</h1>
+              <motion.h1 
+                className="text-lg font-bold text-coral"
+                whileHover={{ scale: 1.05 }}
+                transition={{ duration: 0.2 }}
+              >
+                DRSS
+              </motion.h1>
             </Link>
 
             <nav className="flex gap-6">
@@ -78,23 +87,35 @@ export default function DashboardLayout({
                 <span className="text-sm text-gray-400">{userEmail}</span>
               )}
               <form action={logout}>
-                <button
+                <motion.button
                   type="submit"
                   className="text-sm font-medium bg-gray-900 text-gray-300 px-4 py-2 rounded-lg hover:bg-gray-800 hover:text-white transition-colors"
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
                 >
                   Logout
-                </button>
+                </motion.button>
               </form>
             </div>
           </div>
         </div>
       </header>
 
-      <main className="pt-16 lg:pt-0 px-4 lg:px-0 py-6 lg:py-8">
-        <div className="max-w-7xl mx-auto lg:px-4">
-          {children}
-        </div>
-      </main>
+      {/* Animated page transitions */}
+      <AnimatePresence mode="wait">
+        <motion.main
+          key={pathname}
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -20 }}
+          transition={{ duration: 0.3 }}
+          className="pt-16 lg:pt-0 px-4 lg:px-0 py-6 lg:py-8"
+        >
+          <div className="max-w-7xl mx-auto lg:px-4">
+            {children}
+          </div>
+        </motion.main>
+      </AnimatePresence>
     </div>
   )
 }
