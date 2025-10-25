@@ -218,6 +218,27 @@ export function KanbanBoard({ initialProjects }: KanbanBoardProps) {
     )
   }
 
+  // Helper to get status badge colors
+  const getStatusColors = (status: string) => {
+    const statusMap: Record<string, { bg: string; text: string }> = {
+      backlog: { bg: 'bg-gray-700', text: 'text-gray-300' },
+      in_progress: { bg: 'bg-blue-600', text: 'text-white' },
+      in_review: { bg: 'bg-yellow-600', text: 'text-white' },
+      done: { bg: 'bg-green-600', text: 'text-white' },
+    }
+    return statusMap[status] || statusMap.backlog
+  }
+
+  const getPriorityColors = (priority: string) => {
+    const priorityMap: Record<string, { bg: string; text: string }> = {
+      low: { bg: 'bg-gray-500', text: 'text-white' },
+      medium: { bg: 'bg-blue-500', text: 'text-white' },
+      high: { bg: 'bg-orange-500', text: 'text-white' },
+      urgent: { bg: 'bg-red-500', text: 'text-white' },
+    }
+    return priorityMap[priority] || priorityMap.medium
+  }
+
   return (
     <>
       {isUpdating && (
@@ -227,80 +248,135 @@ export function KanbanBoard({ initialProjects }: KanbanBoardProps) {
         </div>
       )}
       
-      <DndContext
-        sensors={sensors}
-        onDragStart={handleDragStart}
-        onDragEnd={handleDragEnd}
-        onDragCancel={handleDragCancel}
-      >
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        {columns.map((column) => {
-          const columnProjects = getProjectsByStatus(column.id)
-          
-          return (
-            <DroppableColumn
-              key={column.id}
-              id={column.id}
-              title={column.title}
-              color={column.color}
-              count={columnProjects.length}
-            >
-              <SortableContext
-                items={columnProjects.map(p => p.id)}
-                strategy={verticalListSortingStrategy}
-              >
-                {columnProjects.length === 0 ? (
-                  <div className="flex items-center justify-center h-32 text-sm text-gray-500">
-                    No projects
-                  </div>
-                ) : (
-                  columnProjects.map((project) => (
-                    <ProjectCard
-                      key={project.id}
-                      project={project}
-                      onClick={() => setSelectedProject(project)}
-                    />
-                  ))
-                )}
-              </SortableContext>
-            </DroppableColumn>
-          )
-        })}
+      {/* Desktop: Columns */}
+      <div className="hidden lg:block">
+        <DndContext
+          sensors={sensors}
+          onDragStart={handleDragStart}
+          onDragEnd={handleDragEnd}
+          onDragCancel={handleDragCancel}
+        >
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            {columns.map((column) => {
+              const columnProjects = getProjectsByStatus(column.id)
+              
+              return (
+                <DroppableColumn
+                  key={column.id}
+                  id={column.id}
+                  title={column.title}
+                  color={column.color}
+                  count={columnProjects.length}
+                >
+                  <SortableContext
+                    items={columnProjects.map(p => p.id)}
+                    strategy={verticalListSortingStrategy}
+                  >
+                    {columnProjects.length === 0 ? (
+                      <div className="flex items-center justify-center h-32 text-sm text-gray-500">
+                        No projects
+                      </div>
+                    ) : (
+                      columnProjects.map((project) => (
+                        <ProjectCard
+                          key={project.id}
+                          project={project}
+                          onClick={() => setSelectedProject(project)}
+                        />
+                      ))
+                    )}
+                  </SortableContext>
+                </DroppableColumn>
+              )
+            })}
+          </div>
+
+          <DragOverlay>
+            {activeProject ? (
+              <div className="bg-white rounded-lg border-2 border-blue-500 p-4 shadow-lg opacity-90">
+                <h3 className="font-semibold text-gray-900">{activeProject.name}</h3>
+              </div>
+            ) : null}
+          </DragOverlay>
+        </DndContext>
       </div>
 
-      <DragOverlay>
-        {activeProject ? (
-          <div className="bg-white rounded-lg border-2 border-blue-500 p-4 shadow-lg opacity-90">
-            <h3 className="font-semibold text-gray-900">{activeProject.name}</h3>
+      {/* Mobile: List View */}
+      <div className="lg:hidden space-y-2 pb-20">
+        {projects.length === 0 ? (
+          <div className="flex items-center justify-center h-32 text-sm text-gray-500">
+            No projects yet
           </div>
-        ) : null}
-      </DragOverlay>
-    </DndContext>
-
-    {/* Project Modal */}
-    {selectedProject && (
-      <ProjectModal
-        project={selectedProject}
-        onClose={() => setSelectedProject(null)}
-        onUpdate={(updatedProject) => {
-          // Update local state immediately
-          setProjects(prevProjects =>
-            prevProjects.map(p =>
-              p.id === updatedProject.id ? { ...p, ...updatedProject } : p
+        ) : (
+          projects.map((project) => {
+            const statusColors = getStatusColors(project.status)
+            const priorityColors = getPriorityColors(project.priority)
+            
+            return (
+              <div
+                key={project.id}
+                className="bg-gray-900 rounded-lg p-4 border border-gray-800 active:scale-95 transition-transform"
+                onClick={() => setSelectedProject(project)}
+              >
+                <div className="flex items-start justify-between mb-2 gap-2">
+                  <h3 className="font-medium text-white flex-1">{project.name}</h3>
+                  <span className={`px-2 py-1 rounded text-xs font-medium whitespace-nowrap ${statusColors.bg} ${statusColors.text}`}>
+                    {project.status.replace('_', ' ')}
+                  </span>
+                </div>
+                
+                {project.description && (
+                  <p className="text-sm text-gray-400 mb-3 line-clamp-2">
+                    {project.description}
+                  </p>
+                )}
+                
+                <div className="flex items-center justify-between text-xs flex-wrap gap-2">
+                  <div className="flex items-center gap-2">
+                    <span className="text-gray-500">{project.clients?.name || 'Unknown Client'}</span>
+                    <span className={`px-2 py-1 rounded font-medium ${priorityColors.bg} ${priorityColors.text}`}>
+                      {project.priority}
+                    </span>
+                  </div>
+                  {project.due_date && (
+                    <span className="text-gray-500">
+                      Due: {new Date(project.due_date).toLocaleDateString('en-US', {
+                        month: 'short',
+                        day: 'numeric'
+                      })}
+                    </span>
+                  )}
+                </div>
+              </div>
             )
-          )
-          // Update the selected project so modal shows new data
-          setSelectedProject(selectedProject ? { ...selectedProject, ...updatedProject } : updatedProject)
-        }}
-        onDelete={(projectId) => {
-          // Remove project from local state immediately
-          setProjects(prevProjects =>
-            prevProjects.filter(p => p.id !== projectId)
-          )
-          // Modal will close automatically via onClose in handleDelete
-        }}
-      />
-    )}
+          })
+        )}
+      </div>
+
+      {/* Project Modal */}
+      {selectedProject && (
+        <ProjectModal
+          project={selectedProject}
+          onClose={() => setSelectedProject(null)}
+          onUpdate={(updatedProject) => {
+            // Update local state immediately
+            setProjects(prevProjects =>
+              prevProjects.map(p =>
+                p.id === updatedProject.id ? { ...p, ...updatedProject } : p
+              )
+            )
+            // Update the selected project so modal shows new data
+            setSelectedProject(selectedProject ? { ...selectedProject, ...updatedProject } : updatedProject)
+          }}
+          onDelete={(projectId) => {
+            // Remove project from local state immediately
+            setProjects(prevProjects =>
+              prevProjects.filter(p => p.id !== projectId)
+            )
+            // Modal will close automatically via onClose in handleDelete
+          }}
+        />
+      )}
     </>
   )
 }

@@ -22,6 +22,18 @@ module.exports = {
           DEFAULT: "hsl(var(--secondary))",
           foreground: "hsl(var(--secondary-foreground))",
         },
+        coral: {
+          DEFAULT: '#FF6B6B',
+          dark: '#FF5252',
+        },
+      },
+      screens: {
+        'xs': '320px',
+        'sm': '375px',
+        'md': '428px',
+        'lg': '1024px',
+        'xl': '1280px',
+        '2xl': '1536px',
       },
     },
   },
