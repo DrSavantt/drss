@@ -30,7 +30,7 @@ export async function getOrCreateInbox() {
   const supabase = await createClient()
   
   // Try to get existing Inbox
-  const { data: existing, error: fetchError } = await supabase
+  const { data: existing } = await supabase
     .from('journal_chats')
     .select('id')
     .eq('type', 'inbox')

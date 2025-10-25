@@ -1,6 +1,5 @@
 import { AlertCircle, Clock } from 'lucide-react'
 import Link from 'next/link'
-import { formatDistanceToNow } from 'date-fns'
 
 interface UrgentItem {
   id: string

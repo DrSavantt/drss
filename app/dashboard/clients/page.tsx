@@ -12,7 +12,15 @@ import { useState, useEffect } from 'react'
 
 export default function ClientsPage() {
   const router = useRouter()
-  const [clients, setClients] = useState<any[]>([])
+  interface Client {
+    id: string
+    name: string
+    email: string | null
+    website: string | null
+    created_at: string
+  }
+  
+  const [clients, setClients] = useState<Client[]>([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -65,7 +73,7 @@ export default function ClientsPage() {
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {clients.map((client, index) => (
+          {clients.map((client) => (
             <div key={client.id}>
               <InteractiveCard 
                 className="p-6 group relative overflow-hidden"

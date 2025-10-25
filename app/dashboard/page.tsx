@@ -10,18 +10,35 @@ import { Users, FolderKanban, FileText, TrendingUp, Clock } from 'lucide-react'
 import Link from 'next/link'
 import { formatDistanceToNow } from 'date-fns'
 import { DashboardSkeleton } from '@/components/skeleton-loader'
-import { Suspense } from 'react'
 import { useState, useEffect } from 'react'
 
 export default function DashboardPage() {
+  interface ActivityItem {
+    id: string
+    type: string
+    title: string
+    client: string
+    created_at: string
+    href: string
+  }
+
+  interface UrgentItem {
+    id: string
+    title: string
+    subtitle?: string
+    dueDate?: string
+    href: string
+    type: 'project' | 'client' | 'content'
+  }
+
   const [stats, setStats] = useState({
     totalClients: 0,
     totalProjects: 0,
     totalContent: 0,
     projectsByStatus: { backlog: 0, in_progress: 0, in_review: 0, done: 0 },
     completionPercentage: 0,
-    urgentItems: [] as any[],
-    recentActivity: [] as any[],
+    urgentItems: [] as UrgentItem[],
+    recentActivity: [] as ActivityItem[],
     totalActivityThisWeek: 0,
     projectsThisWeek: 0,
     contentThisWeek: 0,
@@ -56,8 +73,6 @@ export default function DashboardPage() {
     urgentItems,
     recentActivity,
     totalActivityThisWeek,
-    projectsThisWeek,
-    contentThisWeek,
   } = stats
 
   return (
@@ -140,11 +155,6 @@ export default function DashboardPage() {
           <StatCard
             label="Content Assets"
             value={totalContent}
-            trend={contentThisWeek > 0 ? {
-              value: contentThisWeek,
-              isPositive: true,
-              label: 'this week'
-            } : undefined}
             cta={{
               label: 'Browse library',
               href: '/dashboard/content'
@@ -213,7 +223,7 @@ export default function DashboardPage() {
             />
           ) : (
             <div className="space-y-3">
-              {recentActivity.map((activity, index) => {
+              {recentActivity.map((activity) => {
                 const isProject = activity.type === 'project'
                 const iconBg = isProject ? 'bg-blue-500/10' : 'bg-mint/10'
                 const iconColor = isProject ? 'text-blue-400' : 'text-mint'
