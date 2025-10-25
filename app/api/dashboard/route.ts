@@ -94,7 +94,7 @@ export async function GET() {
   // Fetch all content for storage calculation
   const { data: allContent } = await supabase
     .from('content_assets')
-    .select('id, file_size, file_url, created_at')
+    .select('id, file_size, file_url, created_at, asset_type')
 
   // Calculate performance metrics
   const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)

@@ -4,7 +4,7 @@ import { getContentAssets } from '@/app/actions/content'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import { DeleteClientButton } from './delete-button'
-import { FolderKanban, FileText, TrendingUp, Calendar, Building2 } from 'lucide-react'
+import { FolderKanban, FileText, Calendar, Building2 } from 'lucide-react'
 
 export default async function ClientDetailPage({
   params,
