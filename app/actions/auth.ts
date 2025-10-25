@@ -9,43 +9,51 @@ const SINGLE_USER_EMAIL = 'drss.admin@gmail.com'
 const SINGLE_USER_PASSWORD = 'drss-admin-2025-secure'
 
 export async function autoLogin() {
-  const supabase = await createClient()
+  try {
+    const supabase = await createClient()
 
-  // Try to sign in
-  const { error } = await supabase.auth.signInWithPassword({
-    email: SINGLE_USER_EMAIL,
-    password: SINGLE_USER_PASSWORD,
-  })
-
-  // If user doesn't exist, create the account
-  if (error?.message.includes('Invalid login credentials')) {
-    const { error: signupError } = await supabase.auth.signUp({
+    // Try to sign in
+    const { error } = await supabase.auth.signInWithPassword({
       email: SINGLE_USER_EMAIL,
       password: SINGLE_USER_PASSWORD,
-      options: {
-        emailRedirectTo: undefined, // Disable email confirmation
+    })
+
+    // If user doesn't exist, create the account
+    if (error?.message.includes('Invalid login credentials')) {
+      const { error: signupError } = await supabase.auth.signUp({
+        email: SINGLE_USER_EMAIL,
+        password: SINGLE_USER_PASSWORD,
+        options: {
+          emailRedirectTo: undefined, // Disable email confirmation if possible
+        }
+      })
+
+      if (signupError) {
+        console.error('Signup error:', signupError)
+        return { error: `Signup failed: ${signupError.message}` }
       }
-    })
 
-    if (signupError) {
-      return { error: signupError.message }
+      // Sign in after creating account
+      const { error: loginError } = await supabase.auth.signInWithPassword({
+        email: SINGLE_USER_EMAIL,
+        password: SINGLE_USER_PASSWORD,
+      })
+
+      if (loginError) {
+        console.error('Login after signup error:', loginError)
+        return { error: `Login failed after signup: ${loginError.message}` }
+      }
+    } else if (error) {
+      console.error('Initial login error:', error)
+      return { error: `Login failed: ${error.message}` }
     }
 
-    // Sign in after creating account
-    const { error: loginError } = await supabase.auth.signInWithPassword({
-      email: SINGLE_USER_EMAIL,
-      password: SINGLE_USER_PASSWORD,
-    })
-
-    if (loginError) {
-      return { error: loginError.message }
-    }
-  } else if (error) {
-    return { error: error.message }
+    revalidatePath('/', 'layout')
+    redirect('/dashboard')
+  } catch (err) {
+    console.error('Auto login error:', err)
+    return { error: err instanceof Error ? err.message : 'Unexpected error' }
   }
-
-  revalidatePath('/', 'layout')
-  redirect('/dashboard')
 }
 
 export async function logout() {

@@ -16,8 +16,12 @@ export default function LoginPage() {
       if (result?.error) {
         setError(result.error)
       }
-    } catch {
-      setError('An unexpected error occurred')
+    } catch (err) {
+      if (err instanceof Error && err.message.includes('Missing Supabase environment variables')) {
+        setError('Configuration error: Supabase is not properly set up. Please check your environment variables.')
+      } else {
+        setError('An unexpected error occurred: ' + (err instanceof Error ? err.message : String(err)))
+      }
     } finally {
       setLoading(false)
     }
