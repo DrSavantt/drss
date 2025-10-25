@@ -1,6 +1,13 @@
 import { createClient as createSupabaseClient } from '@/lib/supabase/server'
 import { getClientName } from '@/lib/supabase/types'
+import { StatCard } from '@/components/stat-card'
+import { UrgentItems } from '@/components/urgent-items'
+import { QuickActions } from '@/components/quick-actions'
+import { EmptyState } from '@/components/empty-state'
+import { ProgressRing } from '@/components/progress-ring'
+import { Users, FolderKanban, FileText, TrendingUp, Clock } from 'lucide-react'
 import Link from 'next/link'
+import { formatDistanceToNow } from 'date-fns'
 
 export default async function DashboardPage() {
   const supabase = await createSupabaseClient()
@@ -13,7 +20,7 @@ export default async function DashboardPage() {
 
   const { data: projects } = await supabase
     .from('projects')
-    .select('id, name, status, priority, due_date, created_at, clients(name)')
+    .select('id, name, status, priority, due_date, created_at, client_id, clients(name)')
     .order('created_at', { ascending: false })
 
   const { data: content } = await supabase
@@ -34,14 +41,29 @@ export default async function DashboardPage() {
     done: projects?.filter(p => p.status === 'done').length || 0,
   }
 
-  // Find urgent projects (due in next 7 days)
+  // Calculate completion percentage
+  const completionPercentage = totalProjects > 0 
+    ? Math.round((projectsByStatus.done / totalProjects) * 100)
+    : 0
+
+  // Find urgent projects (due in next 3 days)
   const now = new Date()
-  const sevenDaysFromNow = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000)
+  const threeDaysFromNow = new Date(now.getTime() + 3 * 24 * 60 * 60 * 1000)
   const urgentProjects = projects?.filter(p => {
     if (!p.due_date) return false
     const dueDate = new Date(p.due_date)
-    return dueDate >= now && dueDate <= sevenDaysFromNow && p.status !== 'done'
+    return dueDate >= now && dueDate <= threeDaysFromNow && p.status !== 'done'
   }) || []
+
+  // Map urgent items
+  const urgentItems = urgentProjects.map(p => ({
+    id: p.id,
+    title: p.name,
+    subtitle: getClientName(p.clients),
+    dueDate: p.due_date || undefined,
+    href: `/dashboard/projects/board`,
+    type: 'project' as const,
+  }))
 
   // Recent activity (combine projects and content, sort by date)
   const recentActivity = [
@@ -51,6 +73,7 @@ export default async function DashboardPage() {
       type: 'project' as const,
       client: getClientName(p.clients),
       created_at: p.created_at,
+      href: `/dashboard/projects/board`,
     })) || []),
     ...(content?.slice(0, 5).map(c => ({
       id: c.id,
@@ -58,279 +81,207 @@ export default async function DashboardPage() {
       type: 'content' as const,
       client: getClientName(c.clients),
       created_at: c.created_at,
+      href: `/dashboard/content/${c.id}`,
     })) || []),
   ]
     .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
-    .slice(0, 10)
+    .slice(0, 8)
 
-  const priorityColors = {
-    low: 'bg-gray-100 text-gray-800',
-    medium: 'bg-blue-100 text-blue-800',
-    high: 'bg-orange-100 text-orange-800',
-    urgent: 'bg-red-100 text-red-800',
-  }
+  // Calculate "this week" metrics for hero
+  const oneWeekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
+  const projectsThisWeek = projects?.filter(p => 
+    new Date(p.created_at) >= oneWeekAgo
+  ).length || 0
+  const contentThisWeek = content?.filter(c =>
+    new Date(c.created_at) >= oneWeekAgo
+  ).length || 0
+
+  const totalActivityThisWeek = projectsThisWeek + contentThisWeek
 
   return (
-    <div className="space-y-8">
-      {/* Welcome Header */}
-      <div>
-        <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
-        <p className="mt-2 text-gray-600">
-          Overview of all your clients, projects, and content
-        </p>
+    <div className="space-y-8 pb-8">
+      {/* Hero Section - Motivational Metric */}
+      <div className="bg-gradient-to-br from-coral via-coral-dark to-coral rounded-2xl p-8 shadow-2xl shadow-coral/20">
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-6">
+          <div className="text-center sm:text-left">
+            <p className="text-coral-dark/80 text-sm font-medium uppercase tracking-wide mb-2">
+              This Week&apos;s Progress
+            </p>
+            <div className="flex items-baseline gap-3">
+              <h2 className="text-6xl font-bold text-white">
+                {totalActivityThisWeek}
+              </h2>
+              <span className="text-2xl text-white/80">items created</span>
+            </div>
+            <p className="mt-2 text-white/70 text-sm">
+              Keep the momentum going! You&apos;re crushing it 🚀
+            </p>
+          </div>
+          <div className="flex-shrink-0">
+            <TrendingUp size={64} className="text-white/30" />
+          </div>
+        </div>
       </div>
 
-      {/* Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        {/* Total Clients */}
-        <Link
-          href="/dashboard/clients"
-          className="bg-white rounded-lg border border-gray-200 p-6 hover:border-blue-300 hover:shadow-md transition-all"
-        >
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-gray-600">Total Clients</p>
-              <p className="text-3xl font-bold text-gray-900 mt-2">{totalClients}</p>
-            </div>
-            <div className="h-12 w-12 bg-purple-100 rounded-lg flex items-center justify-center">
-              <svg className="h-6 w-6 text-purple-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-              </svg>
-            </div>
-          </div>
-        </Link>
+      {/* Primary Metrics Grid */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <StatCard
+          label="Total Clients"
+          value={totalClients}
+          trend={totalClients > 0 ? {
+            value: totalClients,
+            isPositive: true,
+            label: 'active'
+          } : undefined}
+          cta={{
+            label: 'Manage clients',
+            href: '/dashboard/clients'
+          }}
+          icon={<Users size={24} />}
+        />
 
-        {/* Total Projects */}
-        <Link
-          href="/dashboard/projects/board"
-          className="bg-white rounded-lg border border-gray-200 p-6 hover:border-blue-300 hover:shadow-md transition-all"
-        >
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-gray-600">Total Projects</p>
-              <p className="text-3xl font-bold text-gray-900 mt-2">{totalProjects}</p>
-            </div>
-            <div className="h-12 w-12 bg-blue-100 rounded-lg flex items-center justify-center">
-              <svg className="h-6 w-6 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-              </svg>
-            </div>
-          </div>
-        </Link>
-
-        {/* Active Projects */}
-        <div className="bg-white rounded-lg border border-gray-200 p-6">
+        <div className="bg-slate-900 rounded-xl p-6 border border-slate-800 hover:border-mint/30 transition-all">
           <div className="flex items-center justify-between mb-4">
+            <p className="text-xs text-slate-400 uppercase tracking-wide font-medium">
+              Project Completion
+            </p>
+            <FolderKanban size={20} className="text-slate-600" />
+          </div>
+          <div className="flex items-center gap-6">
+            <ProgressRing value={completionPercentage} size={80} color="#00D9A3" />
             <div>
-              <p className="text-sm font-medium text-gray-600">Active Projects</p>
-              <p className="text-3xl font-bold text-gray-900 mt-2">
-                {projectsByStatus.in_progress + projectsByStatus.in_review}
-              </p>
-            </div>
-            <div className="h-12 w-12 bg-yellow-100 rounded-lg flex items-center justify-center">
-              <svg className="h-6 w-6 text-yellow-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-              </svg>
+              <p className="text-3xl font-bold text-white">{projectsByStatus.done}</p>
+              <p className="text-sm text-slate-400">of {totalProjects} done</p>
             </div>
           </div>
-          <div className="space-y-1 text-xs">
-            <div className="flex justify-between">
-              <span className="text-gray-600">In Progress</span>
-              <span className="font-medium text-blue-600">{projectsByStatus.in_progress}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-gray-600">In Review</span>
-              <span className="font-medium text-yellow-600">{projectsByStatus.in_review}</span>
-            </div>
-          </div>
-        </div>
-
-        {/* Total Content */}
-        <Link
-          href="/dashboard/content"
-          className="bg-white rounded-lg border border-gray-200 p-6 hover:border-blue-300 hover:shadow-md transition-all"
-        >
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-gray-600">Total Content</p>
-              <p className="text-3xl font-bold text-gray-900 mt-2">{totalContent}</p>
-            </div>
-            <div className="h-12 w-12 bg-green-100 rounded-lg flex items-center justify-center">
-              <svg className="h-6 w-6 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-              </svg>
-            </div>
-          </div>
-        </Link>
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        {/* Urgent Projects */}
-        <div className="bg-white rounded-lg border border-gray-200">
-          <div className="px-6 py-4 border-b border-gray-200">
-            <h2 className="text-lg font-semibold text-gray-900">Urgent Projects</h2>
-            <p className="text-sm text-gray-600 mt-1">Due in the next 7 days</p>
-          </div>
-          <div className="p-6">
-            {urgentProjects.length === 0 ? (
-              <div className="text-center py-8 text-gray-500">
-                <p className="text-sm">No urgent projects 🎉</p>
-              </div>
-            ) : (
-              <div className="space-y-3">
-                {urgentProjects.map((project) => (
-                  <div
-                    key={project.id}
-                    className="flex items-start justify-between p-3 rounded-lg border border-gray-200 hover:border-orange-300 hover:bg-orange-50 transition-all"
-                  >
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-gray-900 truncate">
-                        {project.name}
-                      </p>
-                      <div className="flex items-center gap-2 mt-1">
-                        {getClientName(project.clients) && (
-                          <span className="text-xs text-gray-600">
-                            {getClientName(project.clients)}
-                          </span>
-                        )}
-                        <span
-                          className={`px-2 py-0.5 text-xs font-medium rounded-full ${
-                            priorityColors[project.priority as keyof typeof priorityColors]
-                          }`}
-                        >
-                          {project.priority}
-                        </span>
-                      </div>
-                    </div>
-                    {project.due_date && (
-                      <div className="text-right ml-4">
-                        <p className="text-xs font-medium text-orange-600">
-                          {new Date(project.due_date).toLocaleDateString('en-US', {
-                            month: 'short',
-                            day: 'numeric',
-                          })}
-                        </p>
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Recent Activity */}
-        <div className="bg-white rounded-lg border border-gray-200">
-          <div className="px-6 py-4 border-b border-gray-200">
-            <h2 className="text-lg font-semibold text-gray-900">Recent Activity</h2>
-            <p className="text-sm text-gray-600 mt-1">Last 10 items created</p>
-          </div>
-          <div className="p-6">
-            {recentActivity.length === 0 ? (
-              <div className="text-center py-8 text-gray-500">
-                <p className="text-sm">No recent activity</p>
-              </div>
-            ) : (
-              <div className="space-y-3">
-                {recentActivity.map((item) => (
-                  <Link
-                    key={`${item.type}-${item.id}`}
-                    href={
-                      item.type === 'project'
-                        ? '/dashboard/projects/board'
-                        : `/dashboard/content/${item.id}`
-                    }
-                    className="flex items-start gap-3 p-3 rounded-lg hover:bg-gray-50 transition-colors"
-                  >
-                    <div
-                      className={`mt-0.5 px-2 py-1 text-xs font-medium rounded-full ${
-                        item.type === 'project'
-                          ? 'bg-blue-100 text-blue-800'
-                          : 'bg-green-100 text-green-800'
-                      }`}
-                    >
-                      {item.type === 'project' ? 'Project' : 'Content'}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-gray-900 truncate">
-                        {item.title}
-                      </p>
-                      <div className="flex items-center gap-2 mt-1 text-xs text-gray-500">
-                        {item.client && <span>{item.client}</span>}
-                        <span>•</span>
-                        <span>
-                          {new Date(item.created_at).toLocaleDateString('en-US', {
-                            month: 'short',
-                            day: 'numeric',
-                          })}
-                        </span>
-                      </div>
-                    </div>
-                  </Link>
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
-
-      {/* Quick Actions */}
-      <div className="bg-gradient-to-r from-blue-600 to-blue-700 rounded-lg p-8 text-white">
-        <h2 className="text-2xl font-bold mb-2">Quick Actions</h2>
-        <p className="text-blue-100 mb-6">Common tasks to get started</p>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <Link
-            href="/dashboard/clients/new"
-            className="bg-white bg-opacity-20 backdrop-blur rounded-lg p-4 hover:bg-opacity-30 transition-all"
-          >
-            <div className="flex items-center gap-3">
-              <div className="h-10 w-10 bg-white bg-opacity-20 rounded-lg flex items-center justify-center">
-                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                </svg>
-              </div>
-              <div>
-                <p className="font-semibold">New Client</p>
-                <p className="text-sm text-blue-100">Add a new client</p>
-              </div>
-            </div>
-          </Link>
-
           <Link
             href="/dashboard/projects/board"
-            className="bg-white bg-opacity-20 backdrop-blur rounded-lg p-4 hover:bg-opacity-30 transition-all"
+            className="inline-flex items-center gap-1 mt-4 text-sm text-mint hover:text-mint/80 font-medium transition-colors"
           >
-            <div className="flex items-center gap-3">
-              <div className="h-10 w-10 bg-white bg-opacity-20 rounded-lg flex items-center justify-center">
-                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-                </svg>
-              </div>
-              <div>
-                <p className="font-semibold">View Projects</p>
-                <p className="text-sm text-blue-100">Manage on Kanban</p>
-              </div>
-            </div>
-          </Link>
-
-          <Link
-            href="/dashboard/content"
-            className="bg-white bg-opacity-20 backdrop-blur rounded-lg p-4 hover:bg-opacity-30 transition-all"
-          >
-            <div className="flex items-center gap-3">
-              <div className="h-10 w-10 bg-white bg-opacity-20 rounded-lg flex items-center justify-center">
-                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                </svg>
-              </div>
-              <div>
-                <p className="font-semibold">Content Library</p>
-                <p className="text-sm text-blue-100">View all content</p>
-              </div>
-            </div>
+            View board →
           </Link>
         </div>
+
+        <StatCard
+          label="Content Assets"
+          value={totalContent}
+          trend={contentThisWeek > 0 ? {
+            value: contentThisWeek,
+            isPositive: true,
+            label: 'this week'
+          } : undefined}
+          cta={{
+            label: 'Browse library',
+            href: '/dashboard/content'
+          }}
+          icon={<FileText size={24} />}
+        />
+
+        <div className="bg-slate-900 rounded-xl p-6 border border-slate-800">
+          <p className="text-xs text-slate-400 uppercase tracking-wide font-medium mb-2">
+            Active Projects
+          </p>
+          <div className="grid grid-cols-2 gap-3 mb-4">
+            <div>
+              <p className="text-3xl font-bold text-blue-400">{projectsByStatus.in_progress}</p>
+              <p className="text-xs text-slate-500">In Progress</p>
+            </div>
+            <div>
+              <p className="text-3xl font-bold text-amber">{projectsByStatus.in_review}</p>
+              <p className="text-xs text-slate-500">In Review</p>
+            </div>
+          </div>
+          <div className="text-xs text-slate-500">
+            {projectsByStatus.backlog} in backlog
+          </div>
+        </div>
       </div>
+
+      {/* Urgent Items Section */}
+      {urgentItems.length > 0 && (
+        <UrgentItems items={urgentItems} />
+      )}
+
+      {/* Quick Actions */}
+      <QuickActions />
+
+      {/* Recent Activity - Visual Timeline */}
+      <div className="bg-slate-900 rounded-xl p-6 border border-slate-800">
+        <div className="flex items-center justify-between mb-6">
+          <h3 className="text-lg font-semibold text-white">Recent Activity</h3>
+          <Clock size={20} className="text-slate-600" />
+        </div>
+
+        {recentActivity.length === 0 ? (
+          <EmptyState
+            icon={TrendingUp}
+            title="No activity yet"
+            description="Start by creating a client or project to see your activity here."
+            cta={{
+              label: 'Create your first client',
+              href: '/dashboard/clients/new'
+            }}
+          />
+        ) : (
+          <div className="space-y-3">
+            {recentActivity.map((activity) => {
+              const isProject = activity.type === 'project'
+              const iconBg = isProject ? 'bg-blue-500/10' : 'bg-mint/10'
+              const iconColor = isProject ? 'text-blue-400' : 'text-mint'
+              
+              return (
+                <Link
+                  key={`${activity.type}-${activity.id}`}
+                  href={activity.href}
+                  className="flex items-center gap-4 p-3 rounded-lg hover:bg-black/40 transition-all group"
+                >
+                  <div className={`w-10 h-10 ${iconBg} rounded-lg flex items-center justify-center flex-shrink-0`}>
+                    {isProject ? (
+                      <FolderKanban size={18} className={iconColor} />
+                    ) : (
+                      <FileText size={18} className={iconColor} />
+                    )}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-white font-medium truncate group-hover:text-coral transition-colors">
+                      {activity.title}
+                    </p>
+                    <div className="flex items-center gap-2 mt-0.5">
+                      <span className={`text-xs px-2 py-0.5 rounded-full ${
+                        isProject ? 'bg-blue-500/20 text-blue-400' : 'bg-mint/20 text-mint'
+                      }`}>
+                        {activity.type}
+                      </span>
+                      {activity.client && (
+                        <span className="text-xs text-slate-500">
+                          {activity.client}
+                        </span>
+                      )}
+                      <span className="text-xs text-slate-600">•</span>
+                      <span className="text-xs text-slate-500">
+                        {formatDistanceToNow(new Date(activity.created_at), { addSuffix: true })}
+                      </span>
+                    </div>
+                  </div>
+                </Link>
+              )
+            })}
+          </div>
+        )}
+      </div>
+
+      {/* Empty State for No Clients */}
+      {totalClients === 0 && (
+        <EmptyState
+          icon={Users}
+          title="Welcome to DRSS!"
+          description="Start by adding your first client to organize projects, content, and streamline your marketing operations."
+          cta={{
+            label: 'Add Your First Client',
+            href: '/dashboard/clients/new'
+          }}
+        />
+      )}
     </div>
   )
 }
