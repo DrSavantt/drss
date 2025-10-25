@@ -8,6 +8,7 @@ import {
   DragStartEvent,
   PointerSensor,
   TouchSensor,
+  MouseSensor,
   useSensor,
   useSensors,
 } from '@dnd-kit/core'
@@ -57,8 +58,13 @@ export function KanbanBoard({ initialProjects }: KanbanBoardProps) {
     }),
     useSensor(TouchSensor, {
       activationConstraint: {
-        delay: 250,
-        tolerance: 5,
+        delay: 300,
+        tolerance: 8,
+      },
+    }),
+    useSensor(MouseSensor, {
+      activationConstraint: {
+        distance: 8,
       },
     })
   )
