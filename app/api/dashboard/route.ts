@@ -91,6 +91,58 @@ export async function GET() {
 
   const totalActivityThisWeek = projectsThisWeek + contentThisWeek
 
+  // Fetch all content for storage calculation
+  const { data: allContent } = await supabase
+    .from('content_assets')
+    .select('id, file_size, file_url, created_at')
+
+  // Calculate performance metrics
+  const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
+  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1)
+  
+  // Weekly content
+  const weeklyContent = allContent?.filter(c => 
+    new Date(c.created_at) >= sevenDaysAgo
+  ).length || 0
+
+  // Completed this month
+  const completedThisMonth = projects?.filter(p => 
+    p.status === 'done' && new Date(p.created_at) >= monthStart
+  ).length || 0
+
+  // Storage used
+  const storageUsed = Math.round(
+    (allContent?.reduce((sum, c) => sum + (c.file_size || 0), 0) || 0) / 1024 / 1024
+  )
+  const filesCount = allContent?.filter(c => c.file_url).length || 0
+
+  // Active vs inactive clients
+  const activeClients = clients?.filter(c => 
+    projects?.some(p => p.client_id === c.id && p.status !== 'done')
+  ).length || 0
+  const inactiveClients = totalClients - activeClients
+
+  // Due this week
+  const oneWeekFromNow = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000)
+  const dueThisWeek = projects?.filter(p => {
+    if (!p.due_date) return false
+    const dueDate = new Date(p.due_date)
+    return dueDate >= now && dueDate <= oneWeekFromNow && p.status !== 'done'
+  }).length || 0
+
+  // Overdue
+  const overdue = projects?.filter(p => {
+    if (!p.due_date) return false
+    const dueDate = new Date(p.due_date)
+    return dueDate < now && p.status !== 'done'
+  }).length || 0
+
+  // Content types breakdown
+  const contentTypes = {
+    note: allContent?.filter(c => c.asset_type === 'note').length || 0,
+    file: allContent?.filter(c => c.file_url).length || 0,
+  }
+
   return NextResponse.json({
     totalClients,
     totalProjects,
@@ -102,6 +154,17 @@ export async function GET() {
     totalActivityThisWeek,
     projectsThisWeek,
     contentThisWeek,
+    // Performance metrics
+    weeklyContent,
+    completedThisMonth,
+    completionRate: completionPercentage,
+    storageUsed,
+    filesCount,
+    activeClients,
+    inactiveClients,
+    dueThisWeek,
+    overdue,
+    contentTypes,
   })
 }
 

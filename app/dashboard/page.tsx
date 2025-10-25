@@ -3,10 +3,11 @@
 import { motion } from 'framer-motion'
 import { StatCard } from '@/components/stat-card'
 import { UrgentItems } from '@/components/urgent-items'
-import { QuickActions } from '@/components/quick-actions'
+import { MetricCard } from '@/components/metric-card'
+import { QuickActionButton } from '@/components/quick-action-button'
 import { EmptyState } from '@/components/empty-state'
 import { ProgressRing } from '@/components/progress-ring'
-import { Users, FolderKanban, FileText, TrendingUp, Clock } from 'lucide-react'
+import { Users, FolderKanban, FileText, TrendingUp, Clock, Plus, CheckCircle, Database, Zap } from 'lucide-react'
 import Link from 'next/link'
 import { formatDistanceToNow } from 'date-fns'
 import { DashboardSkeleton } from '@/components/skeleton-loader'
@@ -42,6 +43,17 @@ export default function DashboardPage() {
     totalActivityThisWeek: 0,
     projectsThisWeek: 0,
     contentThisWeek: 0,
+    // Performance metrics
+    weeklyContent: 0,
+    completedThisMonth: 0,
+    completionRate: 0,
+    storageUsed: 0,
+    filesCount: 0,
+    activeClients: 0,
+    inactiveClients: 0,
+    dueThisWeek: 0,
+    overdue: 0,
+    contentTypes: { note: 0, file: 0 },
   })
   const [loading, setLoading] = useState(true)
 
@@ -73,6 +85,16 @@ export default function DashboardPage() {
     urgentItems,
     recentActivity,
     totalActivityThisWeek,
+    // Performance metrics
+    weeklyContent,
+    completedThisMonth,
+    completionRate,
+    storageUsed,
+    filesCount,
+    activeClients,
+    inactiveClients,
+    dueThisWeek,
+    overdue,
   } = stats
 
   return (
@@ -198,9 +220,84 @@ export default function DashboardPage() {
         </div>
       )}
 
-      {/* Quick Actions */}
+      {/* Performance Metrics */}
+      <div className="space-y-4">
+        <h2 className="text-2xl font-semibold text-white">Performance Metrics</h2>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          <MetricCard
+            title="Content This Week"
+            value={weeklyContent}
+            trend="Created in last 7 days"
+            icon={TrendingUp}
+            color="mint"
+          />
+          <MetricCard
+            title="Projects Completed"
+            value={completedThisMonth}
+            trend={`${completionRate}% completion rate`}
+            icon={CheckCircle}
+            color="coral"
+          />
+          <MetricCard
+            title="Storage Used"
+            value={`${storageUsed} MB`}
+            subtitle={`${filesCount} files`}
+            icon={Database}
+            color="amber"
+          />
+          <MetricCard
+            title="Active Clients"
+            value={activeClients}
+            subtitle={`${inactiveClients} inactive`}
+            icon={Users}
+            color="mint"
+          />
+          <MetricCard
+            title="Due This Week"
+            value={dueThisWeek}
+            trend={overdue > 0 ? `${overdue} overdue` : "On track"}
+            icon={Clock}
+            color={overdue > 0 ? "coral" : "mint"}
+          />
+          <MetricCard
+            title="Avg Response Time"
+            value="< 24h"
+            subtitle="Last updated to client"
+            icon={Zap}
+            color="amber"
+          />
+        </div>
+      </div>
+
+      {/* Quick Actions - Compact */}
       <div>
-        <QuickActions />
+        <h2 className="text-2xl font-semibold text-white mb-4">Quick Actions</h2>
+        <div className="flex flex-wrap gap-3">
+          <QuickActionButton 
+            icon={Plus} 
+            label="Content" 
+            href="/dashboard/content"
+            variant="primary"
+          />
+          <QuickActionButton 
+            icon={Users} 
+            label="Client" 
+            href="/dashboard/clients/new"
+            variant="secondary"
+          />
+          <QuickActionButton 
+            icon={FolderKanban} 
+            label="Project" 
+            href="/dashboard/projects/board"
+            variant="secondary"
+          />
+          <QuickActionButton 
+            icon={FileText} 
+            label="Note" 
+            href="/dashboard/journal"
+            variant="secondary"
+          />
+        </div>
       </div>
 
       {/* Recent Activity - Instant load */}
