@@ -83,6 +83,12 @@ export default function DashboardLayout({
                 >
                   Content
                 </Link>
+                <Link 
+                  href="/dashboard/journal" 
+                  className="text-xs sm:text-sm font-medium text-gray-600 hover:text-gray-900 transition-colors"
+                >
+                  Journal
+                </Link>
               </nav>
 
               <div className="hidden lg:block flex-1 max-w-sm mx-4">
@@ -146,6 +152,13 @@ export default function DashboardLayout({
                 onClick={() => setMobileMenuOpen(false)}
               >
                 Content
+              </Link>
+              <Link 
+                href="/dashboard/journal" 
+                className="text-base font-medium text-gray-700 hover:bg-gray-100 px-4 py-3 rounded-md"
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                Journal
               </Link>
               <div className="pt-4 border-t border-gray-200 mt-4">
                 <p className="text-sm text-gray-500 px-4 mb-2">{userEmail}</p>
