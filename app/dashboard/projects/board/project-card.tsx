@@ -53,7 +53,7 @@ export function ProjectCard({ project, onClick }: ProjectCardProps) {
       {...attributes}
       {...listeners}
       onClick={onClick}
-      className="bg-[#1a1a1a] border border-gray-700 rounded-lg p-4 hover:border-[#4ECDC4]/50 transition-all duration-200 cursor-grab active:cursor-grabbing touch-none select-none"
+      className="bg-[#1a1f2e] border border-white/10 rounded-lg p-4 hover:border-[#4ECDC4]/50 transition-all duration-200 cursor-grab active:cursor-grabbing"
     >
       {/* Project Name */}
       <h3 className="font-semibold text-white mb-2">

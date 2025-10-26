@@ -58,8 +58,8 @@ export function KanbanBoard({ initialProjects }: KanbanBoardProps) {
     }),
     useSensor(TouchSensor, {
       activationConstraint: {
-        delay: 250,
-        tolerance: 5,
+        delay: 150,
+        tolerance: 8,
       },
     }),
     useSensor(PointerSensor, {
@@ -175,15 +175,15 @@ export function KanbanBoard({ initialProjects }: KanbanBoardProps) {
           
           return (
             <div key={column.id} className="flex flex-col">
-              <div className="bg-[#111111] border border-gray-800 rounded-t-lg px-4 py-3 border-b border-gray-700">
+              {/* Column header styling */}
+              <div className="bg-[#1a1f2e] border border-white/10 rounded-t-lg px-4 py-3 border-b border-white/10">
                 <div className="flex items-center justify-between">
                   <h2 className="font-semibold text-white">{column.title}</h2>
-                  <span className="text-xs font-medium text-gray-500">
-                    {columnProjects.length}
-                  </span>
+                  <span className="text-xs font-medium text-gray-400">{columnProjects.length}</span>
                 </div>
               </div>
-              <div className="flex-1 bg-[#111111] rounded-b-lg p-4 space-y-3 min-h-[500px]">
+              {/* Column content styling */}
+              <div className="bg-[#252d3d] border border-white/10 rounded-b-lg p-4 space-y-3 min-h-[500px]">
                 {columnProjects.length === 0 ? (
                   <div className="flex items-center justify-center h-32 text-sm text-gray-500">
                     Drop projects here

@@ -31,7 +31,7 @@ export default function DashboardLayout({
       <MobileNav userEmail={userEmail} />
 
       {/* Desktop Header */}
-      <header className="hidden lg:block bg-black border-b border-gray-800">
+      <header className="hidden lg:block bg-black">
         <div className="max-w-7xl mx-auto px-4 sm:px-6">
           <div className="flex items-center gap-4 sm:gap-8 h-14">
             <Link href="/dashboard" className="flex-shrink-0">

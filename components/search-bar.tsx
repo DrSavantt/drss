@@ -62,10 +62,11 @@ export function SearchBar() {
     setIsOpen(false)
   }
 
+  // Update type colors
   const typeColors = {
-    client: 'bg-purple-100 text-purple-800',
-    project: 'bg-blue-100 text-blue-800',
-    content: 'bg-green-100 text-green-800',
+    client: 'bg-[#4ECDC4]/20 text-[#4ECDC4]',
+    project: 'bg-[#FF6B6B]/20 text-[#FF6B6B]',
+    content: 'bg-[#FFE66D]/20 text-[#FFE66D]',
   }
 
   const typeLabels = {
@@ -82,13 +83,13 @@ export function SearchBar() {
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder="Search..."
-          className="w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-1.5 text-sm placeholder-gray-400 focus:border-blue-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-100 transition-all"
+          className="w-full rounded-lg border border-white/10 bg-[#1a1f2e] px-3 py-1.5 text-sm text-white placeholder-gray-500 focus:border-[#4ECDC4] focus:outline-none focus:ring-1 focus:ring-[#4ECDC4] transition-all duration-200"
         />
       </div>
 
       {/* Search Results Dropdown */}
       {isOpen && query.length >= 2 && (
-        <div className="absolute z-50 mt-2 w-full rounded-md bg-white shadow-lg border border-gray-200 max-h-96 overflow-y-auto">
+        <div className="absolute z-50 mt-2 w-full rounded-md bg-[#252d3d] shadow-lg border border-white/10 max-h-96 overflow-y-auto">
           {loading ? (
             <div className="p-4 text-center text-sm text-gray-500">
               Searching...
@@ -104,7 +105,7 @@ export function SearchBar() {
                   key={`${result.type}-${result.id}`}
                   href={result.url}
                   onClick={handleResultClick}
-                  className="block px-4 py-3 hover:bg-gray-50 transition-colors"
+                  className="block px-4 py-3 hover:bg-[#1a1f2e] transition-colors"
                 >
                   <div className="flex items-start gap-3">
                     <span
@@ -115,11 +116,11 @@ export function SearchBar() {
                       {typeLabels[result.type]}
                     </span>
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-gray-900 truncate">
+                      <p className="text-sm font-medium text-white truncate">
                         {result.title}
                       </p>
                       {result.subtitle && (
-                        <p className="text-xs text-gray-500 truncate">
+                        <p className="text-xs text-gray-400 truncate">
                           {result.subtitle}
                         </p>
                       )}
