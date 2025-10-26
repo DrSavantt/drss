@@ -141,3 +141,27 @@ select {
     -webkit-tap-highlight-color: transparent;
   }
 }
+
+/* ========================================
+   NAVIGATION HEADER FIX
+   ======================================== */
+
+/* Prevent content showing through header when scrolling */
+nav {
+  background: rgba(10, 10, 10, 0.95) !important;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  z-index: 50;
+}
+
+.sticky {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+}
+
+main {
+  position: relative;
+  z-index: 1;
+}
