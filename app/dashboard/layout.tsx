@@ -57,8 +57,8 @@ export default function DashboardLayout({
               >
                 Clients
               </Link>
-              <Link 
-                href="/dashboard/projects/board" 
+              <Link
+                href="/dashboard/projects/list"
                 className="text-sm font-medium text-gray-400 hover:text-white transition-colors"
               >
                 Projects

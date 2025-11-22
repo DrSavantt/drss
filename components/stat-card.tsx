@@ -22,7 +22,7 @@ export function StatCard({ label, value, trend, cta, size = 'default', icon }: S
   
   return (
     <div className={`
-      bg-slate-900 rounded-xl border border-slate-800 
+      bg-[#1a1f2e] rounded-xl border border-gray-700/50
       hover:border-coral/30 transition-all duration-300
       ${isHero ? 'p-8' : 'p-6'}
     `}>

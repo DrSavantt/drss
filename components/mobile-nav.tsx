@@ -17,7 +17,7 @@ export function MobileNav({ userEmail }: MobileNavProps) {
   const navItems = [
     { href: '/dashboard', icon: Home, label: 'Dashboard' },
     { href: '/dashboard/clients', icon: Folder, label: 'Clients' },
-    { href: '/dashboard/projects/board', icon: Layout, label: 'Projects' },
+    { href: '/dashboard/projects/list', icon: Layout, label: 'Projects' },
     { href: '/dashboard/content', icon: FileText, label: 'Content' },
     { href: '/dashboard/journal', icon: BookOpen, label: 'Journal' },
   ]

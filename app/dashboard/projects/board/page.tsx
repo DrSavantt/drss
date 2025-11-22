@@ -3,6 +3,7 @@ import Link from 'next/link'
 import { Suspense } from 'react'
 import { KanbanBoard } from './kanban-board'
 import { LoadingSpinner } from '@/components/loading-spinner'
+import { List } from 'lucide-react'
 
 export default async function KanbanBoardPage() {
   const supabase = await createSupabaseClient()
@@ -20,17 +21,28 @@ export default async function KanbanBoardPage() {
   return (
     <div className="space-y-6 pt-4">
       {/* Page Header */}
-      <div className="mb-8">
-        <h1 className="text-4xl font-bold mb-2 bg-gradient-to-r from-[#4ECDC4] to-[#FF6B6B] bg-clip-text text-transparent">
-          Projects Board
-        </h1>
-        <p className="text-gray-400">
-          <span className="hidden sm:inline">Drag cards to change status • </span>Manage all projects across clients
-        </p>
+      <div className="mb-8 flex items-center justify-between">
+        <div>
+          <h1 className="text-4xl font-bold mb-2 bg-gradient-to-r from-[#4ECDC4] to-[#FF6B6B] bg-clip-text text-transparent">
+            Projects Board
+          </h1>
+          <p className="text-gray-400">
+            <span className="hidden sm:inline">Drag cards to change status • </span>Manage all projects across clients
+          </p>
+        </div>
+
+        {/* View Toggle */}
+        <Link
+          href="/dashboard/projects/list"
+          className="flex items-center gap-2 bg-[#1a1f2e] border border-gray-700/50 text-white px-4 py-2 rounded-lg hover:border-[#4ECDC4]/50 transition-all"
+        >
+          <List size={18} />
+          <span className="hidden sm:inline">List View</span>
+        </Link>
       </div>
 
       {!projects || projects.length === 0 ? (
-        <div className="bg-[#111111] border-2 border-dashed border-gray-800 rounded-lg p-12 text-center">
+        <div className="bg-[#1a1f2e] border-2 border-dashed border-gray-700/50 rounded-lg p-12 text-center">
           <h3 className="text-lg font-semibold text-white mb-2">No projects yet</h3>
           <p className="text-sm text-gray-400 mb-6">
             Create a project from a client&apos;s page to get started.

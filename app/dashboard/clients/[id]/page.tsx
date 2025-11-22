@@ -64,7 +64,7 @@ export default async function ClientDetailPage({
       </div>
 
       {/* Client Header Card */}
-      <div className="bg-[#111111] border border-gray-800 rounded-xl p-8 hover:border-[#4ECDC4]/50 transition-all duration-200">
+      <div className="bg-[#1a1f2e] border border-gray-700/50 rounded-xl p-8 hover:border-[#4ECDC4]/50 transition-all duration-200">
         <div className="flex items-start justify-between mb-6">
           <div className="flex-1">
             <h1 className="text-4xl font-bold mb-2 bg-gradient-to-r from-[#4ECDC4] to-[#FF6B6B] bg-clip-text text-transparent">
@@ -120,7 +120,7 @@ export default async function ClientDetailPage({
       {/* Quick Stats Dashboard */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         {/* Total Projects */}
-        <div className="bg-[#111111] border border-gray-800 rounded-xl p-6 hover:border-[#4ECDC4]/50 transition-all duration-200">
+        <div className="bg-[#1a1f2e] border border-gray-700/50 rounded-xl p-6 hover:border-[#4ECDC4]/50 transition-all duration-200">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-xs text-gray-400 uppercase tracking-wide font-medium mb-1">
@@ -135,7 +135,7 @@ export default async function ClientDetailPage({
         </div>
 
         {/* Projects by Status */}
-        <div className="bg-[#111111] border border-gray-800 rounded-xl p-6 hover:border-[#4ECDC4]/50 transition-all duration-200">
+        <div className="bg-[#1a1f2e] border border-gray-700/50 rounded-xl p-6 hover:border-[#4ECDC4]/50 transition-all duration-200">
           <p className="text-xs text-gray-400 uppercase tracking-wide font-medium mb-4">Projects by Status</p>
           <div className="space-y-3">
             <div className="flex items-center justify-between text-sm">
@@ -160,7 +160,7 @@ export default async function ClientDetailPage({
         </div>
 
         {/* Total Content */}
-        <div className="bg-[#111111] border border-gray-800 rounded-xl p-6 hover:border-[#4ECDC4]/50 transition-all duration-200">
+        <div className="bg-[#1a1f2e] border border-gray-700/50 rounded-xl p-6 hover:border-[#4ECDC4]/50 transition-all duration-200">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-xs text-gray-400 uppercase tracking-wide font-medium mb-1">
@@ -175,7 +175,7 @@ export default async function ClientDetailPage({
         </div>
 
         {/* Content by Type */}
-        <div className="bg-[#111111] border border-gray-800 rounded-xl p-6 hover:border-[#4ECDC4]/50 transition-all duration-200">
+        <div className="bg-[#1a1f2e] border border-gray-700/50 rounded-xl p-6 hover:border-[#4ECDC4]/50 transition-all duration-200">
           <p className="text-xs text-gray-400 uppercase tracking-wide font-medium mb-4">Content by Type</p>
           <div className="space-y-3">
             <div className="flex items-center justify-between text-sm">
@@ -195,7 +195,7 @@ export default async function ClientDetailPage({
       </div>
 
       {/* Projects Section */}
-      <div className="bg-[#111111] border border-gray-800 rounded-xl p-8 hover:border-[#4ECDC4]/50 transition-all duration-200">
+      <div className="bg-[#1a1f2e] border border-gray-700/50 rounded-xl p-8 hover:border-[#4ECDC4]/50 transition-all duration-200">
         <div className="flex items-center justify-between mb-6">
           <div>
             <h2 className="text-2xl font-semibold text-white mb-2">Recent Projects</h2>
@@ -229,7 +229,7 @@ export default async function ClientDetailPage({
               <Link
                 key={project.id}
                 href={`/dashboard/projects/board`}
-                className="border border-gray-800 rounded-lg p-5 hover:border-[#4ECDC4]/50 transition-all duration-200 block"
+                className="border border-gray-700/50 rounded-lg p-5 hover:border-[#4ECDC4]/50 transition-all duration-200 block"
               >
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
@@ -286,7 +286,7 @@ export default async function ClientDetailPage({
       </div>
 
       {/* Content Section */}
-      <div className="bg-[#111111] border border-gray-800 rounded-xl p-8 hover:border-[#4ECDC4]/50 transition-all duration-200">
+      <div className="bg-[#1a1f2e] border border-gray-700/50 rounded-xl p-8 hover:border-[#4ECDC4]/50 transition-all duration-200">
         <div className="flex items-center justify-between mb-6">
           <div>
             <h2 className="text-2xl font-semibold text-white mb-2">Recent Content</h2>
@@ -327,7 +327,7 @@ export default async function ClientDetailPage({
             {content.slice(0, 5).map((item) => (
               <div
                 key={item.id}
-                className="border border-gray-800 rounded-lg p-5 hover:border-[#4ECDC4]/50 transition-all duration-200"
+                className="border border-gray-700/50 rounded-lg p-5 hover:border-[#4ECDC4]/50 transition-all duration-200"
               >
                 <div className="flex items-start justify-between">
                   <div className="flex-1">

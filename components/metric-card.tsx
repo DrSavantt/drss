@@ -21,7 +21,7 @@ export function MetricCard({ title, value, subtitle, trend, icon: Icon, color }:
   const accentColor = colorMap[color]
   
   return (
-    <div className="bg-[#111111] border border-gray-800 rounded-xl p-4 hover:border-[#4ECDC4]/50 transition-all duration-200">
+    <div className="bg-[#1a1f2e] border border-gray-700/50 rounded-xl p-4 hover:border-[#4ECDC4]/50 transition-all duration-200">
       <div className="flex items-start justify-between mb-3">
         <div className="flex items-center gap-2">
           <Icon className="w-4 h-4" style={{ color: accentColor }} />

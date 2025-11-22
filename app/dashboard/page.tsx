@@ -180,7 +180,7 @@ export default function DashboardPage() {
         </div>
 
         <div>
-          <div className="bg-slate-900 rounded-xl p-6 border border-slate-800 hover:border-mint/30 transition-all">
+          <div className="bg-[#1a1f2e] rounded-xl p-6 border border-gray-700/50 hover:border-mint/30 transition-all">
             <div className="flex items-center justify-between mb-4">
               <p className="text-xs text-slate-400 uppercase tracking-wide font-medium">
                 Project Completion
@@ -218,7 +218,7 @@ export default function DashboardPage() {
         </div>
 
         <div>
-          <div className="bg-slate-900 rounded-xl p-6 border border-slate-800">
+          <div className="bg-[#1a1f2e] rounded-xl p-6 border border-gray-700/50">
             <p className="text-xs text-slate-400 uppercase tracking-wide font-medium mb-2">
               Active Projects
             </p>
@@ -317,10 +317,10 @@ export default function DashboardPage() {
             href="/dashboard/clients/new"
             variant="secondary"
           />
-          <QuickActionButton 
-            icon={FolderKanban} 
-            label="Project" 
-            href="/dashboard/projects/board"
+          <QuickActionButton
+            icon={FolderKanban}
+            label="Project"
+            href="/dashboard/projects/list"
             variant="secondary"
           />
           <QuickActionButton 
@@ -334,7 +334,7 @@ export default function DashboardPage() {
 
       {/* Recent Activity - Instant load */}
       <div>
-        <div className="bg-slate-900 rounded-xl p-6 border border-slate-800">
+        <div className="bg-[#1a1f2e] rounded-xl p-6 border border-gray-700/50">
           <div className="flex items-center justify-between mb-6">
             <h3 className="text-lg font-semibold text-white">Recent Activity</h3>
             <Clock size={20} className="text-slate-600" />
