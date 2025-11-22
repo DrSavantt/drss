@@ -15,14 +15,11 @@ module.exports = {
         card: {
           DEFAULT: "var(--card)",
           foreground: "var(--card-foreground)",
-          border: "var(--card-border)",
         },
         muted: {
           DEFAULT: "var(--muted)",
           foreground: "var(--muted-foreground)",
         },
-        'input-bg': "var(--input-bg)",
-        'input-border': "var(--input-border)",
         popover: {
           DEFAULT: "var(--popover)",
           foreground: "var(--popover-foreground)",
@@ -66,6 +63,14 @@ module.exports = {
         'lg': '1024px',
         'xl': '1280px',
         '2xl': '1536px',
+      },
+      borderColor: {
+        DEFAULT: "var(--card-border)",
+        card: "var(--card-border)",
+        input: "var(--input-border)",
+      },
+      backgroundColor: {
+        'input': "var(--input-bg)",
       },
     },
   },
