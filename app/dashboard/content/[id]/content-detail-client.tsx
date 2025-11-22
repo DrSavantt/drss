@@ -96,12 +96,12 @@ export function ContentDetailClient({ content }: ContentDetailClientProps) {
   }
 
   const typeColors = {
-    note: 'bg-green-100 text-green-800',
-    research_pdf: 'bg-purple-100 text-purple-800',
-    ad_copy: 'bg-orange-100 text-orange-800',
-    email: 'bg-blue-100 text-blue-800',
-    blog_post: 'bg-pink-100 text-pink-800',
-    landing_page: 'bg-yellow-100 text-yellow-800',
+    note: 'bg-green-600/20 text-green-300 border border-green-600/30',
+    research_pdf: 'bg-purple-600/20 text-purple-300 border border-purple-600/30',
+    ad_copy: 'bg-orange-600/20 text-orange-300 border border-orange-600/30',
+    email: 'bg-blue-600/20 text-blue-300 border border-blue-600/30',
+    blog_post: 'bg-pink-600/20 text-pink-300 border border-pink-600/30',
+    landing_page: 'bg-yellow-600/20 text-yellow-300 border border-yellow-600/30',
   }
 
   return (
@@ -109,42 +109,42 @@ export function ContentDetailClient({ content }: ContentDetailClientProps) {
       <div className="mb-8">
         <Link
           href={`/dashboard/clients/${content.client_id}`}
-          className="text-sm text-blue-600 hover:text-blue-700"
+          className="text-sm text-[#4ECDC4] hover:text-[#FF6B6B] transition-colors"
         >
           ← Back to {content.clients?.name || 'Client'}
         </Link>
       </div>
 
       {error && (
-        <div className="mb-6 rounded-md bg-red-50 p-4">
-          <p className="text-sm text-red-800">{error}</p>
+        <div className="mb-6 rounded-md bg-red-600/20 border border-red-600/30 p-4">
+          <p className="text-sm text-red-300">{error}</p>
         </div>
       )}
 
       {!isEditing ? (
         // VIEW MODE
         <div className="space-y-6">
-          <div className="bg-white rounded-lg border border-gray-200 p-6">
+          <div className="bg-[#1a1f2e] rounded-lg border border-gray-700/50 p-6">
             <div className="flex items-start justify-between mb-4">
               <div className="flex-1">
-                <h1 className="text-3xl font-bold text-gray-900 mb-3">
+                <h1 className="text-3xl font-bold text-white mb-3">
                   {content.title}
                 </h1>
                 <div className="flex items-center gap-2 flex-wrap">
                   <span
-                    className={`px-3 py-1 text-sm font-medium rounded-full ${
-                      typeColors[content.asset_type as keyof typeof typeColors] || 'bg-gray-100 text-gray-800'
+                    className={`px-3 py-1 text-sm font-medium rounded ${
+                      typeColors[content.asset_type as keyof typeof typeColors] || 'bg-gray-700/50 text-gray-300'
                     }`}
                   >
                     {content.asset_type.replace('_', ' ')}
                   </span>
                   {getClientName(content.clients) && (
-                    <span className="px-3 py-1 text-sm font-medium rounded-full bg-purple-100 text-purple-800">
+                    <span className="px-3 py-1 text-sm font-medium rounded bg-[#4ECDC4]/10 text-[#4ECDC4] border border-[#4ECDC4]/30">
                       {getClientName(content.clients)}
                     </span>
                   )}
                   {content.projects && (
-                    <span className="px-3 py-1 text-sm font-medium rounded-full bg-blue-100 text-blue-800">
+                    <span className="px-3 py-1 text-sm font-medium rounded bg-blue-600/20 text-blue-300 border border-blue-600/30">
                       {content.projects.name}
                     </span>
                   )}
@@ -153,19 +153,19 @@ export function ContentDetailClient({ content }: ContentDetailClientProps) {
             </div>
 
             {/* Content Display */}
-            <div className="prose prose-lg max-w-none mb-6 mt-6">
+            <div className="prose prose-lg prose-invert max-w-none mb-6 mt-6">
               <div
-                className="text-gray-700"
+                className="text-gray-300"
                 dangerouslySetInnerHTML={{ __html: editorContent }}
               />
             </div>
 
             {/* Metadata */}
-            <div className="border-t border-gray-200 pt-4 mt-6">
+            <div className="border-t border-gray-700/50 pt-4 mt-6">
               <div className="grid grid-cols-2 gap-4 text-sm">
                 <div>
-                  <span className="font-medium text-gray-700">Created:</span>
-                  <span className="ml-2 text-gray-600">
+                  <span className="font-medium text-gray-400">Created:</span>
+                  <span className="ml-2 text-gray-300">
                     {new Date(content.created_at).toLocaleDateString('en-US', {
                       year: 'numeric',
                       month: 'long',
@@ -174,8 +174,8 @@ export function ContentDetailClient({ content }: ContentDetailClientProps) {
                   </span>
                 </div>
                 <div>
-                  <span className="font-medium text-gray-700">Last Updated:</span>
-                  <span className="ml-2 text-gray-600">
+                  <span className="font-medium text-gray-400">Last Updated:</span>
+                  <span className="ml-2 text-gray-300">
                     {new Date(content.updated_at).toLocaleDateString('en-US', {
                       year: 'numeric',
                       month: 'long',
@@ -206,9 +206,9 @@ export function ContentDetailClient({ content }: ContentDetailClientProps) {
       ) : (
         // EDIT MODE
         <form action={handleSubmit} className="space-y-6">
-          <div className="bg-white rounded-lg border border-gray-200 p-6 space-y-6">
+          <div className="bg-[#1a1f2e] rounded-lg border border-gray-700/50 p-6 space-y-6">
             <div>
-              <label htmlFor="title" className="block text-sm font-medium text-gray-700">
+              <label htmlFor="title" className="block text-sm font-medium text-gray-400">
                 Title *
               </label>
               <input
@@ -218,12 +218,12 @@ export function ContentDetailClient({ content }: ContentDetailClientProps) {
                 required
                 disabled={loading}
                 defaultValue={content.title}
-                className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-blue-500 disabled:bg-gray-100"
+                className="mt-1 block w-full rounded-md bg-black border border-gray-700/50 px-3 py-2 text-white placeholder-gray-500 focus:border-[#4ECDC4]/50 focus:outline-none disabled:opacity-50"
               />
             </div>
 
             <div>
-              <label htmlFor="project_id" className="block text-sm font-medium text-gray-700">
+              <label htmlFor="project_id" className="block text-sm font-medium text-gray-400">
                 Link to Project (Optional)
               </label>
               <select
@@ -231,7 +231,7 @@ export function ContentDetailClient({ content }: ContentDetailClientProps) {
                 id="project_id"
                 disabled={loading}
                 defaultValue={content.project_id || ''}
-                className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-blue-500 disabled:bg-gray-100"
+                className="mt-1 block w-full rounded-md bg-black border border-gray-700/50 px-3 py-2 text-white focus:border-[#4ECDC4]/50 focus:outline-none disabled:opacity-50"
               >
                 <option value="">No project</option>
                 {projects.map((project) => (
@@ -243,7 +243,7 @@ export function ContentDetailClient({ content }: ContentDetailClientProps) {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-gray-400 mb-2">
                 Content *
               </label>
               <TiptapEditor
@@ -258,7 +258,7 @@ export function ContentDetailClient({ content }: ContentDetailClientProps) {
             <button
               type="submit"
               disabled={loading}
-              className="flex-1 rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-500 disabled:bg-blue-300 disabled:cursor-not-allowed"
+              className="flex-1 rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-500 disabled:bg-blue-400 disabled:cursor-not-allowed"
             >
               {loading ? 'Saving...' : 'Save Changes'}
             </button>
@@ -266,7 +266,7 @@ export function ContentDetailClient({ content }: ContentDetailClientProps) {
               type="button"
               onClick={() => setIsEditing(false)}
               disabled={loading}
-              className="rounded-md bg-gray-200 px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-300"
+              className="rounded-md bg-gray-700 px-4 py-2 text-sm font-semibold text-gray-300 hover:bg-gray-600"
             >
               Cancel
             </button>
@@ -276,26 +276,26 @@ export function ContentDetailClient({ content }: ContentDetailClientProps) {
 
       {/* Delete Confirmation Dialog */}
       {isDeleting && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg p-6 max-w-md w-full">
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">
+        <div className="fixed inset-0 bg-black/80 flex items-center justify-center p-4 z-50">
+          <div className="bg-[#1a1f2e] border border-gray-700/50 rounded-lg p-6 max-w-md w-full">
+            <h3 className="text-lg font-semibold text-white mb-2">
               Delete {content.title}?
             </h3>
-            <p className="text-sm text-gray-600 mb-6">
+            <p className="text-sm text-gray-400 mb-6">
               This will permanently delete this content. This action cannot be undone.
             </p>
             <div className="flex gap-4">
               <button
                 onClick={handleDelete}
                 disabled={loading}
-                className="flex-1 rounded-md bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-500 disabled:bg-red-300"
+                className="flex-1 rounded-md bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-500 disabled:bg-red-400"
               >
                 {loading ? 'Deleting...' : 'Delete'}
               </button>
               <button
                 onClick={() => setIsDeleting(false)}
                 disabled={loading}
-                className="flex-1 rounded-md bg-gray-200 px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-300"
+                className="flex-1 rounded-md bg-gray-700 px-4 py-2 text-sm font-semibold text-gray-300 hover:bg-gray-600"
               >
                 Cancel
               </button>

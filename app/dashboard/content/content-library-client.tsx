@@ -45,12 +45,12 @@ export function ContentLibraryClient({ initialContent }: ContentLibraryClientPro
   ]
 
   const typeColors = {
-    note: 'bg-green-100 text-green-800',
-    research_pdf: 'bg-purple-100 text-purple-800',
-    ad_copy: 'bg-orange-100 text-orange-800',
-    email: 'bg-blue-100 text-blue-800',
-    blog_post: 'bg-pink-100 text-pink-800',
-    landing_page: 'bg-yellow-100 text-yellow-800',
+    note: 'bg-green-600/20 text-green-300 border border-green-600/30',
+    research_pdf: 'bg-purple-600/20 text-purple-300 border border-purple-600/30',
+    ad_copy: 'bg-orange-600/20 text-orange-300 border border-orange-600/30',
+    email: 'bg-blue-600/20 text-blue-300 border border-blue-600/30',
+    blog_post: 'bg-pink-600/20 text-pink-300 border border-pink-600/30',
+    landing_page: 'bg-yellow-600/20 text-yellow-300 border border-yellow-600/30',
   }
 
   // Filter content
@@ -67,11 +67,11 @@ export function ContentLibraryClient({ initialContent }: ContentLibraryClientPro
   return (
     <div className="space-y-6">
       {/* Filters */}
-      <div className="bg-white rounded-lg border border-gray-200 p-4">
+      <div className="bg-[#1a1f2e] rounded-lg border border-gray-700/50 p-4">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {/* Search */}
           <div>
-            <label htmlFor="search" className="block text-sm font-medium text-gray-700 mb-1">
+            <label htmlFor="search" className="block text-sm font-medium text-gray-400 mb-1">
               Search
             </label>
             <input
@@ -80,20 +80,20 @@ export function ContentLibraryClient({ initialContent }: ContentLibraryClientPro
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search by title..."
-              className="block w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-blue-500"
+              className="block w-full rounded-md bg-black border border-gray-700/50 px-3 py-2 text-sm text-white placeholder-gray-500 focus:border-[#4ECDC4]/50 focus:outline-none"
             />
           </div>
 
           {/* Type Filter */}
           <div>
-            <label htmlFor="type" className="block text-sm font-medium text-gray-700 mb-1">
+            <label htmlFor="type" className="block text-sm font-medium text-gray-400 mb-1">
               Content Type
             </label>
             <select
               id="type"
               value={selectedType}
               onChange={(e) => setSelectedType(e.target.value)}
-              className="block w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-blue-500"
+              className="block w-full rounded-md bg-black border border-gray-700/50 px-3 py-2 text-sm text-white focus:border-[#4ECDC4]/50 focus:outline-none"
             >
               {assetTypes.map((type) => (
                 <option key={type.value} value={type.value}>
@@ -105,14 +105,14 @@ export function ContentLibraryClient({ initialContent }: ContentLibraryClientPro
 
           {/* Client Filter */}
           <div>
-            <label htmlFor="client" className="block text-sm font-medium text-gray-700 mb-1">
+            <label htmlFor="client" className="block text-sm font-medium text-gray-400 mb-1">
               Client
             </label>
             <select
               id="client"
               value={selectedClient}
               onChange={(e) => setSelectedClient(e.target.value)}
-              className="block w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-blue-500"
+              className="block w-full rounded-md bg-black border border-gray-700/50 px-3 py-2 text-sm text-white focus:border-[#4ECDC4]/50 focus:outline-none"
             >
               <option value="all">All Clients</option>
               {uniqueClients.map((client) => (
@@ -125,15 +125,15 @@ export function ContentLibraryClient({ initialContent }: ContentLibraryClientPro
         </div>
 
         {/* Results Count */}
-        <div className="mt-4 text-sm text-gray-600">
+        <div className="mt-4 text-sm text-gray-400">
           Showing {filteredContent.length} of {initialContent.length} items
         </div>
       </div>
 
       {/* Content Grid */}
       {filteredContent.length === 0 ? (
-        <div className="text-center py-12 bg-gray-50 rounded-lg">
-          <p className="text-gray-600">No content matches your filters</p>
+        <div className="text-center py-12 bg-[#1a1f2e] border border-gray-700/50 rounded-lg">
+          <p className="text-gray-400">No content matches your filters</p>
         </div>
       ) : (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
@@ -141,36 +141,36 @@ export function ContentLibraryClient({ initialContent }: ContentLibraryClientPro
             <Link
               key={item.id}
               href={`/dashboard/content/${item.id}`}
-              className="group bg-white rounded-lg border border-gray-200 p-4 hover:border-blue-300 hover:shadow-md transition-all"
+              className="group bg-[#1a1f2e] rounded-lg border border-gray-700/50 p-4 hover:border-[#4ECDC4]/50 transition-all"
             >
               {/* Title */}
-              <h3 className="font-semibold text-gray-900 mb-2 group-hover:text-blue-600 transition-colors">
+              <h3 className="font-semibold text-white mb-2 group-hover:text-[#4ECDC4] transition-colors">
                 {item.title}
               </h3>
 
               {/* Badges */}
               <div className="flex flex-wrap gap-2 mb-3">
                 <span
-                  className={`px-2 py-1 text-xs font-medium rounded-full ${
-                    typeColors[item.asset_type as keyof typeof typeColors] || 'bg-gray-100 text-gray-800'
+                  className={`px-2 py-1 text-xs font-medium rounded ${
+                    typeColors[item.asset_type as keyof typeof typeColors] || 'bg-gray-700/50 text-gray-300'
                   }`}
                 >
                   {item.asset_type.replace('_', ' ')}
                 </span>
                 {getClientName(item.clients) && (
-                  <span className="px-2 py-1 text-xs font-medium rounded-full bg-purple-100 text-purple-800">
+                  <span className="px-2 py-1 text-xs font-medium rounded bg-[#4ECDC4]/10 text-[#4ECDC4] border border-[#4ECDC4]/30">
                     {getClientName(item.clients)}
                   </span>
                 )}
                 {item.projects && (
-                  <span className="px-2 py-1 text-xs font-medium rounded-full bg-blue-100 text-blue-800">
+                  <span className="px-2 py-1 text-xs font-medium rounded bg-blue-600/20 text-blue-300 border border-blue-600/30">
                     {item.projects.name}
                   </span>
                 )}
               </div>
 
               {/* Date */}
-              <p className="text-xs text-gray-500">
+              <p className="text-xs text-gray-400">
                 Created {new Date(item.created_at).toLocaleDateString('en-US', {
                   month: 'short',
                   day: 'numeric',
