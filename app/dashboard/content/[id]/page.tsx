@@ -21,20 +21,20 @@ export default async function ContentDetailPage({
         <div className="mb-8">
           <Link
             href={`/dashboard/clients/${content.client_id}`}
-            className="text-sm text-blue-600 hover:text-blue-700"
+            className="text-sm text-[#4ECDC4] hover:text-[#FF6B6B] transition-colors"
           >
             ← Back to {content.clients?.name || 'Client'}
           </Link>
         </div>
-        
-        <div className="bg-white rounded-lg border border-gray-200 p-8 text-center">
-          <h1 className="text-2xl font-bold text-gray-900 mb-4">
+
+        <div className="bg-[#1a1f2e] rounded-lg border border-gray-700/50 p-8 text-center">
+          <h1 className="text-2xl font-bold text-white mb-4">
             {content.title}
           </h1>
-          <p className="text-gray-600 mb-6">
+          <p className="text-gray-400 mb-6">
             This is a file. Click below to download.
           </p>
-          
+
           <a
             href={content.file_url}
             download
@@ -44,9 +44,9 @@ export default async function ContentDetailPage({
           >
             Download File ↓
           </a>
-          
+
           {content.file_size && (
-            <p className="mt-4 text-sm text-gray-500">
+            <p className="mt-4 text-sm text-gray-400">
               Size: {(content.file_size / 1024 / 1024).toFixed(2)} MB
             </p>
           )}

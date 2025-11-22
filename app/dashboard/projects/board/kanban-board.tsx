@@ -192,7 +192,7 @@ export function KanbanBoard({ initialProjects }: KanbanBoardProps) {
                   columnProjects.map((project) => (
                     <div
                       key={project.id}
-                      className="bg-[#1a1a1a] border border-gray-700 rounded-lg p-4"
+                      className="bg-[#1a1f2e] border border-gray-700/50 rounded-lg p-4"
                     >
                       <h3 className="font-semibold text-white mb-2">
                         {project.name}
@@ -305,7 +305,7 @@ export function KanbanBoard({ initialProjects }: KanbanBoardProps) {
 
           <DragOverlay>
             {activeProject ? (
-              <div className="bg-[#1a1a1a] border-2 border-[#4ECDC4] rounded-lg p-4 shadow-2xl opacity-80 cursor-grabbing transform rotate-3">
+              <div className="bg-[#1a1f2e] border-2 border-[#4ECDC4] rounded-lg p-4 shadow-2xl opacity-80 cursor-grabbing transform rotate-3">
                 <h3 className="font-semibold text-white mb-2">
                   {activeProject.name}
                 </h3>
@@ -349,15 +349,15 @@ export function KanbanBoard({ initialProjects }: KanbanBoardProps) {
                 <div key={column.id} className="w-[85vw] flex-shrink-0">
                   <div className="flex flex-col h-full">
                     {/* Column Header */}
-                    <div className="bg-[#111111] border border-gray-800 rounded-t-lg px-4 py-3 border-b border-gray-700">
+                    <div className="bg-[#1a1f2e] border border-gray-700/50 rounded-t-lg px-4 py-3 border-b border-gray-700/50">
                       <div className="flex items-center justify-between">
                         <h2 className="font-semibold text-white">{column.title}</h2>
                         <span className="text-xs font-medium text-gray-500">{columnProjects.length}</span>
                       </div>
                     </div>
-                    
+
                     {/* Column Content */}
-                    <div className="bg-[#111111] border-l border-r border-b border-gray-800 rounded-b-lg p-4 space-y-3 min-h-[400px]">
+                    <div className="bg-[#1a1f2e] border-l border-r border-b border-gray-700/50 rounded-b-lg p-4 space-y-3 min-h-[400px]">
                       {columnProjects.length === 0 ? (
                         <div className="flex items-center justify-center h-32 text-sm text-gray-500">
                           No projects

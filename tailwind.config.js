@@ -9,29 +9,38 @@ module.exports = {
   theme: {
     extend: {
       colors: {
-        border: "hsl(var(--border))",
-        input: "hsl(var(--input))",
-        ring: "hsl(var(--ring))",
-        background: "hsl(var(--background))",
-        foreground: "hsl(var(--foreground))",
-        primary: {
-          DEFAULT: "hsl(var(--primary))",
-          foreground: "hsl(var(--primary-foreground))",
+        // Theme-aware colors using CSS variables
+        background: "var(--background)",
+        foreground: "var(--foreground)",
+        card: {
+          DEFAULT: "var(--card)",
+          foreground: "var(--card-foreground)",
         },
-        secondary: {
-          DEFAULT: "hsl(var(--secondary))",
-          foreground: "hsl(var(--secondary-foreground))",
+        muted: {
+          DEFAULT: "var(--muted)",
+          foreground: "var(--muted-foreground)",
         },
+        popover: {
+          DEFAULT: "var(--popover)",
+          foreground: "var(--popover-foreground)",
+        },
+
+        // Accent colors - consistent across themes
+        'accent-mint': "var(--accent-mint)",
+        'accent-coral': "var(--accent-coral)",
+        'accent-yellow': "var(--accent-yellow)",
+
+        // Legacy color support
         coral: {
           DEFAULT: '#FF6B6B',
           dark: '#FF5252',
         },
         mint: {
-          DEFAULT: '#00D9A3',
+          DEFAULT: '#4ECDC4',
           light: '#00F5B8',
         },
         amber: {
-          DEFAULT: '#FFB800',
+          DEFAULT: '#FFE66D',
           light: '#FFD666',
         },
         slate: {
@@ -54,6 +63,14 @@ module.exports = {
         'lg': '1024px',
         'xl': '1280px',
         '2xl': '1536px',
+      },
+      borderColor: {
+        DEFAULT: "var(--card-border)",
+        card: "var(--card-border)",
+        input: "var(--input-border)",
+      },
+      backgroundColor: {
+        'input': "var(--input-bg)",
       },
     },
   },
