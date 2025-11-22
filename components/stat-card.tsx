@@ -19,20 +19,20 @@ interface StatCardProps {
 
 export function StatCard({ label, value, trend, cta, size = 'default', icon }: StatCardProps) {
   const isHero = size === 'hero'
-  
+
   return (
     <div className={`
-      bg-[#1a1f2e] rounded-xl border border-gray-700/50
-      hover:border-coral/30 transition-all duration-300
+      bg-card rounded-xl border border-card-border
+      hover:border-accent-coral/30 transition-all duration-300
       ${isHero ? 'p-8' : 'p-6'}
     `}>
       {/* Label */}
       <div className="flex items-center justify-between mb-2">
-        <p className="text-xs text-slate-400 uppercase tracking-wide font-medium">
+        <p className="text-xs text-muted-foreground uppercase tracking-wide font-medium">
           {label}
         </p>
         {icon && (
-          <div className="text-slate-600">
+          <div className="text-muted">
             {icon}
           </div>
         )}
@@ -40,13 +40,13 @@ export function StatCard({ label, value, trend, cta, size = 'default', icon }: S
 
       {/* Value with trend */}
       <div className="flex items-baseline gap-3 mb-2">
-        <p className={`font-bold text-white ${isHero ? 'text-6xl' : 'text-5xl'}`}>
+        <p className={`font-bold text-foreground ${isHero ? 'text-6xl' : 'text-5xl'}`}>
           {value}
         </p>
-        
+
         {trend && (
           <div className={`flex items-center gap-1 ${
-            trend.isPositive ? 'text-mint' : 'text-coral'
+            trend.isPositive ? 'text-accent-mint' : 'text-accent-coral'
           }`}>
             {trend.isPositive ? (
               <ArrowUp size={16} />
@@ -56,7 +56,7 @@ export function StatCard({ label, value, trend, cta, size = 'default', icon }: S
             <span className="text-sm font-medium">
               {Math.abs(trend.value)}
               {trend.label && (
-                <span className="text-slate-500 ml-1">{trend.label}</span>
+                <span className="text-muted-foreground ml-1">{trend.label}</span>
               )}
             </span>
           </div>
@@ -65,9 +65,9 @@ export function StatCard({ label, value, trend, cta, size = 'default', icon }: S
 
       {/* CTA */}
       {cta && (
-        <Link 
+        <Link
           href={cta.href}
-          className="inline-flex items-center gap-1 mt-4 text-sm text-coral hover:text-coral/80 font-medium transition-colors"
+          className="inline-flex items-center gap-1 mt-4 text-sm text-accent-coral hover:text-accent-coral/80 font-medium transition-colors"
         >
           {cta.label} →
         </Link>
@@ -75,4 +75,3 @@ export function StatCard({ label, value, trend, cta, size = 'default', icon }: S
     </div>
   )
 }
-
