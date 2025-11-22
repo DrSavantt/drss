@@ -5,6 +5,7 @@ import { logout } from '@/app/actions/auth'
 import { SearchBar } from '@/components/search-bar'
 import { MobileNav } from '@/components/mobile-nav'
 import { PerfMonitor } from '@/components/perf-monitor'
+import { ThemeToggle } from '@/components/theme-toggle'
 import Link from 'next/link'
 import { useState, useEffect } from 'react'
 
@@ -26,12 +27,12 @@ export default function DashboardLayout({
   }, [])
 
   return (
-    <div className="min-h-screen bg-black">
+    <div className="min-h-screen" style={{ background: 'var(--background)' }}>
       {/* Mobile Navigation */}
       <MobileNav userEmail={userEmail} />
 
       {/* Desktop Header */}
-      <header className="hidden lg:block bg-black">
+      <header className="hidden lg:block" style={{ background: 'var(--background)' }}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6">
           <div className="flex items-center gap-4 sm:gap-8 h-14">
             <Link href="/dashboard" className="flex-shrink-0">
@@ -83,12 +84,18 @@ export default function DashboardLayout({
 
             <div className="flex items-center gap-3 flex-shrink-0 ml-auto">
               {userEmail && (
-                <span className="text-sm text-gray-400">{userEmail}</span>
+                <span className="text-sm" style={{ color: 'var(--muted-foreground)' }}>{userEmail}</span>
               )}
+              <ThemeToggle />
               <form action={logout}>
                 <motion.button
                   type="submit"
-                  className="text-sm font-medium bg-gray-900 text-gray-300 px-4 py-2 rounded-lg hover:bg-gray-800 hover:text-white transition-colors"
+                  className="text-sm font-medium px-4 py-2 rounded-lg transition-colors"
+                  style={{
+                    background: 'var(--card)',
+                    color: 'var(--card-foreground)',
+                    border: '1px solid var(--card-border)',
+                  }}
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
                 >
