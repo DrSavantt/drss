@@ -180,20 +180,20 @@ export default function DashboardPage() {
         </div>
 
         <div>
-          <div className="bg-[#1a1f2e] rounded-xl p-6 border border-gray-700/50 hover:border-mint/30 transition-all">
+          <div className="bg-card rounded-xl p-6 border border-card hover:border-mint/30 transition-all">
             <div className="flex items-center justify-between mb-4">
-              <p className="text-xs text-slate-400 uppercase tracking-wide font-medium">
+              <p className="text-xs text-muted-foreground uppercase tracking-wide font-medium">
                 Project Completion
               </p>
-              <FolderKanban size={20} className="text-slate-600" />
+              <FolderKanban size={20} className="text-muted" />
             </div>
             <div className="flex items-center gap-6">
               <div>
                 <ProgressRing value={completionPercentage} size={80} color="#00D9A3" />
               </div>
               <div>
-                <p className="text-3xl font-bold text-white">{projectsByStatus.done}</p>
-                <p className="text-sm text-slate-400">of {totalProjects} done</p>
+                <p className="text-3xl font-bold text-foreground">{projectsByStatus.done}</p>
+                <p className="text-sm text-muted-foreground">of {totalProjects} done</p>
               </div>
             </div>
             <Link
@@ -218,8 +218,8 @@ export default function DashboardPage() {
         </div>
 
         <div>
-          <div className="bg-[#1a1f2e] rounded-xl p-6 border border-gray-700/50">
-            <p className="text-xs text-slate-400 uppercase tracking-wide font-medium mb-2">
+          <div className="bg-card rounded-xl p-6 border border-card">
+            <p className="text-xs text-muted-foreground uppercase tracking-wide font-medium mb-2">
               Active Projects
             </p>
             <div className="grid grid-cols-2 gap-3 mb-4">
@@ -228,17 +228,17 @@ export default function DashboardPage() {
                 transition={{ duration: 0.15 }}
               >
                 <p className="text-3xl font-bold text-blue-400">{projectsByStatus.in_progress}</p>
-                <p className="text-xs text-slate-500">In Progress</p>
+                <p className="text-xs text-muted-foreground">In Progress</p>
               </motion.div>
               <motion.div
                 whileHover={{ scale: 1.02 }}
                 transition={{ duration: 0.15 }}
               >
                 <p className="text-3xl font-bold text-amber">{projectsByStatus.in_review}</p>
-                <p className="text-xs text-slate-500">In Review</p>
+                <p className="text-xs text-muted-foreground">In Review</p>
               </motion.div>
             </div>
-            <div className="text-xs text-slate-500">
+            <div className="text-xs text-muted-foreground">
               {projectsByStatus.backlog} in backlog
             </div>
           </div>
@@ -334,10 +334,10 @@ export default function DashboardPage() {
 
       {/* Recent Activity - Instant load */}
       <div>
-        <div className="bg-[#1a1f2e] rounded-xl p-6 border border-gray-700/50">
+        <div className="bg-card rounded-xl p-6 border border-card">
           <div className="flex items-center justify-between mb-6">
-            <h3 className="text-lg font-semibold text-white">Recent Activity</h3>
-            <Clock size={20} className="text-slate-600" />
+            <h3 className="text-lg font-semibold text-foreground">Recent Activity</h3>
+            <Clock size={20} className="text-muted" />
           </div>
 
           {recentActivity.length === 0 ? (
@@ -363,7 +363,7 @@ export default function DashboardPage() {
                   >
                     <Link
                       href={activity.href}
-                      className="flex items-center gap-4 p-3 rounded-lg hover:bg-black/40 transition-all group"
+                      className="flex items-center gap-4 p-3 rounded-lg hover:bg-muted/10 transition-all group"
                     >
                       <motion.div 
                         className={`w-10 h-10 ${iconBg} rounded-lg flex items-center justify-center flex-shrink-0`}
@@ -377,7 +377,7 @@ export default function DashboardPage() {
                         )}
                       </motion.div>
                       <div className="flex-1 min-w-0">
-                        <p className="text-white font-medium truncate group-hover:text-coral transition-colors">
+                        <p className="text-foreground font-medium truncate group-hover:text-coral transition-colors">
                           {activity.title}
                         </p>
                         <div className="flex items-center gap-2 mt-0.5">
@@ -387,12 +387,12 @@ export default function DashboardPage() {
                             {activity.type}
                           </span>
                           {activity.client && (
-                            <span className="text-xs text-slate-500">
+                            <span className="text-xs text-muted-foreground">
                               {activity.client}
                             </span>
                           )}
-                          <span className="text-xs text-slate-600">•</span>
-                          <span className="text-xs text-slate-500">
+                          <span className="text-xs text-muted">•</span>
+                          <span className="text-xs text-muted-foreground">
                             {formatDistanceToNow(new Date(activity.created_at), { addSuffix: true })}
                           </span>
                         </div>

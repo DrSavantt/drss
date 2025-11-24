@@ -31,14 +31,14 @@ export default function NewClientPage() {
       <div className="mb-8">
         <Link
           href="/dashboard/clients"
-          className="text-sm text-gray-400 hover:text-[#4ECDC4] transition-colors inline-flex items-center gap-2"
+          className="text-sm text-muted-foreground hover:text-[#4ECDC4] transition-colors inline-flex items-center gap-2"
         >
           ← Back to Clients
         </Link>
         <h1 className="mt-6 text-4xl font-bold mb-2 bg-gradient-to-r from-[#4ECDC4] to-[#FF6B6B] bg-clip-text text-transparent">
           New Client
         </h1>
-        <p className="text-gray-400">
+        <p className="text-muted-foreground">
           Add a new client to your workspace
         </p>
       </div>
@@ -51,9 +51,9 @@ export default function NewClientPage() {
       )}
 
       {/* Form */}
-      <form action={handleSubmit} className="space-y-6 bg-[#111111] border border-gray-800 rounded-xl p-8 hover:border-[#4ECDC4]/50 transition-all duration-200">
+      <form action={handleSubmit} className="space-y-6 bg-card border border-card rounded-xl p-8 hover:border-[#4ECDC4]/50 transition-all duration-200">
         <div>
-          <label htmlFor="name" className="block text-sm font-medium text-gray-300 mb-2">
+          <label htmlFor="name" className="block text-sm font-medium text-card-foreground mb-2">
             Client Name *
           </label>
           <input
@@ -62,13 +62,13 @@ export default function NewClientPage() {
             id="name"
             required
             disabled={loading}
-            className="mt-1 block w-full bg-[#1a1a1a] border border-gray-700 text-white rounded-lg px-4 py-2.5 shadow-sm focus:border-[#4ECDC4] focus:outline-none focus:ring-1 focus:ring-[#4ECDC4] disabled:bg-gray-900 disabled:text-gray-500 transition-colors"
+            className="mt-1 block w-full bg-input border border-input text-foreground rounded-lg px-4 py-2.5 shadow-sm focus:border-[#4ECDC4] focus:outline-none focus:ring-1 focus:ring-[#4ECDC4] disabled:opacity-50 transition-colors"
             placeholder="Acme Corporation"
           />
         </div>
 
         <div>
-          <label htmlFor="email" className="block text-sm font-medium text-gray-300 mb-2">
+          <label htmlFor="email" className="block text-sm font-medium text-card-foreground mb-2">
             Email
           </label>
           <input
@@ -76,13 +76,13 @@ export default function NewClientPage() {
             name="email"
             id="email"
             disabled={loading}
-            className="mt-1 block w-full bg-[#1a1a1a] border border-gray-700 text-white rounded-lg px-4 py-2.5 shadow-sm focus:border-[#4ECDC4] focus:outline-none focus:ring-1 focus:ring-[#4ECDC4] disabled:bg-gray-900 disabled:text-gray-500 transition-colors"
+            className="mt-1 block w-full bg-input border border-input text-foreground rounded-lg px-4 py-2.5 shadow-sm focus:border-[#4ECDC4] focus:outline-none focus:ring-1 focus:ring-[#4ECDC4] disabled:opacity-50 transition-colors"
             placeholder="contact@acme.com"
           />
         </div>
 
         <div>
-          <label htmlFor="website" className="block text-sm font-medium text-gray-300 mb-2">
+          <label htmlFor="website" className="block text-sm font-medium text-card-foreground mb-2">
             Website
           </label>
           <input
@@ -90,7 +90,7 @@ export default function NewClientPage() {
             name="website"
             id="website"
             disabled={loading}
-            className="mt-1 block w-full bg-[#1a1a1a] border border-gray-700 text-white rounded-lg px-4 py-2.5 shadow-sm focus:border-[#4ECDC4] focus:outline-none focus:ring-1 focus:ring-[#4ECDC4] disabled:bg-gray-900 disabled:text-gray-500 transition-colors"
+            className="mt-1 block w-full bg-input border border-input text-foreground rounded-lg px-4 py-2.5 shadow-sm focus:border-[#4ECDC4] focus:outline-none focus:ring-1 focus:ring-[#4ECDC4] disabled:opacity-50 transition-colors"
             placeholder="https://acme.com"
           />
         </div>
@@ -105,7 +105,7 @@ export default function NewClientPage() {
           </button>
           <Link
             href="/dashboard/clients"
-            className="flex-1 text-center bg-[#1a1a1a] border border-gray-700 text-white px-6 py-2.5 rounded-lg hover:border-[#4ECDC4]/50 transition-all duration-200 font-medium"
+            className="flex-1 text-center bg-card border border-card text-foreground px-6 py-2.5 rounded-lg hover:border-[#4ECDC4]/50 transition-all duration-200 font-medium"
           >
             Cancel
           </Link>

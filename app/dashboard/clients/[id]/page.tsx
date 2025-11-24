@@ -47,7 +47,7 @@ export default async function ClientDetailPage({
         <div className="flex items-center gap-4">
           <Link
             href="/dashboard/clients"
-            className="text-sm text-gray-400 hover:text-[#4ECDC4] transition-colors flex items-center gap-2"
+            className="text-sm text-muted-foreground hover:text-[#4ECDC4] transition-colors flex items-center gap-2"
           >
             ← Back to Clients
           </Link>
@@ -55,7 +55,7 @@ export default async function ClientDetailPage({
         <div className="flex gap-3">
           <Link
             href={`/dashboard/clients/${client.id}/edit`}
-            className="bg-[#1a1a1a] border border-gray-700 text-white px-5 py-2.5 rounded-lg hover:border-[#4ECDC4]/50 transition-all duration-200 text-sm font-medium"
+            className="bg-card border border-card text-foreground px-5 py-2.5 rounded-lg hover:border-[#4ECDC4]/50 transition-all duration-200 text-sm font-medium"
           >
             Edit
           </Link>
@@ -64,15 +64,15 @@ export default async function ClientDetailPage({
       </div>
 
       {/* Client Header Card */}
-      <div className="bg-[#1a1f2e] border border-gray-700/50 rounded-xl p-8 hover:border-[#4ECDC4]/50 transition-all duration-200">
+      <div className="bg-card border border-card rounded-xl p-8 hover:border-[#4ECDC4]/50 transition-all duration-200">
         <div className="flex items-start justify-between mb-6">
           <div className="flex-1">
             <h1 className="text-4xl font-bold mb-2 bg-gradient-to-r from-[#4ECDC4] to-[#FF6B6B] bg-clip-text text-transparent">
               {client.name}
             </h1>
             {client.email && (
-              <p className="text-gray-400 flex items-center gap-2">
-                <span className="inline-flex items-center justify-center w-5 h-5 bg-gray-800 rounded">
+              <p className="text-muted-foreground flex items-center gap-2">
+                <span className="inline-flex items-center justify-center w-5 h-5 bg-muted/20 rounded">
                   <Building2 size={14} className="text-[#4ECDC4]" />
                 </span>
                 {client.email}
@@ -91,11 +91,11 @@ export default async function ClientDetailPage({
           </div>
         </div>
 
-        <div className="border-t border-gray-800 pt-6 mt-6">
+        <div className="border-t border-card pt-6 mt-6">
           <dl className="grid grid-cols-1 gap-x-6 gap-y-4 sm:grid-cols-2">
             <div>
-              <dt className="text-sm font-medium text-gray-400">Created</dt>
-              <dd className="mt-1.5 text-sm text-white">
+              <dt className="text-sm font-medium text-muted-foreground">Created</dt>
+              <dd className="mt-1.5 text-sm text-foreground">
                 {new Date(client.created_at).toLocaleDateString('en-US', {
                   year: 'numeric',
                   month: 'long',
@@ -104,8 +104,8 @@ export default async function ClientDetailPage({
               </dd>
             </div>
             <div>
-              <dt className="text-sm font-medium text-gray-400">Last Updated</dt>
-              <dd className="mt-1.5 text-sm text-white">
+              <dt className="text-sm font-medium text-muted-foreground">Last Updated</dt>
+              <dd className="mt-1.5 text-sm text-foreground">
                 {new Date(client.updated_at).toLocaleDateString('en-US', {
                   year: 'numeric',
                   month: 'long',
@@ -120,13 +120,13 @@ export default async function ClientDetailPage({
       {/* Quick Stats Dashboard */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         {/* Total Projects */}
-        <div className="bg-[#1a1f2e] border border-gray-700/50 rounded-xl p-6 hover:border-[#4ECDC4]/50 transition-all duration-200">
+        <div className="bg-card border border-card rounded-xl p-6 hover:border-[#4ECDC4]/50 transition-all duration-200">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-xs text-gray-400 uppercase tracking-wide font-medium mb-1">
+              <p className="text-xs text-muted-foreground uppercase tracking-wide font-medium mb-1">
                 Total Projects
               </p>
-              <p className="text-3xl font-bold text-white">{projects.length}</p>
+              <p className="text-3xl font-bold text-foreground">{projects.length}</p>
             </div>
             <div className="h-12 w-12 bg-blue-600/10 rounded-lg flex items-center justify-center border border-blue-600/20">
               <FolderKanban size={24} className="text-[#4ECDC4]" />
@@ -135,23 +135,23 @@ export default async function ClientDetailPage({
         </div>
 
         {/* Projects by Status */}
-        <div className="bg-[#1a1f2e] border border-gray-700/50 rounded-xl p-6 hover:border-[#4ECDC4]/50 transition-all duration-200">
-          <p className="text-xs text-gray-400 uppercase tracking-wide font-medium mb-4">Projects by Status</p>
+        <div className="bg-card border border-card rounded-xl p-6 hover:border-[#4ECDC4]/50 transition-all duration-200">
+          <p className="text-xs text-muted-foreground uppercase tracking-wide font-medium mb-4">Projects by Status</p>
           <div className="space-y-3">
             <div className="flex items-center justify-between text-sm">
-              <span className="text-gray-400">In Progress</span>
+              <span className="text-muted-foreground">In Progress</span>
               <span className="font-semibold text-[#4ECDC4]">
                 {projects.filter(p => p.status === 'in_progress').length}
               </span>
             </div>
             <div className="flex items-center justify-between text-sm">
-              <span className="text-gray-400">In Review</span>
+              <span className="text-muted-foreground">In Review</span>
               <span className="font-semibold text-[#FFE66D]">
                 {projects.filter(p => p.status === 'in_review').length}
               </span>
             </div>
             <div className="flex items-center justify-between text-sm">
-              <span className="text-gray-400">Done</span>
+              <span className="text-muted-foreground">Done</span>
               <span className="font-semibold text-green-400">
                 {projects.filter(p => p.status === 'done').length}
               </span>
@@ -160,13 +160,13 @@ export default async function ClientDetailPage({
         </div>
 
         {/* Total Content */}
-        <div className="bg-[#1a1f2e] border border-gray-700/50 rounded-xl p-6 hover:border-[#4ECDC4]/50 transition-all duration-200">
+        <div className="bg-card border border-card rounded-xl p-6 hover:border-[#4ECDC4]/50 transition-all duration-200">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-xs text-gray-400 uppercase tracking-wide font-medium mb-1">
+              <p className="text-xs text-muted-foreground uppercase tracking-wide font-medium mb-1">
                 Total Content
               </p>
-              <p className="text-3xl font-bold text-white">{content.length}</p>
+              <p className="text-3xl font-bold text-foreground">{content.length}</p>
             </div>
             <div className="h-12 w-12 bg-green-600/10 rounded-lg flex items-center justify-center border border-green-600/20">
               <FileText size={24} className="text-green-400" />
@@ -175,17 +175,17 @@ export default async function ClientDetailPage({
         </div>
 
         {/* Content by Type */}
-        <div className="bg-[#1a1f2e] border border-gray-700/50 rounded-xl p-6 hover:border-[#4ECDC4]/50 transition-all duration-200">
-          <p className="text-xs text-gray-400 uppercase tracking-wide font-medium mb-4">Content by Type</p>
+        <div className="bg-card border border-card rounded-xl p-6 hover:border-[#4ECDC4]/50 transition-all duration-200">
+          <p className="text-xs text-muted-foreground uppercase tracking-wide font-medium mb-4">Content by Type</p>
           <div className="space-y-3">
             <div className="flex items-center justify-between text-sm">
-              <span className="text-gray-400">Notes</span>
+              <span className="text-muted-foreground">Notes</span>
               <span className="font-semibold text-green-400">
                 {content.filter(c => c.asset_type === 'note').length}
               </span>
             </div>
             <div className="flex items-center justify-between text-sm">
-              <span className="text-gray-400">Files</span>
+              <span className="text-muted-foreground">Files</span>
               <span className="font-semibold text-purple-400">
                 {content.filter(c => c.file_url).length}
               </span>
@@ -195,11 +195,11 @@ export default async function ClientDetailPage({
       </div>
 
       {/* Projects Section */}
-      <div className="bg-[#1a1f2e] border border-gray-700/50 rounded-xl p-8 hover:border-[#4ECDC4]/50 transition-all duration-200">
+      <div className="bg-card border border-card rounded-xl p-8 hover:border-[#4ECDC4]/50 transition-all duration-200">
         <div className="flex items-center justify-between mb-6">
           <div>
-            <h2 className="text-2xl font-semibold text-white mb-2">Recent Projects</h2>
-            <p className="text-sm text-gray-400">Last 5 projects</p>
+            <h2 className="text-2xl font-semibold text-foreground mb-2">Recent Projects</h2>
+            <p className="text-sm text-muted-foreground">Last 5 projects</p>
           </div>
           <Link
             href={`/dashboard/clients/${client.id}/projects/new`}
@@ -210,10 +210,10 @@ export default async function ClientDetailPage({
         </div>
 
         {projects.length === 0 ? (
-          <div className="text-center py-16 border-2 border-dashed border-gray-800 rounded-lg">
-            <FolderKanban size={48} className="mx-auto text-gray-600 mb-4" />
-            <h3 className="text-base font-medium text-white mb-2">No projects yet</h3>
-            <p className="text-sm text-gray-400 mb-6">
+          <div className="text-center py-16 border-2 border-dashed border-card rounded-lg">
+            <FolderKanban size={48} className="mx-auto text-muted mb-4" />
+            <h3 className="text-base font-medium text-foreground mb-2">No projects yet</h3>
+            <p className="text-sm text-muted-foreground mb-6">
               Get started by creating a new project.
             </p>
             <Link
@@ -229,12 +229,12 @@ export default async function ClientDetailPage({
               <Link
                 key={project.id}
                 href={`/dashboard/projects/board`}
-                className="border border-gray-700/50 rounded-lg p-5 hover:border-[#4ECDC4]/50 transition-all duration-200 block"
+                className="border border-card rounded-lg p-5 hover:border-[#4ECDC4]/50 transition-all duration-200 block"
               >
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
                     <div className="flex items-center gap-3 mb-3">
-                      <h3 className="text-base font-semibold text-white">
+                      <h3 className="text-base font-semibold text-foreground">
                         {project.name}
                       </h3>
                       <span
@@ -251,11 +251,11 @@ export default async function ClientDetailPage({
                       </span>
                     </div>
                     {project.description && (
-                      <p className="text-sm text-gray-400 mb-3 line-clamp-2">
+                      <p className="text-sm text-muted-foreground mb-3 line-clamp-2">
                         {project.description}
                       </p>
                     )}
-                    <div className="flex items-center gap-4 text-xs text-gray-500">
+                    <div className="flex items-center gap-4 text-xs text-muted-foreground">
                       {project.due_date && (
                         <span className="flex items-center gap-1">
                           <Calendar size={12} />
@@ -286,11 +286,11 @@ export default async function ClientDetailPage({
       </div>
 
       {/* Content Section */}
-      <div className="bg-[#1a1f2e] border border-gray-700/50 rounded-xl p-8 hover:border-[#4ECDC4]/50 transition-all duration-200">
+      <div className="bg-card border border-card rounded-xl p-8 hover:border-[#4ECDC4]/50 transition-all duration-200">
         <div className="flex items-center justify-between mb-6">
           <div>
-            <h2 className="text-2xl font-semibold text-white mb-2">Recent Content</h2>
-            <p className="text-sm text-gray-400">Last 5 items</p>
+            <h2 className="text-2xl font-semibold text-foreground mb-2">Recent Content</h2>
+            <p className="text-sm text-muted-foreground">Last 5 items</p>
           </div>
           <div className="flex gap-3">
             <Link
@@ -301,7 +301,7 @@ export default async function ClientDetailPage({
             </Link>
             <Link
               href={`/dashboard/clients/${client.id}/files/new`}
-              className="bg-[#1a1a1a] border border-gray-700 text-white px-5 py-2.5 rounded-lg hover:border-[#4ECDC4]/50 transition-all duration-200 text-sm font-medium"
+              className="bg-card border border-card text-foreground px-5 py-2.5 rounded-lg hover:border-[#4ECDC4]/50 transition-all duration-200 text-sm font-medium"
             >
               ↑ Upload
             </Link>
@@ -309,10 +309,10 @@ export default async function ClientDetailPage({
         </div>
 
         {content.length === 0 ? (
-          <div className="text-center py-16 border-2 border-dashed border-gray-800 rounded-lg">
-            <FileText size={48} className="mx-auto text-gray-600 mb-4" />
-            <h3 className="text-base font-medium text-white mb-2">No content yet</h3>
-            <p className="text-sm text-gray-400 mb-6">
+          <div className="text-center py-16 border-2 border-dashed border-card rounded-lg">
+            <FileText size={48} className="mx-auto text-muted mb-4" />
+            <h3 className="text-base font-medium text-foreground mb-2">No content yet</h3>
+            <p className="text-sm text-muted-foreground mb-6">
               Get started by creating your first note.
             </p>
             <Link
@@ -327,12 +327,12 @@ export default async function ClientDetailPage({
             {content.slice(0, 5).map((item) => (
               <div
                 key={item.id}
-                className="border border-gray-700/50 rounded-lg p-5 hover:border-[#4ECDC4]/50 transition-all duration-200"
+                className="border border-card rounded-lg p-5 hover:border-[#4ECDC4]/50 transition-all duration-200"
               >
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
                     <div className="flex items-center gap-3 mb-3">
-                      <h3 className="text-base font-semibold text-white">
+                      <h3 className="text-base font-semibold text-foreground">
                         {item.title}
                       </h3>
                       <span className="px-3 py-1 text-xs font-medium rounded-full bg-green-600/20 text-green-400 border border-green-600/30">
@@ -344,7 +344,7 @@ export default async function ClientDetailPage({
                         </span>
                       )}
                     </div>
-                    <div className="flex items-center gap-4 text-xs text-gray-500">
+                    <div className="flex items-center gap-4 text-xs text-muted-foreground">
                       <span>
                         Created: {new Date(item.created_at).toLocaleDateString()}
                       </span>

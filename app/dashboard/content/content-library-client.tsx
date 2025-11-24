@@ -67,11 +67,11 @@ export function ContentLibraryClient({ initialContent }: ContentLibraryClientPro
   return (
     <div className="space-y-6">
       {/* Filters */}
-      <div className="bg-[#1a1f2e] rounded-lg border border-gray-700/50 p-4">
+      <div className="bg-card rounded-lg border border-card p-4">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {/* Search */}
           <div>
-            <label htmlFor="search" className="block text-sm font-medium text-gray-400 mb-1">
+            <label htmlFor="search" className="block text-sm font-medium text-muted-foreground mb-1">
               Search
             </label>
             <input
@@ -80,20 +80,20 @@ export function ContentLibraryClient({ initialContent }: ContentLibraryClientPro
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search by title..."
-              className="block w-full rounded-md bg-black border border-gray-700/50 px-3 py-2 text-sm text-white placeholder-gray-500 focus:border-[#4ECDC4]/50 focus:outline-none"
+              className="block w-full rounded-md bg-input border border-input px-3 py-2 text-sm text-foreground placeholder-muted-foreground focus:border-[#4ECDC4]/50 focus:outline-none"
             />
           </div>
 
           {/* Type Filter */}
           <div>
-            <label htmlFor="type" className="block text-sm font-medium text-gray-400 mb-1">
+            <label htmlFor="type" className="block text-sm font-medium text-muted-foreground mb-1">
               Content Type
             </label>
             <select
               id="type"
               value={selectedType}
               onChange={(e) => setSelectedType(e.target.value)}
-              className="block w-full rounded-md bg-black border border-gray-700/50 px-3 py-2 text-sm text-white focus:border-[#4ECDC4]/50 focus:outline-none"
+              className="block w-full rounded-md bg-input border border-input px-3 py-2 text-sm text-foreground focus:border-[#4ECDC4]/50 focus:outline-none"
             >
               {assetTypes.map((type) => (
                 <option key={type.value} value={type.value}>
@@ -105,14 +105,14 @@ export function ContentLibraryClient({ initialContent }: ContentLibraryClientPro
 
           {/* Client Filter */}
           <div>
-            <label htmlFor="client" className="block text-sm font-medium text-gray-400 mb-1">
+            <label htmlFor="client" className="block text-sm font-medium text-muted-foreground mb-1">
               Client
             </label>
             <select
               id="client"
               value={selectedClient}
               onChange={(e) => setSelectedClient(e.target.value)}
-              className="block w-full rounded-md bg-black border border-gray-700/50 px-3 py-2 text-sm text-white focus:border-[#4ECDC4]/50 focus:outline-none"
+              className="block w-full rounded-md bg-input border border-input px-3 py-2 text-sm text-foreground focus:border-[#4ECDC4]/50 focus:outline-none"
             >
               <option value="all">All Clients</option>
               {uniqueClients.map((client) => (
@@ -125,15 +125,15 @@ export function ContentLibraryClient({ initialContent }: ContentLibraryClientPro
         </div>
 
         {/* Results Count */}
-        <div className="mt-4 text-sm text-gray-400">
+        <div className="mt-4 text-sm text-muted-foreground">
           Showing {filteredContent.length} of {initialContent.length} items
         </div>
       </div>
 
       {/* Content Grid */}
       {filteredContent.length === 0 ? (
-        <div className="text-center py-12 bg-[#1a1f2e] border border-gray-700/50 rounded-lg">
-          <p className="text-gray-400">No content matches your filters</p>
+        <div className="text-center py-12 bg-card border border-card rounded-lg">
+          <p className="text-muted-foreground">No content matches your filters</p>
         </div>
       ) : (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
@@ -141,10 +141,10 @@ export function ContentLibraryClient({ initialContent }: ContentLibraryClientPro
             <Link
               key={item.id}
               href={`/dashboard/content/${item.id}`}
-              className="group bg-[#1a1f2e] rounded-lg border border-gray-700/50 p-4 hover:border-[#4ECDC4]/50 transition-all"
+              className="group bg-card rounded-lg border border-card p-4 hover:border-[#4ECDC4]/50 transition-all"
             >
               {/* Title */}
-              <h3 className="font-semibold text-white mb-2 group-hover:text-[#4ECDC4] transition-colors">
+              <h3 className="font-semibold text-foreground mb-2 group-hover:text-[#4ECDC4] transition-colors">
                 {item.title}
               </h3>
 
@@ -170,7 +170,7 @@ export function ContentLibraryClient({ initialContent }: ContentLibraryClientPro
               </div>
 
               {/* Date */}
-              <p className="text-xs text-gray-400">
+              <p className="text-xs text-muted-foreground">
                 Created {new Date(item.created_at).toLocaleDateString('en-US', {
                   month: 'short',
                   day: 'numeric',

@@ -32,20 +32,20 @@ export function MobileNav({ userEmail }: MobileNavProps) {
   return (
     <>
       {/* Mobile Header */}
-      <header className="lg:hidden fixed top-0 left-0 right-0 bg-black border-b border-gray-800 z-50 h-16">
+      <header className="lg:hidden fixed top-0 left-0 right-0 bg-background border-b border-card z-50 h-16">
         <div className="flex items-center justify-between px-4 h-full">
           <Link href="/dashboard">
             <h1 className="text-coral font-bold text-xl">DRSS</h1>
           </Link>
-          <button 
+          <button
             onClick={() => setIsOpen(!isOpen)}
-            className="p-2 hover:bg-gray-900 rounded-lg transition-colors"
+            className="p-2 hover:bg-muted/10 rounded-lg transition-colors"
             aria-label="Toggle menu"
           >
             {isOpen ? (
-              <X size={24} className="text-white" />
+              <X size={24} className="text-foreground" />
             ) : (
-              <Menu size={24} className="text-white" />
+              <Menu size={24} className="text-foreground" />
             )}
           </button>
         </div>
@@ -53,7 +53,7 @@ export function MobileNav({ userEmail }: MobileNavProps) {
 
       {/* Overlay */}
       {isOpen && (
-        <div 
+        <div
           className="lg:hidden fixed inset-0 bg-black/80 z-40 transition-opacity duration-300"
           onClick={() => setIsOpen(false)}
         />
@@ -61,7 +61,7 @@ export function MobileNav({ userEmail }: MobileNavProps) {
 
       {/* Slide-out Menu */}
       <div className={`
-        lg:hidden fixed top-0 right-0 bottom-0 w-64 bg-black border-l border-gray-800 z-50
+        lg:hidden fixed top-0 right-0 bottom-0 w-64 bg-background border-l border-card z-50
         transform transition-transform duration-300 ease-in-out
         ${isOpen ? 'translate-x-0' : 'translate-x-full'}
       `}>
@@ -76,9 +76,9 @@ export function MobileNav({ userEmail }: MobileNavProps) {
                 onClick={() => setIsOpen(false)}
                 className={`
                   flex items-center gap-3 px-4 py-3 rounded-lg mb-2 transition-all
-                  ${isActive 
-                    ? 'bg-coral text-white font-medium' 
-                    : 'text-gray-400 hover:text-white hover:bg-gray-900'
+                  ${isActive
+                    ? 'bg-coral text-white font-medium'
+                    : 'text-muted-foreground hover:text-foreground hover:bg-muted/10'
                   }
                 `}
               >
@@ -89,17 +89,17 @@ export function MobileNav({ userEmail }: MobileNavProps) {
           })}
 
           {/* User Info & Logout */}
-          <div className="mt-8 pt-6 border-t border-gray-800">
+          <div className="mt-8 pt-6 border-t border-card">
             {userEmail && (
               <div className="px-4 mb-4">
-                <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">Account</p>
-                <p className="text-sm text-gray-300 truncate">{userEmail}</p>
+                <p className="text-xs text-muted uppercase tracking-wide mb-1">Account</p>
+                <p className="text-sm text-card-foreground truncate">{userEmail}</p>
               </div>
             )}
             <form action={logout}>
               <button
                 type="submit"
-                className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-red-400 hover:text-red-300 hover:bg-gray-900 transition-all"
+                className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-red-400 hover:text-red-300 hover:bg-muted/10 transition-all"
               >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />

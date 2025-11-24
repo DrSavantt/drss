@@ -142,17 +142,17 @@ export default function ProjectsListPage() {
       </div>
 
       {/* Filters and Search */}
-      <div className="bg-[#1a1f2e] border border-gray-700/50 rounded-lg p-4">
+      <div className="bg-card border border-card rounded-lg p-4">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           {/* Search */}
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <input
               type="text"
               placeholder="Search projects..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full bg-black border border-gray-700/50 rounded-lg pl-10 pr-4 py-2 text-white placeholder-gray-500 focus:border-[#4ECDC4]/50 focus:outline-none"
+              className="w-full bg-input border border-input rounded-lg pl-10 pr-4 py-2 text-foreground placeholder-muted-foreground focus:border-[#4ECDC4]/50 focus:outline-none"
             />
           </div>
 
@@ -160,7 +160,7 @@ export default function ProjectsListPage() {
           <select
             value={filterStatus}
             onChange={(e) => setFilterStatus(e.target.value)}
-            className="bg-black border border-gray-700/50 rounded-lg px-4 py-2 text-white focus:border-[#4ECDC4]/50 focus:outline-none"
+            className="bg-input border border-input rounded-lg px-4 py-2 text-foreground focus:border-[#4ECDC4]/50 focus:outline-none"
           >
             <option value="all">All Statuses</option>
             <option value="backlog">Backlog</option>
@@ -173,7 +173,7 @@ export default function ProjectsListPage() {
           <select
             value={filterClient}
             onChange={(e) => setFilterClient(e.target.value)}
-            className="bg-black border border-gray-700/50 rounded-lg px-4 py-2 text-white focus:border-[#4ECDC4]/50 focus:outline-none"
+            className="bg-input border border-input rounded-lg px-4 py-2 text-foreground focus:border-[#4ECDC4]/50 focus:outline-none"
           >
             <option value="all">All Clients</option>
             {uniqueClients.map(client => (
@@ -182,18 +182,18 @@ export default function ProjectsListPage() {
           </select>
 
           {/* Results Count */}
-          <div className="flex items-center justify-center md:justify-start text-gray-400 text-sm">
+          <div className="flex items-center justify-center md:justify-start text-muted-foreground text-sm">
             {filteredProjects.length} {filteredProjects.length === 1 ? 'project' : 'projects'}
           </div>
         </div>
       </div>
 
       {/* Desktop Table View */}
-      <div className="hidden lg:block bg-[#1a1f2e] border border-gray-700/50 rounded-lg overflow-hidden">
+      <div className="hidden lg:block bg-card border border-card rounded-lg overflow-hidden">
         {filteredProjects.length === 0 ? (
           <div className="p-12 text-center">
-            <h3 className="text-lg font-semibold text-white mb-2">No projects found</h3>
-            <p className="text-sm text-gray-400 mb-6">
+            <h3 className="text-lg font-semibold text-foreground mb-2">No projects found</h3>
+            <p className="text-sm text-muted-foreground mb-6">
               {projects.length === 0
                 ? "Create a project from a client's page to get started."
                 : "Try adjusting your filters or search query."}
@@ -209,10 +209,10 @@ export default function ProjectsListPage() {
           </div>
         ) : (
           <table className="w-full">
-            <thead className="bg-black/40 border-b border-gray-700/50">
+            <thead className="bg-background/40 border-b border-card">
               <tr>
                 <th
-                  className="px-6 py-4 text-left text-xs font-medium text-gray-400 uppercase tracking-wider cursor-pointer hover:text-[#4ECDC4] transition-colors"
+                  className="px-6 py-4 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider cursor-pointer hover:text-[#4ECDC4] transition-colors"
                   onClick={() => handleSort('name')}
                 >
                   <div className="flex items-center gap-2">
@@ -222,11 +222,11 @@ export default function ProjectsListPage() {
                     )}
                   </div>
                 </th>
-                <th className="px-6 py-4 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
+                <th className="px-6 py-4 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
                   Client
                 </th>
                 <th
-                  className="px-6 py-4 text-left text-xs font-medium text-gray-400 uppercase tracking-wider cursor-pointer hover:text-[#4ECDC4] transition-colors"
+                  className="px-6 py-4 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider cursor-pointer hover:text-[#4ECDC4] transition-colors"
                   onClick={() => handleSort('status')}
                 >
                   <div className="flex items-center gap-2">
@@ -237,7 +237,7 @@ export default function ProjectsListPage() {
                   </div>
                 </th>
                 <th
-                  className="px-6 py-4 text-left text-xs font-medium text-gray-400 uppercase tracking-wider cursor-pointer hover:text-[#4ECDC4] transition-colors"
+                  className="px-6 py-4 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider cursor-pointer hover:text-[#4ECDC4] transition-colors"
                   onClick={() => handleSort('priority')}
                 >
                   <div className="flex items-center gap-2">
@@ -248,7 +248,7 @@ export default function ProjectsListPage() {
                   </div>
                 </th>
                 <th
-                  className="px-6 py-4 text-left text-xs font-medium text-gray-400 uppercase tracking-wider cursor-pointer hover:text-[#4ECDC4] transition-colors"
+                  className="px-6 py-4 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider cursor-pointer hover:text-[#4ECDC4] transition-colors"
                   onClick={() => handleSort('due_date')}
                 >
                   <div className="flex items-center gap-2">
@@ -260,20 +260,20 @@ export default function ProjectsListPage() {
                 </th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-700/50">
+            <tbody className="divide-y divide-card">
               {filteredProjects.map((project) => (
                 <motion.tr
                   key={project.id}
-                  className="hover:bg-black/40 transition-colors cursor-pointer"
+                  className="hover:bg-muted/10 transition-colors cursor-pointer"
                   whileHover={{ scale: 1.005 }}
                   transition={{ duration: 0.15 }}
                   onClick={() => window.location.href = `/dashboard/projects/board`}
                 >
                   <td className="px-6 py-4">
                     <div>
-                      <div className="text-white font-medium">{project.name}</div>
+                      <div className="text-foreground font-medium">{project.name}</div>
                       {project.description && (
-                        <div className="text-sm text-gray-400 line-clamp-1 mt-1">
+                        <div className="text-sm text-muted-foreground line-clamp-1 mt-1">
                           {project.description}
                         </div>
                       )}
@@ -298,7 +298,7 @@ export default function ProjectsListPage() {
                       {project.priority}
                     </span>
                   </td>
-                  <td className="px-6 py-4 text-sm text-gray-400">
+                  <td className="px-6 py-4 text-sm text-muted-foreground">
                     {project.due_date
                       ? new Date(project.due_date).toLocaleDateString('en-US', {
                           month: 'short',
@@ -317,9 +317,9 @@ export default function ProjectsListPage() {
       {/* Mobile Card View */}
       <div className="lg:hidden space-y-3">
         {filteredProjects.length === 0 ? (
-          <div className="bg-[#1a1f2e] border border-gray-700/50 rounded-lg p-12 text-center">
-            <h3 className="text-lg font-semibold text-white mb-2">No projects found</h3>
-            <p className="text-sm text-gray-400 mb-6">
+          <div className="bg-card border border-card rounded-lg p-12 text-center">
+            <h3 className="text-lg font-semibold text-foreground mb-2">No projects found</h3>
+            <p className="text-sm text-muted-foreground mb-6">
               {projects.length === 0
                 ? "Create a project from a client's page to get started."
                 : "Try adjusting your filters or search query."}
@@ -338,12 +338,12 @@ export default function ProjectsListPage() {
             <Link
               key={project.id}
               href="/dashboard/projects/board"
-              className="block bg-[#1a1f2e] border border-gray-700/50 rounded-lg p-4 hover:border-[#4ECDC4]/50 transition-all"
+              className="block bg-card border border-card rounded-lg p-4 hover:border-[#4ECDC4]/50 transition-all"
             >
-              <h3 className="text-white font-semibold mb-2">{project.name}</h3>
+              <h3 className="text-foreground font-semibold mb-2">{project.name}</h3>
 
               {project.description && (
-                <p className="text-sm text-gray-400 mb-3 line-clamp-2">
+                <p className="text-sm text-muted-foreground mb-3 line-clamp-2">
                   {project.description}
                 </p>
               )}
@@ -365,7 +365,7 @@ export default function ProjectsListPage() {
               </div>
 
               {project.due_date && (
-                <div className="text-xs text-gray-400">
+                <div className="text-xs text-muted-foreground">
                   Due: {new Date(project.due_date).toLocaleDateString('en-US', {
                     month: 'short',
                     day: 'numeric',

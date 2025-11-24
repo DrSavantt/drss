@@ -124,10 +124,10 @@ export function ContentDetailClient({ content }: ContentDetailClientProps) {
       {!isEditing ? (
         // VIEW MODE
         <div className="space-y-6">
-          <div className="bg-[#1a1f2e] rounded-lg border border-gray-700/50 p-6">
+          <div className="bg-card rounded-lg border border-card p-6">
             <div className="flex items-start justify-between mb-4">
               <div className="flex-1">
-                <h1 className="text-3xl font-bold text-white mb-3">
+                <h1 className="text-3xl font-bold text-foreground mb-3">
                   {content.title}
                 </h1>
                 <div className="flex items-center gap-2 flex-wrap">
@@ -155,17 +155,17 @@ export function ContentDetailClient({ content }: ContentDetailClientProps) {
             {/* Content Display */}
             <div className="prose prose-lg prose-invert max-w-none mb-6 mt-6">
               <div
-                className="text-gray-300"
+                className="text-card-foreground"
                 dangerouslySetInnerHTML={{ __html: editorContent }}
               />
             </div>
 
             {/* Metadata */}
-            <div className="border-t border-gray-700/50 pt-4 mt-6">
+            <div className="border-t border-card pt-4 mt-6">
               <div className="grid grid-cols-2 gap-4 text-sm">
                 <div>
-                  <span className="font-medium text-gray-400">Created:</span>
-                  <span className="ml-2 text-gray-300">
+                  <span className="font-medium text-muted-foreground">Created:</span>
+                  <span className="ml-2 text-card-foreground">
                     {new Date(content.created_at).toLocaleDateString('en-US', {
                       year: 'numeric',
                       month: 'long',
@@ -174,8 +174,8 @@ export function ContentDetailClient({ content }: ContentDetailClientProps) {
                   </span>
                 </div>
                 <div>
-                  <span className="font-medium text-gray-400">Last Updated:</span>
-                  <span className="ml-2 text-gray-300">
+                  <span className="font-medium text-muted-foreground">Last Updated:</span>
+                  <span className="ml-2 text-card-foreground">
                     {new Date(content.updated_at).toLocaleDateString('en-US', {
                       year: 'numeric',
                       month: 'long',
@@ -206,9 +206,9 @@ export function ContentDetailClient({ content }: ContentDetailClientProps) {
       ) : (
         // EDIT MODE
         <form action={handleSubmit} className="space-y-6">
-          <div className="bg-[#1a1f2e] rounded-lg border border-gray-700/50 p-6 space-y-6">
+          <div className="bg-card rounded-lg border border-card p-6 space-y-6">
             <div>
-              <label htmlFor="title" className="block text-sm font-medium text-gray-400">
+              <label htmlFor="title" className="block text-sm font-medium text-muted-foreground">
                 Title *
               </label>
               <input
@@ -218,12 +218,12 @@ export function ContentDetailClient({ content }: ContentDetailClientProps) {
                 required
                 disabled={loading}
                 defaultValue={content.title}
-                className="mt-1 block w-full rounded-md bg-black border border-gray-700/50 px-3 py-2 text-white placeholder-gray-500 focus:border-[#4ECDC4]/50 focus:outline-none disabled:opacity-50"
+                className="mt-1 block w-full rounded-md bg-input border border-input px-3 py-2 text-foreground placeholder-muted-foreground focus:border-[#4ECDC4]/50 focus:outline-none disabled:opacity-50"
               />
             </div>
 
             <div>
-              <label htmlFor="project_id" className="block text-sm font-medium text-gray-400">
+              <label htmlFor="project_id" className="block text-sm font-medium text-muted-foreground">
                 Link to Project (Optional)
               </label>
               <select
@@ -231,7 +231,7 @@ export function ContentDetailClient({ content }: ContentDetailClientProps) {
                 id="project_id"
                 disabled={loading}
                 defaultValue={content.project_id || ''}
-                className="mt-1 block w-full rounded-md bg-black border border-gray-700/50 px-3 py-2 text-white focus:border-[#4ECDC4]/50 focus:outline-none disabled:opacity-50"
+                className="mt-1 block w-full rounded-md bg-input border border-input px-3 py-2 text-foreground focus:border-[#4ECDC4]/50 focus:outline-none disabled:opacity-50"
               >
                 <option value="">No project</option>
                 {projects.map((project) => (
@@ -243,7 +243,7 @@ export function ContentDetailClient({ content }: ContentDetailClientProps) {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-400 mb-2">
+              <label className="block text-sm font-medium text-muted-foreground mb-2">
                 Content *
               </label>
               <TiptapEditor
@@ -266,7 +266,7 @@ export function ContentDetailClient({ content }: ContentDetailClientProps) {
               type="button"
               onClick={() => setIsEditing(false)}
               disabled={loading}
-              className="rounded-md bg-gray-700 px-4 py-2 text-sm font-semibold text-gray-300 hover:bg-gray-600"
+              className="rounded-md bg-muted/20 px-4 py-2 text-sm font-semibold text-foreground hover:bg-muted/30"
             >
               Cancel
             </button>
@@ -277,11 +277,11 @@ export function ContentDetailClient({ content }: ContentDetailClientProps) {
       {/* Delete Confirmation Dialog */}
       {isDeleting && (
         <div className="fixed inset-0 bg-black/80 flex items-center justify-center p-4 z-50">
-          <div className="bg-[#1a1f2e] border border-gray-700/50 rounded-lg p-6 max-w-md w-full">
-            <h3 className="text-lg font-semibold text-white mb-2">
+          <div className="bg-card border border-card rounded-lg p-6 max-w-md w-full">
+            <h3 className="text-lg font-semibold text-foreground mb-2">
               Delete {content.title}?
             </h3>
-            <p className="text-sm text-gray-400 mb-6">
+            <p className="text-sm text-muted-foreground mb-6">
               This will permanently delete this content. This action cannot be undone.
             </p>
             <div className="flex gap-4">
@@ -295,7 +295,7 @@ export function ContentDetailClient({ content }: ContentDetailClientProps) {
               <button
                 onClick={() => setIsDeleting(false)}
                 disabled={loading}
-                className="flex-1 rounded-md bg-gray-700 px-4 py-2 text-sm font-semibold text-gray-300 hover:bg-gray-600"
+                className="flex-1 rounded-md bg-muted/20 px-4 py-2 text-sm font-semibold text-foreground hover:bg-muted/30"
               >
                 Cancel
               </button>

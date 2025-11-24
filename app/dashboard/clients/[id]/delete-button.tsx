@@ -20,12 +20,12 @@ export function DeleteClientButton({
 
   if (showConfirm) {
     return (
-      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-        <div className="bg-white rounded-lg p-6 max-w-md w-full">
-          <h3 className="text-lg font-semibold text-gray-900 mb-2">
+      <div className="fixed inset-0 bg-black/80 flex items-center justify-center p-4 z-50">
+        <div className="bg-card border border-card rounded-lg p-6 max-w-md w-full">
+          <h3 className="text-lg font-semibold text-foreground mb-2">
             Delete {clientName}?
           </h3>
-          <p className="text-sm text-gray-600 mb-6">
+          <p className="text-sm text-muted-foreground mb-6">
             This will permanently delete this client and all associated projects and content. This action cannot be undone.
           </p>
           <div className="flex gap-4">
@@ -39,7 +39,7 @@ export function DeleteClientButton({
             <button
               onClick={() => setShowConfirm(false)}
               disabled={loading}
-              className="flex-1 rounded-md bg-gray-200 px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-300"
+              className="flex-1 rounded-md bg-muted/20 px-4 py-2 text-sm font-semibold text-foreground hover:bg-muted/30"
             >
               Cancel
             </button>
