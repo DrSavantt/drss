@@ -5,6 +5,7 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { logout } from '@/app/actions/auth'
+import { ThemeToggle } from './theme-toggle'
 
 interface MobileNavProps {
   userEmail: string | null
@@ -37,17 +38,20 @@ export function MobileNav({ userEmail }: MobileNavProps) {
           <Link href="/dashboard">
             <h1 className="text-coral font-bold text-xl">DRSS</h1>
           </Link>
-          <button
-            onClick={() => setIsOpen(!isOpen)}
-            className="p-2 hover:bg-muted/10 rounded-lg transition-colors"
-            aria-label="Toggle menu"
-          >
-            {isOpen ? (
-              <X size={24} className="text-foreground" />
-            ) : (
-              <Menu size={24} className="text-foreground" />
-            )}
-          </button>
+          <div className="flex items-center gap-2">
+            <ThemeToggle />
+            <button
+              onClick={() => setIsOpen(!isOpen)}
+              className="p-2 hover:bg-muted/10 rounded-lg transition-colors"
+              aria-label="Toggle menu"
+            >
+              {isOpen ? (
+                <X size={24} className="text-foreground" />
+              ) : (
+                <Menu size={24} className="text-foreground" />
+              )}
+            </button>
+          </div>
         </div>
       </header>
 
