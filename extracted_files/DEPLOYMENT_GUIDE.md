@@ -54,7 +54,7 @@ After deploying:
 
 1. **Delete DRSS from iPhone home screen**
 2. **Delete PocketOptions from iPhone home screen** (temporarily)
-3. Go to Safari → drss-mvp.vercel.app
+3. Go to Safari → drss-main.vercel.app
 4. Add to Home Screen (fresh install)
 5. Test - should work without PocketOptions popup
 6. Re-add PocketOptions if needed

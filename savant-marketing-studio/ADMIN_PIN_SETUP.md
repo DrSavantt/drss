@@ -24,7 +24,7 @@ Replace `123456` with your desired 6-digit PIN.
 
 ### Vercel Deployment
 
-1. Go to your Vercel project: https://vercel.com/genzinvestorr-8816s-projects/drss-mvp/settings/environment-variables
+1. Go to your Vercel project: https://vercel.com/genzinvestorr-8816s-projects/drss-main/settings/environment-variables
 
 2. Add a new environment variable:
    - **Name:** `ADMIN_PIN`
