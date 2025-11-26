@@ -1,8 +1,11 @@
-import { getAllContentAssets } from '@/app/actions/content'
+import { getAllContentAssets, getAllProjects } from '@/app/actions/content'
 import { ContentLibraryClient } from './content-library-client'
 
 export default async function ContentLibraryPage() {
-  const content = await getAllContentAssets()
+  const [content, projects] = await Promise.all([
+    getAllContentAssets(),
+    getAllProjects(),
+  ])
 
   return (
     <div className="space-y-6">
@@ -23,7 +26,7 @@ export default async function ContentLibraryPage() {
           </p>
         </div>
       ) : (
-        <ContentLibraryClient initialContent={content} />
+        <ContentLibraryClient initialContent={content} projects={projects} />
       )}
     </div>
   )
