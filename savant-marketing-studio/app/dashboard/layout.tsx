@@ -6,6 +6,7 @@ import { SearchBar } from '@/components/search-bar'
 import { MobileNav } from '@/components/mobile-nav'
 import { PerfMonitor } from '@/components/perf-monitor'
 import { ThemeToggle } from '@/components/theme-toggle'
+import { CommandPalette } from '@/components/command-palette'
 import Link from 'next/link'
 import { useState, useEffect } from 'react'
 
@@ -28,6 +29,9 @@ export default function DashboardLayout({
 
   return (
     <div className="min-h-screen bg-background">
+      {/* Command Palette (Cmd+K) */}
+      <CommandPalette />
+
       {/* Mobile Navigation */}
       <MobileNav userEmail={userEmail} />
 
