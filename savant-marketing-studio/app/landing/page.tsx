@@ -2,10 +2,14 @@
 
 import { useState, useRef } from 'react'
 import Image from 'next/image'
+import dynamic from 'next/dynamic'
+
+const PinModal = dynamic(() => import('@/components/pin-modal'), { ssr: false })
 
 export default function LandingPage() {
   const [formStep, setFormStep] = useState(0)
   const [showForm, setShowForm] = useState(false)
+  const [showPinModal, setShowPinModal] = useState(false)
   const [formData, setFormData] = useState({
     businessName: '',
     businessType: '',
@@ -48,9 +52,12 @@ export default function LandingPage() {
         {/* Nav */}
         <nav className="absolute top-0 left-0 right-0 flex items-center justify-between px-6 py-4">
           <span className="text-xl font-bold">DRSS</span>
-          <a href="/login" className="text-sm text-gray-500 hover:text-white transition-colors">
+          <button 
+            onClick={() => setShowPinModal(true)}
+            className="text-sm text-gray-500 hover:text-white transition-colors"
+          >
             Admin
-          </a>
+          </button>
         </nav>
 
         <div className="max-w-lg mx-auto text-center md:max-w-2xl">
@@ -666,12 +673,12 @@ export default function LandingPage() {
           <p className="text-gray-500 text-sm">
             © 2025 DRSS Marketing. All rights reserved.
             </p>
-          <a 
-              href="/login"
+          <button 
+            onClick={() => setShowPinModal(true)}
             className="text-gray-500 text-sm hover:text-white transition-colors"
-            >
-              Admin Login
-          </a>
+          >
+            Admin Login
+          </button>
         </div>
       </footer>
 
@@ -700,6 +707,9 @@ export default function LandingPage() {
           outline: none;
         }
       `}</style>
+      
+      {/* PIN Modal */}
+      <PinModal open={showPinModal} onClose={() => setShowPinModal(false)} />
     </div>
   )
 }

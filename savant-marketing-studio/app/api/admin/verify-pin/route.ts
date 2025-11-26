@@ -1,8 +1,24 @@
 import { NextResponse } from 'next/server';
-export const dynamic = 'force-static';
 
 export async function POST(req: Request) {
-  const { pin } = await req.json();
-  const ok = Boolean(process.env.ADMIN_PIN) && pin === process.env.ADMIN_PIN;
-  return NextResponse.json({ success: ok });
+  try {
+    const { pin } = await req.json();
+    
+    // Get PIN from environment variable
+    const adminPin = process.env.ADMIN_PIN;
+    
+    // If no PIN is set, deny access
+    if (!adminPin) {
+      console.error('ADMIN_PIN environment variable is not set');
+      return NextResponse.json({ success: false }, { status: 500 });
+    }
+    
+    // Verify PIN (must be exactly 6 digits)
+    const isValid = pin && typeof pin === 'string' && pin.length === 6 && pin === adminPin;
+    
+    return NextResponse.json({ success: isValid });
+  } catch (error) {
+    console.error('PIN verification error:', error);
+    return NextResponse.json({ success: false }, { status: 500 });
+  }
 }
