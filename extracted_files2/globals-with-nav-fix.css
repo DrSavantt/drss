@@ -1,0 +1,88 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ========================================
+   PROPER MOBILE SCROLL FIXES
+   ======================================== */
+
+/* Allow normal scrolling but prevent bounce */
+html {
+  overscroll-behavior: none;
+  scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch;
+}
+
+body {
+  overscroll-behavior: none;
+  background: #0A0A0A;
+  /* DO NOT use position: fixed - it breaks scrolling */
+  /* DO NOT use overflow: hidden - it breaks scrolling */
+}
+
+/* Safe area for iPhone notch */
+@supports (padding: env(safe-area-inset-top)) {
+  body {
+    padding-top: env(safe-area-inset-top);
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+}
+
+/* Prevent pull-to-refresh at top of page */
+body {
+  overscroll-behavior-y: contain;
+}
+
+/* Prevent iOS zoom on input focus */
+input,
+textarea,
+select {
+  font-size: 16px !important;
+}
+
+/* Prevent text selection on mobile (optional) */
+* {
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Custom scrollbar for desktop */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #0A0A0A;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #4ECDC4;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #3dbdb5;
+}
+
+/* ========================================
+   NAVIGATION HEADER FIX
+   ======================================== */
+
+/* Prevent content showing through header when scrolling */
+nav {
+  background: rgba(10, 10, 10, 0.95) !important;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  z-index: 50;
+}
+
+.sticky {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+}
+
+main {
+  position: relative;
+  z-index: 1;
+}
