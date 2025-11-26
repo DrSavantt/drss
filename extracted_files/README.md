@@ -85,7 +85,7 @@ After your app is deployed:
 
 1. **Delete DRSS** from iPhone home screen
 2. **Delete PocketOptions** from home screen (temporary)
-3. Go to Safari → drss-mvp.vercel.app
+3. Go to Safari → drss-main.vercel.app
 4. **Add DRSS to home screen** (fresh install with new manifest)
 5. Test - popup should be gone
 6. Re-add PocketOptions if needed
