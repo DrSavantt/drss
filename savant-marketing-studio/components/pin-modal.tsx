@@ -57,8 +57,6 @@ export default function PinModal({ open, onClose }: { open: boolean; onClose: ()
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => { e.preventDefault(); if (pin.length === 6) verify(pin); };
-
   if (!open) return null;
 
   const remaining = lockout ? Math.max(0, Math.floor((lockout - Date.now())/1000)) : 0;
@@ -74,7 +72,7 @@ export default function PinModal({ open, onClose }: { open: boolean; onClose: ()
         {lockout ? (
           <div className="text-error mb-2 font-semibold">Locked for {Math.ceil(remaining/60)}m {remaining%60}s</div>
         ) : null}
-        <form onSubmit={handleSubmit}>
+        <div>
           <input
             ref={inputRef}
             type="password"
@@ -88,8 +86,10 @@ export default function PinModal({ open, onClose }: { open: boolean; onClose: ()
             placeholder="••••••"
             maxLength={6}
           />
-          <button type="submit" className="w-full py-2 mt-2 rounded-lg bg-red-primary hover:bg-red-dark text-foreground font-bold transition-all duration-300" disabled={loading || pin.length < 6 || !!lockout}>{loading ? 'Checking...' : 'Unlock'}</button>
-        </form>
+          {loading && (
+            <div className="text-sm text-silver mb-3">Checking...</div>
+          )}
+        </div>
         <div className="mt-3 text-sm min-h-[20px] text-error">{error}</div>
         <button onClick={onClose} className="absolute top-2 right-2 text-silver hover:text-red-primary text-lg">×</button>
       </div>
