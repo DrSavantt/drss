@@ -6,7 +6,7 @@
 
 ## 🚀 Live Deployment
 
-- **Production:** [drss-mvp.vercel.app](https://drss-mvp.vercel.app)
+- **Production:** [drss-main.vercel.app](https://drss-main.vercel.app)
 - **GitHub:** [github.com/DrSavantt/drss](https://github.com/DrSavantt/drss)
 
 ---
