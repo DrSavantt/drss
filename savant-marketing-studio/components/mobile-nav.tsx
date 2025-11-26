@@ -5,6 +5,7 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { logout } from '@/app/actions/auth'
+import { ThemeToggle } from '@/components/theme-toggle'
 
 interface MobileNavProps {
   userEmail: string | null
@@ -88,8 +89,21 @@ export function MobileNav({ userEmail }: MobileNavProps) {
             )
           })}
 
-          {/* User Info & Logout */}
+          {/* Theme Toggle */}
           <div className="mt-8 pt-6 border-t border-mid-gray">
+            <div className="px-4 mb-4">
+              <p className="text-xs text-slate uppercase tracking-wide mb-3">Appearance</p>
+              <div className="flex items-center justify-between px-4 py-3 rounded-lg hover:bg-dark-gray transition-colors">
+                <span className="text-sm text-silver">Theme</span>
+                <div className="flex items-center">
+                  <ThemeToggle />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* User Info & Logout */}
+          <div className="mt-4 pt-6 border-t border-mid-gray">
             {userEmail && (
               <div className="px-4 mb-4">
                 <p className="text-xs text-slate uppercase tracking-wide mb-1">Account</p>
