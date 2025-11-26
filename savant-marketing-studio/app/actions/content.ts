@@ -231,28 +231,124 @@ export async function createFileAsset(clientId: string, formData: FormData) {
 
 export async function getUploadUrl(fileName: string, clientId: string) {
   const supabase = await createSupabaseClient()
-  
+
   if (!supabase) {
     return { error: 'Database connection not configured' }
   }
-  
+
   // Create unique file path: clientId/timestamp-filename
   const timestamp = Date.now()
   const sanitizedFileName = fileName.replace(/[^a-zA-Z0-9.-]/g, '_')
   const filePath = `${clientId}/${timestamp}-${sanitizedFileName}`
-  
+
   const { data, error } = await supabase.storage
     .from('client-files')
     .createSignedUploadUrl(filePath)
-  
+
   if (error) {
     console.error('Error creating upload URL:', error)
     return { error: 'Failed to create upload URL' }
   }
-  
-  return { 
-    signedUrl: data.signedUrl, 
+
+  return {
+    signedUrl: data.signedUrl,
     path: data.path,
-    token: data.token 
+    token: data.token
   }
+}
+
+// Bulk operations
+export async function bulkDeleteContent(contentIds: string[]) {
+  const supabase = await createSupabaseClient()
+
+  if (!supabase) {
+    return { error: 'Database connection not configured' }
+  }
+
+  if (!contentIds || contentIds.length === 0) {
+    return { error: 'No items selected' }
+  }
+
+  const { error } = await supabase
+    .from('content_assets')
+    .delete()
+    .in('id', contentIds)
+
+  if (error) {
+    console.error('Bulk delete failed:', error)
+    return { error: 'Failed to delete items' }
+  }
+
+  revalidatePath('/dashboard/content')
+  return { success: true, count: contentIds.length }
+}
+
+export async function bulkArchiveContent(contentIds: string[]) {
+  const supabase = await createSupabaseClient()
+
+  if (!supabase) {
+    return { error: 'Database connection not configured' }
+  }
+
+  if (!contentIds || contentIds.length === 0) {
+    return { error: 'No items selected' }
+  }
+
+  const { error } = await supabase
+    .from('content_assets')
+    .update({ is_archived: true })
+    .in('id', contentIds)
+
+  if (error) {
+    console.error('Bulk archive failed:', error)
+    return { error: 'Failed to archive items' }
+  }
+
+  revalidatePath('/dashboard/content')
+  return { success: true, count: contentIds.length }
+}
+
+export async function bulkChangeProject(contentIds: string[], projectId: string | null) {
+  const supabase = await createSupabaseClient()
+
+  if (!supabase) {
+    return { error: 'Database connection not configured' }
+  }
+
+  if (!contentIds || contentIds.length === 0) {
+    return { error: 'No items selected' }
+  }
+
+  const { error } = await supabase
+    .from('content_assets')
+    .update({ project_id: projectId })
+    .in('id', contentIds)
+
+  if (error) {
+    console.error('Bulk update failed:', error)
+    return { error: 'Failed to update items' }
+  }
+
+  revalidatePath('/dashboard/content')
+  return { success: true, count: contentIds.length }
+}
+
+export async function getAllProjects() {
+  const supabase = await createSupabaseClient()
+
+  if (!supabase) {
+    return []
+  }
+
+  const { data: projects, error } = await supabase
+    .from('projects')
+    .select('id, name, clients(name)')
+    .order('name', { ascending: true })
+
+  if (error) {
+    console.error('Error fetching projects:', error)
+    return []
+  }
+
+  return projects
 }
