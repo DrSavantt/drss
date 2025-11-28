@@ -14,6 +14,7 @@ interface ContentAsset {
   title: string
   asset_type: string
   created_at: string
+  is_archived?: boolean
   clients: {
     name: string
   } | null
@@ -201,8 +202,8 @@ export function ContentLibraryClient({ initialContent }: ContentLibraryClientPro
       const dateRangeStart = getDateRangeFilter(dateRange)
       const matchesDateRange = !dateRangeStart || new Date(item.created_at) >= dateRangeStart
       
-      // Archived filter
-      const matchesArchived = showArchived || !('is_archived' in item) || !item.is_archived
+      // Archived filter - when toggle is OFF, hide archived items; when ON, show all
+      const matchesArchived = showArchived || !item.is_archived
       
       return matchesSearch && matchesType && matchesClient && matchesDateRange && matchesArchived
     })
@@ -610,6 +611,11 @@ export function ContentLibraryClient({ initialContent }: ContentLibraryClientPro
                       >
                         {item.asset_type.replace('_', ' ')}
                       </span>
+                      {item.is_archived && (
+                        <span className="px-2 py-1 text-xs font-medium rounded-full bg-warning/20 text-warning border border-warning/30">
+                          Archived
+                        </span>
+                      )}
                       {getClientName(item.clients) && (
                         <span className="px-2 py-1 text-xs font-medium rounded-full bg-slate/20 text-foreground border border-slate/30">
                           {getClientName(item.clients)}
