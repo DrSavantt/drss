@@ -4,16 +4,20 @@ interface BulkActionBarProps {
   selectedCount: number
   onDelete: () => void
   onArchive: () => void
+  onUnarchive?: () => void
   onChangeProject: () => void
   onCancel: () => void
+  hasArchivedItems?: boolean
 }
 
 export function BulkActionBar({
   selectedCount,
   onDelete,
   onArchive,
+  onUnarchive,
   onChangeProject,
-  onCancel
+  onCancel,
+  hasArchivedItems = false
 }: BulkActionBarProps) {
   if (selectedCount === 0) return null
 
@@ -47,21 +51,38 @@ export function BulkActionBar({
               Delete
             </button>
 
-            {/* Archive */}
-            <button
-              onClick={onArchive}
-              className="px-4 py-2 rounded-md bg-dark-gray border border-mid-gray text-foreground font-medium hover:bg-mid-gray transition-colors flex items-center gap-2"
-            >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"
-                />
-              </svg>
-              Archive
-            </button>
+            {/* Archive/Unarchive - show based on selection */}
+            {hasArchivedItems && onUnarchive ? (
+              <button
+                onClick={onUnarchive}
+                className="px-4 py-2 rounded-md bg-success/20 border border-success text-success font-medium hover:bg-success/30 transition-colors flex items-center gap-2"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"
+                  />
+                </svg>
+                Unarchive
+              </button>
+            ) : (
+              <button
+                onClick={onArchive}
+                className="px-4 py-2 rounded-md bg-dark-gray border border-mid-gray text-foreground font-medium hover:bg-mid-gray transition-colors flex items-center gap-2"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"
+                  />
+                </svg>
+                Archive
+              </button>
+            )}
 
             {/* Change Project */}
             <button
