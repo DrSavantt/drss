@@ -3,7 +3,7 @@
 import { useState, useMemo, useCallback, useEffect } from 'react'
 import Link from 'next/link'
 import { getClientName } from '@/lib/supabase/types'
-import { bulkDeleteContent, bulkArchiveContent, bulkChangeProject, getAllProjects } from '@/app/actions/content'
+import { bulkDeleteContent, bulkArchiveContent, bulkUnarchiveContent, bulkChangeProject, getAllProjects } from '@/app/actions/content'
 import { BulkActionBar } from '@/app/components/bulk-action-bar'
 import { ConfirmationModal } from '@/app/components/confirmation-modal'
 import { ProjectSelectorModal } from '@/app/components/project-selector-modal'
@@ -79,6 +79,7 @@ export function ContentLibraryClient({ initialContent }: ContentLibraryClientPro
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
   const [isArchiveModalOpen, setIsArchiveModalOpen] = useState(false)
+  const [isUnarchiveModalOpen, setIsUnarchiveModalOpen] = useState(false)
   const [isProjectModalOpen, setIsProjectModalOpen] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [projects, setProjects] = useState<Project[]>([])
@@ -292,7 +293,10 @@ export function ContentLibraryClient({ initialContent }: ContentLibraryClientPro
         addToast(result.error, 'error')
       } else {
         addToast(`${result.count} ${result.count === 1 ? 'item' : 'items'} archived`, 'success')
-        setContent(prev => prev.filter(item => !selectedIds.has(item.id)))
+        // Update local state to mark items as archived
+        setContent(prev => prev.map(item => 
+          selectedIds.has(item.id) ? { ...item, is_archived: true } : item
+        ))
         clearSelection()
       }
     } catch {
@@ -300,6 +304,29 @@ export function ContentLibraryClient({ initialContent }: ContentLibraryClientPro
     } finally {
       setIsLoading(false)
       setIsArchiveModalOpen(false)
+    }
+  }, [selectedIds, addToast, clearSelection])
+
+  // Bulk unarchive handler
+  const handleBulkUnarchive = useCallback(async () => {
+    setIsLoading(true)
+    try {
+      const result = await bulkUnarchiveContent(Array.from(selectedIds))
+      if (result.error) {
+        addToast(result.error, 'error')
+      } else {
+        addToast(`${result.count} ${result.count === 1 ? 'item' : 'items'} unarchived`, 'success')
+        // Update local state to mark items as not archived
+        setContent(prev => prev.map(item => 
+          selectedIds.has(item.id) ? { ...item, is_archived: false } : item
+        ))
+        clearSelection()
+      }
+    } catch {
+      addToast('Failed to unarchive items', 'error')
+    } finally {
+      setIsLoading(false)
+      setIsUnarchiveModalOpen(false)
     }
   }, [selectedIds, addToast, clearSelection])
 
@@ -336,6 +363,14 @@ export function ContentLibraryClient({ initialContent }: ContentLibraryClientPro
     }
   }, [selectedIds, projects, addToast, clearSelection])
 
+  // Check if any selected items are archived
+  const hasArchivedItems = useMemo(() => {
+    return Array.from(selectedIds).some(id => {
+      const item = content.find(c => c.id === id)
+      return item?.is_archived === true
+    })
+  }, [selectedIds, content])
+
   // Modal open handlers
   const openDeleteModal = useCallback(() => {
     setIsDeleteModalOpen(true)
@@ -343,6 +378,10 @@ export function ContentLibraryClient({ initialContent }: ContentLibraryClientPro
 
   const openArchiveModal = useCallback(() => {
     setIsArchiveModalOpen(true)
+  }, [])
+
+  const openUnarchiveModal = useCallback(() => {
+    setIsUnarchiveModalOpen(true)
   }, [])
 
   const openProjectModal = useCallback(async () => {
@@ -649,8 +688,10 @@ export function ContentLibraryClient({ initialContent }: ContentLibraryClientPro
         selectedCount={selectedIds.size}
         onDelete={openDeleteModal}
         onArchive={openArchiveModal}
+        onUnarchive={openUnarchiveModal}
         onChangeProject={openProjectModal}
         onCancel={clearSelection}
+        hasArchivedItems={hasArchivedItems}
       />
 
       {/* Confirmation Modals */}
@@ -674,6 +715,18 @@ export function ContentLibraryClient({ initialContent }: ContentLibraryClientPro
         cancelText="Cancel"
         onConfirm={handleBulkArchive}
         onCancel={() => setIsArchiveModalOpen(false)}
+        isLoading={isLoading}
+        isDanger={false}
+      />
+
+      <ConfirmationModal
+        isOpen={isUnarchiveModalOpen}
+        title="Unarchive Items"
+        message={`Are you sure you want to unarchive ${selectedIds.size} ${selectedIds.size === 1 ? 'item' : 'items'}?`}
+        confirmText="Unarchive"
+        cancelText="Cancel"
+        onConfirm={handleBulkUnarchive}
+        onCancel={() => setIsUnarchiveModalOpen(false)}
         isLoading={isLoading}
         isDanger={false}
       />

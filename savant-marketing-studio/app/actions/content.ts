@@ -306,6 +306,31 @@ export async function bulkArchiveContent(contentIds: string[]) {
   return { success: true, count: contentIds.length }
 }
 
+export async function bulkUnarchiveContent(contentIds: string[]) {
+  const supabase = await createSupabaseClient()
+  
+  if (!supabase) {
+    return { error: 'Database connection not configured' }
+  }
+  
+  if (!contentIds || contentIds.length === 0) {
+    return { error: 'No content IDs provided' }
+  }
+  
+  const { error } = await supabase
+    .from('content_assets')
+    .update({ is_archived: false })
+    .in('id', contentIds)
+  
+  if (error) {
+    console.error('Error bulk unarchiving content:', error)
+    return { error: 'Failed to unarchive content' }
+  }
+  
+  revalidatePath('/dashboard/content')
+  return { success: true, count: contentIds.length }
+}
+
 export async function bulkChangeProject(contentIds: string[], projectId: string | null) {
   const supabase = await createSupabaseClient()
   
