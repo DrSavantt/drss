@@ -151,7 +151,6 @@ export async function getAllContentAssets() {
   const { data: content, error } = await supabase
     .from('content_assets')
     .select('*, clients(name), projects(name)')
-    .eq('is_archived', false)
     .order('created_at', { ascending: false })
   
   if (error) {
