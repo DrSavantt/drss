@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo, useCallback } from 'react'
+import { useState, useMemo, useCallback, useEffect } from 'react'
 import Link from 'next/link'
 import { getClientName } from '@/lib/supabase/types'
 import { bulkDeleteContent, bulkArchiveContent, bulkChangeProject, getAllProjects } from '@/app/actions/content'
@@ -41,9 +41,38 @@ interface ToastMessage {
 }
 
 export function ContentLibraryClient({ initialContent }: ContentLibraryClientProps) {
+  // Load preferences from localStorage
   const [searchQuery, setSearchQuery] = useState('')
-  const [selectedType, setSelectedType] = useState<string>('all')
-  const [selectedClient, setSelectedClient] = useState<string>('all')
+  const [selectedType, setSelectedType] = useState<string>(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('contentLibrary_selectedType') || 'all'
+    }
+    return 'all'
+  })
+  const [selectedClient, setSelectedClient] = useState<string>(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('contentLibrary_selectedClient') || 'all'
+    }
+    return 'all'
+  })
+  const [sortBy, setSortBy] = useState<string>(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('contentLibrary_sortBy') || 'newest'
+    }
+    return 'newest'
+  })
+  const [dateRange, setDateRange] = useState<string>(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('contentLibrary_dateRange') || 'all'
+    }
+    return 'all'
+  })
+  const [showArchived, setShowArchived] = useState<boolean>(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('contentLibrary_showArchived') === 'true'
+    }
+    return false
+  })
   
   // Bulk action state
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
@@ -54,6 +83,27 @@ export function ContentLibraryClient({ initialContent }: ContentLibraryClientPro
   const [projects, setProjects] = useState<Project[]>([])
   const [toasts, setToasts] = useState<ToastMessage[]>([])
   const [content, setContent] = useState<ContentAsset[]>(initialContent)
+
+  // Save preferences to localStorage
+  useEffect(() => {
+    localStorage.setItem('contentLibrary_selectedType', selectedType)
+  }, [selectedType])
+
+  useEffect(() => {
+    localStorage.setItem('contentLibrary_selectedClient', selectedClient)
+  }, [selectedClient])
+
+  useEffect(() => {
+    localStorage.setItem('contentLibrary_sortBy', sortBy)
+  }, [sortBy])
+
+  useEffect(() => {
+    localStorage.setItem('contentLibrary_dateRange', dateRange)
+  }, [dateRange])
+
+  useEffect(() => {
+    localStorage.setItem('contentLibrary_showArchived', showArchived.toString())
+  }, [showArchived])
 
   // Toast helpers
   const addToast = useCallback((message: string, type: 'success' | 'error' | 'info') => {
@@ -93,16 +143,87 @@ export function ContentLibraryClient({ initialContent }: ContentLibraryClientPro
     landing_page: 'bg-warning/20 text-warning border border-warning/30',
   }
 
-  // Filter content
-  const filteredContent = useMemo(() => {
-    return content.filter(item => {
+  // Clear all filters
+  const clearAllFilters = useCallback(() => {
+    setSearchQuery('')
+    setSelectedType('all')
+    setSelectedClient('all')
+    setSortBy('newest')
+    setDateRange('all')
+    setShowArchived(false)
+    localStorage.removeItem('contentLibrary_selectedType')
+    localStorage.removeItem('contentLibrary_selectedClient')
+    localStorage.removeItem('contentLibrary_sortBy')
+    localStorage.removeItem('contentLibrary_dateRange')
+    localStorage.removeItem('contentLibrary_showArchived')
+    addToast('All filters cleared', 'info')
+  }, [addToast])
+
+  // Calculate date range
+  const getDateRangeFilter = useCallback((dateRangeValue: string) => {
+    const now = new Date()
+    switch (dateRangeValue) {
+      case 'week':
+        return new Date(now.setDate(now.getDate() - 7))
+      case 'month':
+        return new Date(now.setDate(now.getDate() - 30))
+      case 'quarter':
+        return new Date(now.setMonth(now.getMonth() - 3))
+      default:
+        return null
+    }
+  }, [])
+
+  // Count active filters
+  const activeFiltersCount = useMemo(() => {
+    let count = 0
+    if (selectedType !== 'all') count++
+    if (selectedClient !== 'all') count++
+    if (dateRange !== 'all') count++
+    if (showArchived) count++
+    return count
+  }, [selectedType, selectedClient, dateRange, showArchived])
+
+  // Filter and sort content
+  const filteredAndSortedContent = useMemo(() => {
+    // First, filter
+    const filtered = content.filter(item => {
+      // Search filter
       const matchesSearch = item.title.toLowerCase().includes(searchQuery.toLowerCase())
+      
+      // Type filter
       const matchesType = selectedType === 'all' || item.asset_type === selectedType
+      
+      // Client filter
       const matchesClient = selectedClient === 'all' || item.clients?.name === selectedClient
       
-      return matchesSearch && matchesType && matchesClient
+      // Date range filter
+      const dateRangeStart = getDateRangeFilter(dateRange)
+      const matchesDateRange = !dateRangeStart || new Date(item.created_at) >= dateRangeStart
+      
+      // Archived filter
+      const matchesArchived = showArchived || !('is_archived' in item) || !item.is_archived
+      
+      return matchesSearch && matchesType && matchesClient && matchesDateRange && matchesArchived
     })
-  }, [content, searchQuery, selectedType, selectedClient])
+
+    // Then, sort
+    return filtered.sort((a, b) => {
+      switch (sortBy) {
+        case 'oldest':
+          return new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+        case 'title-asc':
+          return a.title.localeCompare(b.title)
+        case 'title-desc':
+          return b.title.localeCompare(a.title)
+        case 'client':
+          return (a.clients?.name || '').localeCompare(b.clients?.name || '')
+        case 'newest':
+        default:
+          return new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+      }
+    })
+  }, [content, searchQuery, selectedType, selectedClient, dateRange, showArchived, sortBy, getDateRangeFilter])
 
   // Checkbox handlers
   const toggleSelection = useCallback((id: string) => {
@@ -118,12 +239,12 @@ export function ContentLibraryClient({ initialContent }: ContentLibraryClientPro
   }, [])
 
   const toggleSelectAll = useCallback(() => {
-    if (selectedIds.size === filteredContent.length) {
+    if (selectedIds.size === filteredAndSortedContent.length) {
       setSelectedIds(new Set())
     } else {
-      setSelectedIds(new Set(filteredContent.map(item => item.id)))
+      setSelectedIds(new Set(filteredAndSortedContent.map(item => item.id)))
     }
-  }, [selectedIds.size, filteredContent])
+  }, [selectedIds.size, filteredAndSortedContent])
 
   const clearSelection = useCallback(() => {
     setSelectedIds(new Set())
@@ -228,27 +349,108 @@ export function ContentLibraryClient({ initialContent }: ContentLibraryClientPro
     setIsProjectModalOpen(true)
   }, [loadProjects])
 
+  // Remove individual filter badges
+  const removeFilter = useCallback((filterType: string) => {
+    switch (filterType) {
+      case 'type':
+        setSelectedType('all')
+        break
+      case 'client':
+        setSelectedClient('all')
+        break
+      case 'dateRange':
+        setDateRange('all')
+        break
+      case 'archived':
+        setShowArchived(false)
+        break
+    }
+  }, [])
+
   return (
     <div className="space-y-6 pb-24">
+      {/* Filter Status & Clear Button */}
+      {activeFiltersCount > 0 && (
+        <div className="bg-charcoal rounded-lg border border-red-primary p-4">
+          <div className="flex flex-wrap items-center justify-between gap-4">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-sm font-semibold text-foreground">
+                {activeFiltersCount} {activeFiltersCount === 1 ? 'filter' : 'filters'} active:
+              </span>
+              {selectedType !== 'all' && (
+                <button
+                  onClick={() => removeFilter('type')}
+                  className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-full bg-red-primary/20 text-red-primary border border-red-primary/30 hover:bg-red-primary/30 transition-colors"
+                >
+                  Type: {assetTypes.find(t => t.value === selectedType)?.label}
+                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              )}
+              {selectedClient !== 'all' && (
+                <button
+                  onClick={() => removeFilter('client')}
+                  className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-full bg-red-primary/20 text-red-primary border border-red-primary/30 hover:bg-red-primary/30 transition-colors"
+                >
+                  Client: {selectedClient}
+                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              )}
+              {dateRange !== 'all' && (
+                <button
+                  onClick={() => removeFilter('dateRange')}
+                  className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-full bg-red-primary/20 text-red-primary border border-red-primary/30 hover:bg-red-primary/30 transition-colors"
+                >
+                  Date: {dateRange === 'week' ? 'Last 7 days' : dateRange === 'month' ? 'Last 30 days' : 'Last 3 months'}
+                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              )}
+              {showArchived && (
+                <button
+                  onClick={() => removeFilter('archived')}
+                  className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-full bg-red-primary/20 text-red-primary border border-red-primary/30 hover:bg-red-primary/30 transition-colors"
+                >
+                  Show Archived
+                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              )}
+            </div>
+            <button
+              onClick={clearAllFilters}
+              className="text-sm font-medium text-red-primary hover:text-red-bright transition-colors"
+            >
+              Clear All Filters
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Select All Checkbox */}
-      {filteredContent.length > 0 && (
+      {filteredAndSortedContent.length > 0 && (
         <div className="flex items-center gap-3 bg-charcoal rounded-lg border border-mid-gray p-4">
           <input
             type="checkbox"
             id="select-all"
-            checked={selectedIds.size === filteredContent.length && filteredContent.length > 0}
+            checked={selectedIds.size === filteredAndSortedContent.length && filteredAndSortedContent.length > 0}
             onChange={toggleSelectAll}
             className="w-5 h-5 rounded border-mid-gray bg-dark-gray accent-red-primary cursor-pointer"
           />
           <label htmlFor="select-all" className="text-sm font-medium text-foreground cursor-pointer">
-            Select All ({filteredContent.length} items)
+            Select All ({filteredAndSortedContent.length} items)
           </label>
         </div>
       )}
 
       {/* Filters */}
       <div className="bg-charcoal rounded-lg border border-mid-gray p-4">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {/* Search */}
           <div>
             <label htmlFor="search" className="block text-sm font-medium text-silver mb-1">
@@ -302,22 +504,72 @@ export function ContentLibraryClient({ initialContent }: ContentLibraryClientPro
               ))}
             </select>
           </div>
+
+          {/* Sort By */}
+          <div>
+            <label htmlFor="sort" className="block text-sm font-medium text-silver mb-1">
+              Sort By
+            </label>
+            <select
+              id="sort"
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value)}
+              className="block w-full rounded-md border border-mid-gray bg-dark-gray px-3 py-2 text-sm text-foreground shadow-sm focus:border-red-primary focus:outline-none focus:ring-red-primary"
+            >
+              <option value="newest">Newest First</option>
+              <option value="oldest">Oldest First</option>
+              <option value="title-asc">Title A-Z</option>
+              <option value="title-desc">Title Z-A</option>
+              <option value="client">Client Name</option>
+            </select>
+          </div>
+
+          {/* Date Range */}
+          <div>
+            <label htmlFor="dateRange" className="block text-sm font-medium text-silver mb-1">
+              Date Range
+            </label>
+            <select
+              id="dateRange"
+              value={dateRange}
+              onChange={(e) => setDateRange(e.target.value)}
+              className="block w-full rounded-md border border-mid-gray bg-dark-gray px-3 py-2 text-sm text-foreground shadow-sm focus:border-red-primary focus:outline-none focus:ring-red-primary"
+            >
+              <option value="all">All Time</option>
+              <option value="week">Last 7 Days</option>
+              <option value="month">Last 30 Days</option>
+              <option value="quarter">Last 3 Months</option>
+            </select>
+          </div>
+
+          {/* Show Archived Toggle */}
+          <div className="flex items-end">
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={showArchived}
+                onChange={(e) => setShowArchived(e.target.checked)}
+                className="w-4 h-4 rounded border-mid-gray bg-dark-gray accent-red-primary cursor-pointer"
+              />
+              <span className="text-sm font-medium text-foreground">Show Archived</span>
+            </label>
+          </div>
         </div>
 
         {/* Results Count */}
         <div className="mt-4 text-sm text-slate">
-          Showing {filteredContent.length} of {content.length} items
+          Showing {filteredAndSortedContent.length} of {content.length} items
         </div>
       </div>
 
       {/* Content Grid */}
-      {filteredContent.length === 0 ? (
+      {filteredAndSortedContent.length === 0 ? (
         <div className="text-center py-12 bg-charcoal rounded-lg border border-mid-gray">
           <p className="text-silver">No content matches your filters</p>
         </div>
       ) : (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {filteredContent.map((item) => {
+          {filteredAndSortedContent.map((item) => {
             const isSelected = selectedIds.has(item.id)
             return (
               <div

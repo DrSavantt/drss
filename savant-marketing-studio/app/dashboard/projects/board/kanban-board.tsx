@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import {
   DndContext,
   DragEndEvent,
@@ -36,14 +36,78 @@ interface Project {
 
 interface KanbanBoardProps {
   initialProjects: Project[]
+  filterClient?: string
+  filterPriority?: string
+  dueDateRange?: string
+  sortBy?: string
 }
 
-export function KanbanBoard({ initialProjects }: KanbanBoardProps) {
+export function KanbanBoard({ 
+  initialProjects,
+  filterClient = 'all',
+  filterPriority = 'all',
+  dueDateRange = 'all',
+  sortBy = 'position'
+}: KanbanBoardProps) {
   const [projects, setProjects] = useState(initialProjects)
   const [activeId, setActiveId] = useState<string | null>(null)
   const [mounted, setMounted] = useState(false)
   const [isUpdating, setIsUpdating] = useState(false)
   const [selectedProject, setSelectedProject] = useState<Project | null>(null)
+
+  // Apply filters and sorting
+  const filteredAndSortedProjects = useMemo(() => {
+    let filtered = projects
+
+    // Filter by client
+    if (filterClient !== 'all') {
+      filtered = filtered.filter(p => p.clients?.name === filterClient)
+    }
+
+    // Filter by priority
+    if (filterPriority !== 'all') {
+      filtered = filtered.filter(p => p.priority === filterPriority)
+    }
+
+    // Filter by due date range
+    if (dueDateRange !== 'all') {
+      const now = new Date()
+      filtered = filtered.filter(p => {
+        if (!p.due_date) return dueDateRange === 'none'
+        
+        const dueDate = new Date(p.due_date)
+        switch (dueDateRange) {
+          case 'week':
+            return dueDate <= new Date(now.setDate(now.getDate() + 7))
+          case 'month':
+            return dueDate <= new Date(now.setMonth(now.getMonth() + 1))
+          case 'overdue':
+            return dueDate < new Date()
+          default:
+            return true
+        }
+      })
+    }
+
+    // Sort projects
+    return filtered.sort((a, b) => {
+      switch (sortBy) {
+        case 'due-date':
+          if (!a.due_date) return 1
+          if (!b.due_date) return -1
+          return new Date(a.due_date).getTime() - new Date(b.due_date).getTime()
+        case 'priority':
+          const priorityOrder = { urgent: 0, high: 1, medium: 2, low: 3 }
+          return (priorityOrder[a.priority as keyof typeof priorityOrder] || 2) - 
+                 (priorityOrder[b.priority as keyof typeof priorityOrder] || 2)
+        case 'name':
+          return a.name.localeCompare(b.name)
+        case 'position':
+        default:
+          return (a.position || 0) - (b.position || 0)
+      }
+    })
+  }, [projects, filterClient, filterPriority, dueDateRange, sortBy])
 
   // Only render drag & drop after client-side mount
   useEffect(() => {
@@ -159,9 +223,7 @@ export function KanbanBoard({ initialProjects }: KanbanBoardProps) {
   }
 
   const getProjectsByStatus = (status: string) => {
-    return projects
-      .filter(p => p.status === status)
-      .sort((a, b) => (a.position || 0) - (b.position || 0))
+    return filteredAndSortedProjects.filter(p => p.status === status)
   }
 
   const activeProject = activeId ? projects.find(p => p.id === activeId) : null
