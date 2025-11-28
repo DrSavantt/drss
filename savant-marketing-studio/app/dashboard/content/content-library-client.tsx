@@ -133,7 +133,7 @@ export function ContentLibraryClient({ initialContent }: ContentLibraryClientPro
   const loadProjects = useCallback(async () => {
     const projectsList = await getAllProjects()
     // Transform Supabase array response to single object
-    const transformedProjects = projectsList.map((p: any) => ({
+    const transformedProjects = projectsList.map((p) => ({
       id: p.id,
       name: p.name,
       clients: Array.isArray(p.clients) && p.clients.length > 0 ? p.clients[0] : null
@@ -153,7 +153,7 @@ export function ContentLibraryClient({ initialContent }: ContentLibraryClientPro
         setContent(prev => prev.filter(item => !selectedIds.has(item.id)))
         clearSelection()
       }
-    } catch (error) {
+    } catch {
       addToast('Failed to delete items', 'error')
     } finally {
       setIsLoading(false)
@@ -173,7 +173,7 @@ export function ContentLibraryClient({ initialContent }: ContentLibraryClientPro
         setContent(prev => prev.filter(item => !selectedIds.has(item.id)))
         clearSelection()
       }
-    } catch (error) {
+    } catch {
       addToast('Failed to archive items', 'error')
     } finally {
       setIsLoading(false)
@@ -206,7 +206,7 @@ export function ContentLibraryClient({ initialContent }: ContentLibraryClientPro
         
         clearSelection()
       }
-    } catch (error) {
+    } catch {
       addToast('Failed to change project', 'error')
     } finally {
       setIsLoading(false)
