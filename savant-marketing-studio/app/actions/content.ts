@@ -256,3 +256,98 @@ export async function getUploadUrl(fileName: string, clientId: string) {
     token: data.token 
   }
 }
+
+export async function bulkDeleteContent(contentIds: string[]) {
+  const supabase = await createSupabaseClient()
+  
+  if (!supabase) {
+    return { error: 'Database connection not configured' }
+  }
+  
+  if (!contentIds || contentIds.length === 0) {
+    return { error: 'No content IDs provided' }
+  }
+  
+  const { error } = await supabase
+    .from('content_assets')
+    .delete()
+    .in('id', contentIds)
+  
+  if (error) {
+    console.error('Error bulk deleting content:', error)
+    return { error: 'Failed to delete content' }
+  }
+  
+  revalidatePath('/dashboard/content')
+  return { success: true, count: contentIds.length }
+}
+
+export async function bulkArchiveContent(contentIds: string[]) {
+  const supabase = await createSupabaseClient()
+  
+  if (!supabase) {
+    return { error: 'Database connection not configured' }
+  }
+  
+  if (!contentIds || contentIds.length === 0) {
+    return { error: 'No content IDs provided' }
+  }
+  
+  const { error } = await supabase
+    .from('content_assets')
+    .update({ is_archived: true })
+    .in('id', contentIds)
+  
+  if (error) {
+    console.error('Error bulk archiving content:', error)
+    return { error: 'Failed to archive content' }
+  }
+  
+  revalidatePath('/dashboard/content')
+  return { success: true, count: contentIds.length }
+}
+
+export async function bulkChangeProject(contentIds: string[], projectId: string | null) {
+  const supabase = await createSupabaseClient()
+  
+  if (!supabase) {
+    return { error: 'Database connection not configured' }
+  }
+  
+  if (!contentIds || contentIds.length === 0) {
+    return { error: 'No content IDs provided' }
+  }
+  
+  const { error } = await supabase
+    .from('content_assets')
+    .update({ project_id: projectId })
+    .in('id', contentIds)
+  
+  if (error) {
+    console.error('Error bulk changing project:', error)
+    return { error: 'Failed to change project' }
+  }
+  
+  revalidatePath('/dashboard/content')
+  return { success: true, count: contentIds.length }
+}
+
+export async function getAllProjects() {
+  const supabase = await createSupabaseClient()
+  
+  if (!supabase) {
+    return []
+  }
+  
+  const { data: projects, error } = await supabase
+    .from('projects')
+    .select('id, name, clients(name)')
+    .order('name', { ascending: true })
+  
+  if (error) {
+    console.error('Error fetching all projects:', error)
+    return []
+  }
+  
+  return projects
+}
