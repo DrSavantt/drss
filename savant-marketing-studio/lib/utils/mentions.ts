@@ -1,24 +1,43 @@
 export function parseMentions(
   text: string,
-  clients: { id: string; name: string }[]
+  clients: { id: string; name: string }[],
+  projects?: { id: string; name: string }[]
 ) {
   const clientMentions: string[] = []
+  const projectMentions: string[] = []
   const tags: string[] = []
 
-  // Find @ClientName mentions
+  // Extract all @mentions from text using the same regex as highlighting
+  const mentionRegex = /@([A-Za-z0-9][A-Za-z0-9\s\(\)&\-\.]*[A-Za-z0-9\)])/g
+  const mentions = [...text.matchAll(mentionRegex)].map(m => m[1].toLowerCase())
+
+  // Match mentions to clients
+  mentions.forEach(mentionText => {
+    const client = clients.find(c => 
+      c.name.toLowerCase() === mentionText || 
+      c.name.toLowerCase().includes(mentionText)
+    )
+    if (client && !clientMentions.includes(client.id)) {
+      clientMentions.push(client.id)
+    }
+  })
+
+  // Match mentions to projects
+  if (projects) {
+    mentions.forEach(mentionText => {
+      const project = projects.find(p => 
+        p.name.toLowerCase() === mentionText || 
+        p.name.toLowerCase().includes(mentionText)
+      )
+      if (project && !projectMentions.includes(project.id)) {
+        projectMentions.push(project.id)
+      }
+    })
+  }
+    
+  // Find #tags
   const words = text.split(/\s+/)
   words.forEach(word => {
-    if (word.startsWith('@')) {
-      const name = word.slice(1).toLowerCase()
-      const client = clients.find(c => 
-        c.name.toLowerCase().includes(name)
-      )
-      if (client && !clientMentions.includes(client.id)) {
-        clientMentions.push(client.id)
-      }
-    }
-    
-    // Find #tags
     if (word.startsWith('#')) {
       const tag = word.slice(1).toLowerCase().replace(/[^a-z0-9]/g, '')
       if (tag && !tags.includes(tag)) {
@@ -27,7 +46,11 @@ export function parseMentions(
     }
   })
 
-  return { mentioned_clients: clientMentions, tags }
+  return { 
+    mentioned_clients: clientMentions, 
+    mentioned_projects: projectMentions,
+    tags 
+  }
 }
 
 export function highlightMentions(text: string) {

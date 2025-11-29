@@ -123,9 +123,9 @@ export function JournalCapture({
     setError(null)
     try {
       // Parse mentions and tags from content
-      const { mentioned_clients, tags } = parseMentions(content, clients)
+      const { mentioned_clients, mentioned_projects, tags } = parseMentions(content, clients, projects)
 
-      await createJournalEntry(content, selectedChatId, mentioned_clients, tags)
+      await createJournalEntry(content, selectedChatId, mentioned_clients, mentioned_projects, tags)
       setContent('')
       setSuccess(true)
       onEntryCreated?.()
