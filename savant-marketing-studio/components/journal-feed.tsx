@@ -11,6 +11,7 @@ interface Entry {
   tags: string[]
   created_at: string
   mentioned_clients: string[]
+  chat_id: string
   is_pinned?: boolean
 }
 

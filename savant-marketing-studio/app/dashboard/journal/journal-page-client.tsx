@@ -73,7 +73,6 @@ export function JournalPageClient({
   content,
   defaultChatId 
 }: Props) {
-  const router = useRouter()
   const [entries, setEntries] = useState<Entry[]>(initialEntries)
   const [currentChatId, setCurrentChatId] = useState(defaultChatId)
   const [isLoading, setIsLoading] = useState(false)
