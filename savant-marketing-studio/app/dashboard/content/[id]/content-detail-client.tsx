@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
-import { updateContentAsset, deleteContentAsset, getClientProjects } from '@/app/actions/content'
+import { updateContentAsset, deleteContentAsset } from '@/app/actions/content'
 import { getJournalEntriesByContent, getJournalEntriesByClient } from '@/app/actions/journal'
 import { highlightMentions } from '@/lib/utils/mentions'
 import { TiptapEditor } from '@/components/tiptap-editor'
@@ -41,25 +41,16 @@ export function ContentDetailClient({ content }: ContentDetailClientProps) {
   const [title, setTitle] = useState(content.title)
   const [isEditingTitle, setIsEditingTitle] = useState(false)
   const [isEditingContent, setIsEditingContent] = useState(false)
-  const [isDeleting, setIsDeleting] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [editorContent, setEditorContent] = useState('')
-  const [selectedProjectId, setSelectedProjectId] = useState(content.project_id || '')
-  const [projects, setProjects] = useState<{ id: string; name: string }[]>([])
+  const [selectedProjectId] = useState(content.project_id || '')
   const [journalEntries, setJournalEntries] = useState<JournalEntry[]>([])
   const [loadingJournal, setLoadingJournal] = useState(false)
   const [isExpanded, setIsExpanded] = useState(false)
   const [showMenu, setShowMenu] = useState(false)
   const titleInputRef = useRef<HTMLInputElement>(null)
 
-  useEffect(() => {
-    async function loadProjects() {
-      const data = await getClientProjects(content.client_id)
-      setProjects(data)
-    }
-    loadProjects()
-  }, [content.client_id])
 
   // Fetch journal entries
   useEffect(() => {
