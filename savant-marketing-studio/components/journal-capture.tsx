@@ -16,6 +16,11 @@ interface Project {
   name: string
 }
 
+interface Content {
+  id: string
+  title: string
+}
+
 interface Chat {
   id: string
   name: string
@@ -26,6 +31,7 @@ interface Chat {
 interface Props {
   clients: Client[]
   projects: Project[]
+  content: Content[]
   chats: Chat[]
   defaultChatId: string
   onEntryCreated?: () => void
@@ -34,7 +40,8 @@ interface Props {
 
 export function JournalCapture({ 
   clients, 
-  projects, 
+  projects,
+  content: contentAssets,
   chats, 
   defaultChatId,
   onEntryCreated,
@@ -52,7 +59,8 @@ export function JournalCapture({
 
   const allMentionables = [
     ...clients.map(c => ({ id: c.id, name: c.name, type: 'client' as const })),
-    ...projects.map(p => ({ id: p.id, name: p.name, type: 'project' as const }))
+    ...projects.map(p => ({ id: p.id, name: p.name, type: 'project' as const })),
+    ...contentAssets.map(c => ({ id: c.id, name: c.title, type: 'content' as const }))
   ]
 
   // Handle ESC key to close modals
@@ -123,9 +131,21 @@ export function JournalCapture({
     setError(null)
     try {
       // Parse mentions and tags from content
-      const { mentioned_clients, mentioned_projects, tags } = parseMentions(content, clients, projects)
+      const { mentioned_clients, mentioned_projects, mentioned_content, tags } = parseMentions(
+        content, 
+        clients, 
+        projects, 
+        contentAssets
+      )
 
-      await createJournalEntry(content, selectedChatId, mentioned_clients, mentioned_projects, tags)
+      await createJournalEntry(
+        content, 
+        selectedChatId, 
+        mentioned_clients, 
+        mentioned_projects,
+        mentioned_content,
+        tags
+      )
       setContent('')
       setSuccess(true)
       onEntryCreated?.()

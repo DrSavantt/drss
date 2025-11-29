@@ -1,10 +1,12 @@
 export function parseMentions(
   text: string,
   clients: { id: string; name: string }[],
-  projects?: { id: string; name: string }[]
+  projects?: { id: string; name: string }[],
+  content?: { id: string; title: string }[]
 ) {
   const clientMentions: string[] = []
   const projectMentions: string[] = []
+  const contentMentions: string[] = []
   const tags: string[] = []
 
   // Extract all @mentions from text using the same regex as highlighting
@@ -34,6 +36,19 @@ export function parseMentions(
       }
     })
   }
+
+  // Match mentions to content
+  if (content) {
+    mentions.forEach(mentionText => {
+      const contentItem = content.find(c => 
+        c.title.toLowerCase() === mentionText || 
+        c.title.toLowerCase().includes(mentionText)
+      )
+      if (contentItem && !contentMentions.includes(contentItem.id)) {
+        contentMentions.push(contentItem.id)
+      }
+    })
+  }
     
   // Find #tags
   const words = text.split(/\s+/)
@@ -49,6 +64,7 @@ export function parseMentions(
   return { 
     mentioned_clients: clientMentions, 
     mentioned_projects: projectMentions,
+    mentioned_content: contentMentions,
     tags 
   }
 }

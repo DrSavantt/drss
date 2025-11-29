@@ -32,11 +32,17 @@ interface Project {
   name: string
 }
 
+interface Content {
+  id: string
+  title: string
+}
+
 interface Props {
   initialEntries: Entry[]
   chats: Chat[]
   clients: Client[]
   projects: Project[]
+  content: Content[]
   defaultChatId: string
 }
 
@@ -44,7 +50,8 @@ export function JournalPageClient({
   initialEntries, 
   chats, 
   clients, 
-  projects, 
+  projects,
+  content,
   defaultChatId 
 }: Props) {
   const [entries, setEntries] = useState<Entry[]>(initialEntries)
@@ -122,6 +129,7 @@ export function JournalPageClient({
           <JournalCapture
             clients={clients}
             projects={projects}
+            content={content}
             chats={chats}
             defaultChatId={currentChatId}
             onEntryCreated={handleEntryCreated}
