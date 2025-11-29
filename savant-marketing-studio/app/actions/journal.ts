@@ -68,6 +68,7 @@ export async function createJournalEntry(
   content: string,
   chatId: string,
   mentionedClients: string[],
+  mentionedProjects: string[],
   tags: string[]
 ) {
   const supabase = await createClient()
@@ -96,6 +97,7 @@ export async function createJournalEntry(
     content,
     chat_id: chatId,
     mentioned_clients: mentionedClients,
+    mentioned_projects: mentionedProjects,
     tags
   })
   
@@ -106,6 +108,7 @@ export async function createJournalEntry(
       content: content.trim(),
       chat_id: chatId,
       mentioned_clients: mentionedClients || [],
+      mentioned_projects: mentionedProjects || [],
       tags: tags || []
     })
     .select()
@@ -179,14 +182,12 @@ export async function getJournalEntriesByProject(projectId: string) {
     .eq('user_id', user.id)
     .maybeSingle()
   
-  if (!projectChat) {
-    return []
-  }
-  
+  // Query for entries mentioning this project OR in the project's chat
   const { data, error } = await supabase
     .from('journal_entries')
     .select('*')
-    .eq('chat_id', projectChat.id)
+    .eq('user_id', user.id)
+    .or(projectChat ? `chat_id.eq.${projectChat.id},mentioned_projects.cs.{${projectId}}` : `mentioned_projects.cs.{${projectId}}`)
     .order('created_at', { ascending: false })
     .limit(10)
   
@@ -195,7 +196,12 @@ export async function getJournalEntriesByProject(projectId: string) {
     return []
   }
   
-  return data || []
+  // Dedupe entries (in case an entry is both in project chat AND mentions the project)
+  const uniqueEntries = data?.filter((entry, index, self) => 
+    index === self.findIndex(e => e.id === entry.id)
+  ) || []
+  
+  return uniqueEntries
 }
 
 export async function getJournalChats() {
