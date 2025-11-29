@@ -11,6 +11,7 @@ interface Entry {
   tags: string[]
   created_at: string
   mentioned_clients: string[]
+  is_pinned?: boolean
 }
 
 interface Client {
@@ -22,9 +23,17 @@ interface Props {
   entries: Entry[]
   clients: Client[]
   onEntryDeleted?: (id: string) => void
+  selectedIds?: Set<string>
+  onToggleSelection?: (id: string) => void
 }
 
-export function JournalFeed({ entries, clients, onEntryDeleted }: Props) {
+export function JournalFeed({ 
+  entries, 
+  clients, 
+  onEntryDeleted,
+  selectedIds = new Set(),
+  onToggleSelection
+}: Props) {
   const [deleting, setDeleting] = useState<string | null>(null)
 
   async function handleDelete(id: string) {
@@ -72,80 +81,115 @@ export function JournalFeed({ entries, clients, onEntryDeleted }: Props) {
 
           {/* Entries */}
           <div className="space-y-3">
-            {group.entries.map(entry => (
-              <div 
-                key={entry.id} 
-                className="bg-charcoal rounded-lg border border-mid-gray p-4 shadow-sm hover:border-red-primary/50 transition-colors group"
-              >
-                {/* Content with highlighted mentions/tags */}
-                <div
-                  className="text-foreground whitespace-pre-wrap text-sm leading-relaxed"
-                  dangerouslySetInnerHTML={{ __html: highlightMentions(entry.content) }}
-                />
-
-                {/* Meta row */}
-                <div className="flex flex-wrap items-center gap-2 sm:gap-3 mt-3 pt-3 border-t border-mid-gray/50">
-                  {/* Timestamp */}
-                  <span className="text-xs text-slate">
-                    {new Date(entry.created_at).toLocaleTimeString('en-US', {
-                      hour: 'numeric',
-                      minute: '2-digit',
-                      hour12: true
-                    })}
-                  </span>
-
-                  {/* Tags */}
-                  {entry.tags && entry.tags.length > 0 && (
-                    <div className="flex flex-wrap gap-1">
-                      {entry.tags.map(tag => (
-                        <span 
-                          key={tag} 
-                          className="text-xs px-2 py-0.5 bg-red-primary/20 text-red-primary rounded-full font-medium"
-                        >
-                          #{tag}
-                        </span>
-                      ))}
-                    </div>
-                  )}
-
-                  {/* Mentioned Clients Links */}
-                  {entry.mentioned_clients && entry.mentioned_clients.length > 0 && (
-                    <div className="flex flex-wrap gap-1">
-                      {entry.mentioned_clients.map(clientId => {
-                        const clientName = getClientName(clientId)
-                        if (!clientName) return null
-                        return (
-                          <Link
-                            key={clientId}
-                            href={`/dashboard/clients/${clientId}`}
-                            className="text-xs px-2 py-0.5 bg-info/20 text-info rounded-full font-medium hover:bg-info/30 transition-colors flex items-center gap-1"
-                          >
-                            <span>→</span>
-                            {clientName}
-                          </Link>
-                        )
-                      })}
-                    </div>
-                  )}
-
-                  {/* Delete Button */}
-                  <button
-                    onClick={() => handleDelete(entry.id)}
-                    disabled={deleting === entry.id}
-                    className="ml-auto text-xs text-slate hover:text-red-primary disabled:opacity-50 disabled:cursor-not-allowed transition-colors opacity-0 group-hover:opacity-100"
-                  >
-                    {deleting === entry.id ? (
-                      <span className="flex items-center gap-1">
-                        <div className="w-3 h-3 border border-red-primary border-t-transparent rounded-full animate-spin"></div>
-                        Deleting...
-                      </span>
-                    ) : (
-                      'Delete'
+            {group.entries.map(entry => {
+              const isSelected = selectedIds.has(entry.id)
+              return (
+                <div 
+                  key={entry.id} 
+                  className={`bg-charcoal rounded-lg border p-4 shadow-sm hover:border-red-primary/50 transition-colors group ${
+                    isSelected ? 'border-red-primary' : 'border-mid-gray'
+                  }`}
+                >
+                  {/* Header row with checkbox and pin indicator */}
+                  <div className="flex items-start gap-3 mb-2">
+                    {/* Checkbox */}
+                    {onToggleSelection && (
+                      <input
+                        type="checkbox"
+                        checked={isSelected}
+                        onChange={() => onToggleSelection(entry.id)}
+                        className="mt-1 rounded border-mid-gray text-red-primary focus:ring-red-primary focus:ring-offset-charcoal"
+                      />
                     )}
-                  </button>
+
+                    {/* Content with highlighted mentions/tags */}
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-2">
+                        {entry.is_pinned && (
+                          <span className="text-xs px-2 py-0.5 bg-success/20 text-success rounded-full font-medium flex items-center gap-1">
+                            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z"
+                              />
+                            </svg>
+                            Pinned
+                          </span>
+                        )}
+                      </div>
+                      <div
+                        className="text-foreground whitespace-pre-wrap text-sm leading-relaxed"
+                        dangerouslySetInnerHTML={{ __html: highlightMentions(entry.content) }}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Meta row */}
+                  <div className="flex flex-wrap items-center gap-2 sm:gap-3 mt-3 pt-3 border-t border-mid-gray/50">
+                    {/* Timestamp */}
+                    <span className="text-xs text-slate">
+                      {new Date(entry.created_at).toLocaleTimeString('en-US', {
+                        hour: 'numeric',
+                        minute: '2-digit',
+                        hour12: true
+                      })}
+                    </span>
+
+                    {/* Tags */}
+                    {entry.tags && entry.tags.length > 0 && (
+                      <div className="flex flex-wrap gap-1">
+                        {entry.tags.map(tag => (
+                          <span 
+                            key={tag} 
+                            className="text-xs px-2 py-0.5 bg-red-primary/20 text-red-primary rounded-full font-medium"
+                          >
+                            #{tag}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Mentioned Clients Links */}
+                    {entry.mentioned_clients && entry.mentioned_clients.length > 0 && (
+                      <div className="flex flex-wrap gap-1">
+                        {entry.mentioned_clients.map(clientId => {
+                          const clientName = getClientName(clientId)
+                          if (!clientName) return null
+                          return (
+                            <Link
+                              key={clientId}
+                              href={`/dashboard/clients/${clientId}`}
+                              className="text-xs px-2 py-0.5 bg-info/20 text-info rounded-full font-medium hover:bg-info/30 transition-colors flex items-center gap-1"
+                            >
+                              <span>→</span>
+                              {clientName}
+                            </Link>
+                          )
+                        })}
+                      </div>
+                    )}
+
+                    {/* Delete Button */}
+                    <button
+                      onClick={() => handleDelete(entry.id)}
+                      disabled={deleting === entry.id}
+                      className="ml-auto text-xs text-slate hover:text-red-primary disabled:opacity-50 disabled:cursor-not-allowed transition-colors opacity-0 group-hover:opacity-100"
+                    >
+                      {deleting === entry.id ? (
+                        <span className="flex items-center gap-1">
+                          <div className="w-3 h-3 border border-red-primary border-t-transparent rounded-full animate-spin"></div>
+                          Deleting...
+                        </span>
+                      ) : (
+                        'Delete'
+                      )}
+                    </button>
+                  </div>
                 </div>
-              </div>
-            ))}
+              )
+            })}
           </div>
         </div>
       ))}
