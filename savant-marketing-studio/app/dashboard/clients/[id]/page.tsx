@@ -359,26 +359,12 @@ export default async function ClientDetailPage({
                       )}
                     </div>
                   </div>
-                  <div className="flex gap-2">
-                    {item.file_url ? (
-                      <a
-                        href={item.file_url}
-                        download
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-sm text-success hover:text-success/80 font-medium transition-colors"
-                      >
-                        Download ↓
-                      </a>
-                    ) : (
-                      <Link
-                        href={`/dashboard/content/${item.id}`}
-                        className="text-sm text-red-primary hover:text-red-bright font-medium transition-colors"
-                      >
-                        View →
-                      </Link>
-                    )}
-                  </div>
+                  <Link
+                    href={`/dashboard/content/${item.id}`}
+                    className="text-sm text-red-primary hover:text-red-bright font-medium transition-colors"
+                  >
+                    View →
+                  </Link>
                 </div>
               </div>
             ))}
