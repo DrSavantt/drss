@@ -78,8 +78,6 @@ export function JournalPageClient({
   // Bulk action state
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
-  const [isPinModalOpen, setIsPinModalOpen] = useState(false)
-  const [isUnpinModalOpen, setIsUnpinModalOpen] = useState(false)
   const [isTagModalOpen, setIsTagModalOpen] = useState(false)
   const [isBulkLoading, setIsBulkLoading] = useState(false)
   const [toasts, setToasts] = useState<ToastMessage[]>([])
@@ -339,7 +337,8 @@ export function JournalPageClient({
         confirmText="Delete"
         onConfirm={handleBulkDelete}
         onCancel={() => setIsDeleteModalOpen(false)}
-        loading={isBulkLoading}
+        isLoading={isBulkLoading}
+        isDanger
       />
 
       <TagModal
