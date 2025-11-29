@@ -2,7 +2,6 @@ import { getContentAsset } from '@/app/actions/content'
 import { notFound } from 'next/navigation'
 import { ContentDetailClient } from './content-detail-client'
 import { FilePreviewClient } from './file-preview-client'
-import Link from 'next/link'
 
 export default async function ContentDetailPage({
   params,
