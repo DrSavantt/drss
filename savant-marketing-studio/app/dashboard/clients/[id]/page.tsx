@@ -116,6 +116,9 @@ export default async function ClientDetailPage({
             </div>
           </dl>
         </div>
+
+        {/* Quick Captures - Collapsible */}
+        <ClientCaptures clientId={client.id} clientName={client.name} />
       </div>
 
       {/* Quick Stats Dashboard */}
@@ -393,9 +396,6 @@ export default async function ClientDetailPage({
           </div>
         )}
       </div>
-
-      {/* Quick Captures Section */}
-      <ClientCaptures clientId={client.id} clientName={client.name} />
     </div>
   )
 }
