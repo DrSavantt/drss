@@ -426,3 +426,114 @@ export async function getJournalEntriesByClient(clientId: string) {
   
   return data || []
 }
+
+// Bulk Actions
+export async function bulkDeleteJournalEntries(ids: string[]) {
+  const supabase = await createClient()
+  
+  if (!supabase) {
+    throw new Error('Database connection not configured')
+  }
+  
+  // Get current user
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) {
+    throw new Error('Not authenticated')
+  }
+  
+  const { error } = await supabase
+    .from('journal_entries')
+    .delete()
+    .in('id', ids)
+    .eq('user_id', user.id) // Safety: only delete user's own entries
+  
+  if (error) throw error
+  revalidatePath('/dashboard/journal')
+  return { success: true }
+}
+
+export async function bulkPinJournalEntries(ids: string[]) {
+  const supabase = await createClient()
+  
+  if (!supabase) {
+    throw new Error('Database connection not configured')
+  }
+  
+  // Get current user
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) {
+    throw new Error('Not authenticated')
+  }
+  
+  const { error } = await supabase
+    .from('journal_entries')
+    .update({ is_pinned: true })
+    .in('id', ids)
+    .eq('user_id', user.id) // Safety: only update user's own entries
+  
+  if (error) throw error
+  revalidatePath('/dashboard/journal')
+  return { success: true }
+}
+
+export async function bulkUnpinJournalEntries(ids: string[]) {
+  const supabase = await createClient()
+  
+  if (!supabase) {
+    throw new Error('Database connection not configured')
+  }
+  
+  // Get current user
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) {
+    throw new Error('Not authenticated')
+  }
+  
+  const { error } = await supabase
+    .from('journal_entries')
+    .update({ is_pinned: false })
+    .in('id', ids)
+    .eq('user_id', user.id) // Safety: only update user's own entries
+  
+  if (error) throw error
+  revalidatePath('/dashboard/journal')
+  return { success: true }
+}
+
+export async function bulkAddTagsToJournalEntries(ids: string[], newTags: string[]) {
+  const supabase = await createClient()
+  
+  if (!supabase) {
+    throw new Error('Database connection not configured')
+  }
+  
+  // Get current user
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) {
+    throw new Error('Not authenticated')
+  }
+  
+  // Get existing entries to merge tags
+  const { data: entries, error: fetchError } = await supabase
+    .from('journal_entries')
+    .select('id, tags')
+    .in('id', ids)
+    .eq('user_id', user.id)
+  
+  if (fetchError) throw fetchError
+  
+  // Update each entry with merged tags
+  const updates = entries.map(entry => {
+    const existingTags = entry.tags || []
+    const mergedTags = Array.from(new Set([...existingTags, ...newTags]))
+    return supabase
+      .from('journal_entries')
+      .update({ tags: mergedTags })
+      .eq('id', entry.id)
+      .eq('user_id', user.id)
+  })
+  
+  await Promise.all(updates)
+  revalidatePath('/dashboard/journal')
+  return { success: true }
+}

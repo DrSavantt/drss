@@ -4,7 +4,17 @@ import { useState, useCallback, useMemo } from 'react'
 import { JournalCapture } from '@/components/journal-capture'
 import { JournalFeed } from '@/components/journal-feed'
 import { JournalSidebar } from '@/components/journal-sidebar'
-import { getJournalEntries } from '@/app/actions/journal'
+import { JournalBulkActionBar } from '@/app/components/journal-bulk-action-bar'
+import { ConfirmationModal } from '@/app/components/confirmation-modal'
+import { TagModal } from '@/app/components/tag-modal'
+import { ToastContainer } from '@/app/components/toast'
+import { 
+  getJournalEntries,
+  bulkDeleteJournalEntries,
+  bulkPinJournalEntries,
+  bulkUnpinJournalEntries,
+  bulkAddTagsToJournalEntries
+} from '@/app/actions/journal'
 
 interface Entry {
   id: string
@@ -13,6 +23,7 @@ interface Entry {
   created_at: string
   mentioned_clients: string[]
   chat_id: string
+  is_pinned?: boolean
 }
 
 interface Chat {
@@ -37,6 +48,12 @@ interface Content {
   title: string
 }
 
+interface ToastMessage {
+  id: string
+  message: string
+  type: 'success' | 'error' | 'info'
+}
+
 interface Props {
   initialEntries: Entry[]
   chats: Chat[]
@@ -57,6 +74,15 @@ export function JournalPageClient({
   const [entries, setEntries] = useState<Entry[]>(initialEntries)
   const [currentChatId, setCurrentChatId] = useState(defaultChatId)
   const [isLoading, setIsLoading] = useState(false)
+  
+  // Bulk action state
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
+  const [isPinModalOpen, setIsPinModalOpen] = useState(false)
+  const [isUnpinModalOpen, setIsUnpinModalOpen] = useState(false)
+  const [isTagModalOpen, setIsTagModalOpen] = useState(false)
+  const [isBulkLoading, setIsBulkLoading] = useState(false)
+  const [toasts, setToasts] = useState<ToastMessage[]>([])
 
   // When chat changes, fetch new entries
   const handleChatChange = useCallback(async (chatId: string) => {
@@ -99,6 +125,117 @@ export function JournalPageClient({
     counts[currentChatId] = entries.length
     return counts
   }, [chats, currentChatId, entries.length])
+
+  // Toast helper
+  const addToast = useCallback((message: string, type: 'success' | 'error' | 'info') => {
+    const id = Math.random().toString(36).substr(2, 9)
+    setToasts(prev => [...prev, { id, message, type }])
+    setTimeout(() => {
+      setToasts(prev => prev.filter(t => t.id !== id))
+    }, 3000)
+  }, [])
+
+  // Selection handlers
+  const toggleSelection = useCallback((id: string) => {
+    setSelectedIds(prev => {
+      const newSet = new Set(prev)
+      if (newSet.has(id)) {
+        newSet.delete(id)
+      } else {
+        newSet.add(id)
+      }
+      return newSet
+    })
+  }, [])
+
+  const toggleSelectAll = useCallback(() => {
+    if (selectedIds.size === entries.length) {
+      setSelectedIds(new Set())
+    } else {
+      setSelectedIds(new Set(entries.map(entry => entry.id)))
+    }
+  }, [selectedIds.size, entries])
+
+  const cancelSelection = useCallback(() => {
+    setSelectedIds(new Set())
+  }, [])
+
+  // Check if selection has pinned items
+  const hasPinnedItems = useMemo(() => {
+    return entries.some(entry => selectedIds.has(entry.id) && entry.is_pinned)
+  }, [entries, selectedIds])
+
+  // Bulk action handlers
+  const handleBulkDelete = useCallback(async () => {
+    if (selectedIds.size === 0) return
+    setIsBulkLoading(true)
+    try {
+      await bulkDeleteJournalEntries(Array.from(selectedIds))
+      setEntries(prev => prev.filter(e => !selectedIds.has(e.id)))
+      setSelectedIds(new Set())
+      setIsDeleteModalOpen(false)
+      addToast(`Deleted ${selectedIds.size} ${selectedIds.size === 1 ? 'entry' : 'entries'}`, 'success')
+    } catch (error) {
+      console.error('Bulk delete error:', error)
+      addToast('Failed to delete entries', 'error')
+    } finally {
+      setIsBulkLoading(false)
+    }
+  }, [selectedIds, addToast])
+
+  const handleBulkPin = useCallback(async () => {
+    if (selectedIds.size === 0) return
+    setIsBulkLoading(true)
+    try {
+      await bulkPinJournalEntries(Array.from(selectedIds))
+      setEntries(prev => prev.map(e => 
+        selectedIds.has(e.id) ? { ...e, is_pinned: true } : e
+      ))
+      setSelectedIds(new Set())
+      addToast(`Pinned ${selectedIds.size} ${selectedIds.size === 1 ? 'entry' : 'entries'}`, 'success')
+    } catch (error) {
+      console.error('Bulk pin error:', error)
+      addToast('Failed to pin entries', 'error')
+    } finally {
+      setIsBulkLoading(false)
+    }
+  }, [selectedIds, addToast])
+
+  const handleBulkUnpin = useCallback(async () => {
+    if (selectedIds.size === 0) return
+    setIsBulkLoading(true)
+    try {
+      await bulkUnpinJournalEntries(Array.from(selectedIds))
+      setEntries(prev => prev.map(e => 
+        selectedIds.has(e.id) ? { ...e, is_pinned: false } : e
+      ))
+      setSelectedIds(new Set())
+      addToast(`Unpinned ${selectedIds.size} ${selectedIds.size === 1 ? 'entry' : 'entries'}`, 'success')
+    } catch (error) {
+      console.error('Bulk unpin error:', error)
+      addToast('Failed to unpin entries', 'error')
+    } finally {
+      setIsBulkLoading(false)
+    }
+  }, [selectedIds, addToast])
+
+  const handleBulkAddTags = useCallback(async (newTags: string[]) => {
+    if (selectedIds.size === 0 || newTags.length === 0) return
+    setIsBulkLoading(true)
+    try {
+      await bulkAddTagsToJournalEntries(Array.from(selectedIds), newTags)
+      // Refresh entries to get updated tags
+      const newEntries = await getJournalEntries(currentChatId)
+      setEntries(newEntries || [])
+      setSelectedIds(new Set())
+      addToast(`Added ${newTags.length} ${newTags.length === 1 ? 'tag' : 'tags'} to ${selectedIds.size} ${selectedIds.size === 1 ? 'entry' : 'entries'}`, 'success')
+    } catch (error) {
+      console.error('Bulk add tags error:', error)
+      addToast('Failed to add tags', 'error')
+    } finally {
+      setIsBulkLoading(false)
+    }
+  }, [selectedIds, currentChatId, addToast])
 
   return (
     <div className="flex h-[calc(100vh-4rem)] overflow-hidden">
@@ -147,9 +284,22 @@ export function JournalPageClient({
               </span>
               {currentChat?.name || 'Inbox'}
             </h2>
-            <span className="text-sm text-slate">
-              {entries.length} {entries.length === 1 ? 'entry' : 'entries'}
-            </span>
+            <div className="flex items-center gap-3">
+              {entries.length > 0 && (
+                <label className="flex items-center gap-2 cursor-pointer text-sm text-silver hover:text-foreground transition-colors">
+                  <input
+                    type="checkbox"
+                    checked={selectedIds.size === entries.length && entries.length > 0}
+                    onChange={toggleSelectAll}
+                    className="rounded border-mid-gray text-red-primary focus:ring-red-primary focus:ring-offset-charcoal"
+                  />
+                  Select All
+                </label>
+              )}
+              <span className="text-sm text-slate">
+                {entries.length} {entries.length === 1 ? 'entry' : 'entries'}
+              </span>
+            </div>
           </div>
 
           {/* Feed */}
@@ -163,10 +313,44 @@ export function JournalPageClient({
               entries={entries} 
               clients={clients}
               onEntryDeleted={handleEntryDeleted}
+              selectedIds={selectedIds}
+              onToggleSelection={toggleSelection}
             />
           )}
         </div>
       </div>
+
+      {/* Bulk Action Bar */}
+      <JournalBulkActionBar
+        selectedCount={selectedIds.size}
+        onDelete={() => setIsDeleteModalOpen(true)}
+        onPin={handleBulkPin}
+        onUnpin={handleBulkUnpin}
+        onAddTags={() => setIsTagModalOpen(true)}
+        onCancel={cancelSelection}
+        hasPinnedItems={hasPinnedItems}
+      />
+
+      {/* Modals */}
+      <ConfirmationModal
+        isOpen={isDeleteModalOpen}
+        title="Delete Entries"
+        message={`Are you sure you want to delete ${selectedIds.size} ${selectedIds.size === 1 ? 'entry' : 'entries'}? This action cannot be undone.`}
+        confirmText="Delete"
+        onConfirm={handleBulkDelete}
+        onCancel={() => setIsDeleteModalOpen(false)}
+        loading={isBulkLoading}
+      />
+
+      <TagModal
+        isOpen={isTagModalOpen}
+        onClose={() => setIsTagModalOpen(false)}
+        onConfirm={handleBulkAddTags}
+        title={`Add Tags to ${selectedIds.size} ${selectedIds.size === 1 ? 'Entry' : 'Entries'}`}
+      />
+
+      {/* Toast Notifications */}
+      <ToastContainer toasts={toasts} />
     </div>
   )
 }
