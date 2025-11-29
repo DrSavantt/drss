@@ -73,9 +73,9 @@ export function highlightMentions(text: string) {
   let result = text
   
   // Highlight @mentions in blue/info color
-  // Match: @Name including lowercase words like "for", but stop before punctuation or end
-  // Stops at: ?, !, ., or end of string
-  result = result.replace(/@([A-Z0-9][A-Za-z0-9]*(?:\s+[A-Za-z0-9]+)*(?:\s*\([^)]+\))?)(?=\s*[?!.\s]|$)/g, '<span class="text-info font-semibold">@$1</span>')
+  // Match: @Name including lowercase connecting words (for, and, the, of)
+  // Stop before: space + lowercase word that's NOT a connector (like "test", "remember")
+  result = result.replace(/@([A-Z0-9][A-Za-z0-9]*(?:\s+(?:for|and|the|of|to|in|on|at)\s+[A-Za-z0-9]+|\s+[A-Z0-9][A-Za-z0-9]*)*(?:\s*\([^)]+\))?)/g, '<span class="text-info font-semibold">@$1</span>')
   
   // Highlight #tags in red/primary color
   result = result.replace(/#(\w+)/g, '<span class="text-red-primary font-semibold">#$1</span>')
