@@ -257,11 +257,11 @@ export function JournalCapture({
           
           <div className="flex items-center gap-2">
             <span className="text-xs text-slate hidden sm:inline">⌘+Enter to save</span>
-            <button
-              type="submit"
-              disabled={loading || !content.trim()}
+          <button
+            type="submit"
+            disabled={loading || !content.trim()}
               className="px-4 py-2 bg-red-primary text-foreground rounded-lg hover:bg-red-bright disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm font-medium flex items-center gap-2"
-            >
+          >
               {loading ? (
                 <>
                   <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
@@ -270,7 +270,7 @@ export function JournalCapture({
               ) : (
                 'Capture'
               )}
-            </button>
+          </button>
           </div>
         </div>
       </form>

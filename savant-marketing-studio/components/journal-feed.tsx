@@ -121,10 +121,10 @@ export function JournalFeed({
                           </span>
                         )}
                       </div>
-                      <div
+          <div
                         className="text-foreground whitespace-pre-wrap text-sm leading-relaxed"
-                        dangerouslySetInnerHTML={{ __html: highlightMentions(entry.content) }}
-                      />
+            dangerouslySetInnerHTML={{ __html: highlightMentions(entry.content) }}
+          />
                     </div>
                   </div>
 
@@ -137,21 +137,21 @@ export function JournalFeed({
                         minute: '2-digit',
                         hour12: true
                       })}
-                    </span>
+            </span>
 
                     {/* Tags */}
-                    {entry.tags && entry.tags.length > 0 && (
-                      <div className="flex flex-wrap gap-1">
-                        {entry.tags.map(tag => (
+            {entry.tags && entry.tags.length > 0 && (
+              <div className="flex flex-wrap gap-1">
+                {entry.tags.map(tag => (
                           <span 
                             key={tag} 
                             className="text-xs px-2 py-0.5 bg-red-primary/20 text-red-primary rounded-full font-medium"
                           >
-                            #{tag}
-                          </span>
-                        ))}
-                      </div>
-                    )}
+                    #{tag}
+                  </span>
+                ))}
+              </div>
+            )}
 
                     {/* Mentioned Clients Links */}
                     {entry.mentioned_clients && entry.mentioned_clients.length > 0 && (
@@ -187,11 +187,11 @@ export function JournalFeed({
                     )}
 
                     {/* Delete Button */}
-                    <button
-                      onClick={() => handleDelete(entry.id)}
-                      disabled={deleting === entry.id}
+            <button
+              onClick={() => handleDelete(entry.id)}
+              disabled={deleting === entry.id}
                       className="text-xs text-slate hover:text-red-primary disabled:opacity-50 disabled:cursor-not-allowed transition-colors opacity-0 group-hover:opacity-100"
-                    >
+            >
                       {deleting === entry.id ? (
                         <span className="flex items-center gap-1">
                           <div className="w-3 h-3 border border-red-primary border-t-transparent rounded-full animate-spin"></div>
@@ -200,7 +200,7 @@ export function JournalFeed({
                       ) : (
                         'Delete'
                       )}
-                    </button>
+            </button>
                   </div>
                 </div>
               )

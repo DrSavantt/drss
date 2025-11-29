@@ -17,13 +17,13 @@ export function parseMentions(
 
   // Match mentions to clients
   mentions.forEach(mentionText => {
-    const client = clients.find(c => 
+      const client = clients.find(c => 
       c.name.toLowerCase() === mentionText || 
       c.name.toLowerCase().includes(mentionText)
-    )
-    if (client && !clientMentions.includes(client.id)) {
-      clientMentions.push(client.id)
-    }
+      )
+      if (client && !clientMentions.includes(client.id)) {
+        clientMentions.push(client.id)
+      }
   })
 
   // Match mentions to projects
@@ -50,9 +50,9 @@ export function parseMentions(
         contentMentions.push(contentItem.id)
       }
     })
-  }
+    }
     
-  // Find #tags
+    // Find #tags
   const words = text.split(/\s+/)
   words.forEach(word => {
     if (word.startsWith('#')) {
