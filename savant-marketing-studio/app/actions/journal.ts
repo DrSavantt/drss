@@ -69,6 +69,7 @@ export async function createJournalEntry(
   chatId: string,
   mentionedClients: string[],
   mentionedProjects: string[],
+  mentionedContent: string[],
   tags: string[]
 ) {
   const supabase = await createClient()
@@ -98,6 +99,7 @@ export async function createJournalEntry(
     chat_id: chatId,
     mentioned_clients: mentionedClients,
     mentioned_projects: mentionedProjects,
+    mentioned_content: mentionedContent,
     tags
   })
   
@@ -109,6 +111,7 @@ export async function createJournalEntry(
       chat_id: chatId,
       mentioned_clients: mentionedClients || [],
       mentioned_projects: mentionedProjects || [],
+      mentioned_content: mentionedContent || [],
       tags: tags || []
     })
     .select()
@@ -372,14 +375,12 @@ export async function getJournalEntriesByContent(contentId: string) {
     .eq('user_id', user.id)
     .maybeSingle()
   
-  if (!contentChat) {
-    return []
-  }
-  
+  // Query for entries mentioning this content OR in the content's chat
   const { data, error } = await supabase
     .from('journal_entries')
     .select('*')
-    .eq('chat_id', contentChat.id)
+    .eq('user_id', user.id)
+    .or(contentChat ? `chat_id.eq.${contentChat.id},mentioned_content.cs.{${contentId}}` : `mentioned_content.cs.{${contentId}}`)
     .order('created_at', { ascending: false })
     .limit(10)
   
@@ -388,7 +389,12 @@ export async function getJournalEntriesByContent(contentId: string) {
     return []
   }
   
-  return data || []
+  // Dedupe entries (in case an entry is both in content chat AND mentions the content)
+  const uniqueEntries = data?.filter((entry, index, self) => 
+    index === self.findIndex(e => e.id === entry.id)
+  ) || []
+  
+  return uniqueEntries
 }
 
 export async function getJournalEntriesByClient(clientId: string) {

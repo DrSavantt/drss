@@ -1,16 +1,17 @@
 import { getOrCreateInbox, getJournalChats, getJournalEntries } from '@/app/actions/journal'
 import { getClients } from '@/app/actions/clients'
-import { getAllProjects } from '@/app/actions/content'
+import { getAllProjects, getAllContentAssets } from '@/app/actions/content'
 import { JournalPageClient } from './journal-page-client'
 
 export default async function JournalPage() {
   try {
     // Get or create default inbox and fetch all data in parallel
-    const [inboxId, chats, clients, projects] = await Promise.all([
+    const [inboxId, chats, clients, projects, content] = await Promise.all([
       getOrCreateInbox(),
       getJournalChats(),
       getClients(),
-      getAllProjects()
+      getAllProjects(),
+      getAllContentAssets()
     ])
     
     // Get entries for the inbox by default
@@ -28,12 +29,19 @@ export default async function JournalPage() {
       name: c.name
     }))
 
+    // Transform content to simple format
+    const simpleContent = content.map(c => ({
+      id: c.id,
+      title: c.title
+    }))
+
     return (
       <JournalPageClient
         initialEntries={entries || []}
         chats={chats || []}
         clients={simpleClients}
         projects={simpleProjects}
+        content={simpleContent}
         defaultChatId={inboxId}
       />
     )
