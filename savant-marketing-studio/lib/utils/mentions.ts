@@ -9,8 +9,10 @@ export function parseMentions(
   const contentMentions: string[] = []
   const tags: string[] = []
 
-  // Extract all @mentions from text using the same regex as highlighting
-  const mentionRegex = /@([A-Za-z0-9][A-Za-z0-9\s\(\)&\-\.]*[A-Za-z0-9\)])/g
+  // Extract all @mentions from text using the SAME regex as highlighting
+  // Match @[first word][optional additional CAPITALIZED words][optional parentheses content]
+  // Stops at lowercase words
+  const mentionRegex = /@([A-Za-z0-9]+(?:\s+[A-Z0-9][A-Za-z0-9]*)*(?:\s*\([^)]+\))?)/g
   const mentions = [...text.matchAll(mentionRegex)].map(m => m[1].toLowerCase())
 
   // Match mentions to clients
