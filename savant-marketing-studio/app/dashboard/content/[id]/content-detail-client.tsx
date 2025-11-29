@@ -2,6 +2,8 @@
 
 import { useState, useEffect } from 'react'
 import { updateContentAsset, deleteContentAsset, getClientProjects } from '@/app/actions/content'
+import { getJournalEntriesByContent, getJournalEntriesByClient } from '@/app/actions/journal'
+import { highlightMentions } from '@/lib/utils/mentions'
 import { TiptapEditor } from '@/components/tiptap-editor'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
@@ -24,6 +26,13 @@ interface Content {
   } | null
 }
 
+interface JournalEntry {
+  id: string
+  content: string
+  tags: string[]
+  created_at: string
+}
+
 interface ContentDetailClientProps {
   content: Content
 }
@@ -36,6 +45,8 @@ export function ContentDetailClient({ content }: ContentDetailClientProps) {
   const [error, setError] = useState<string | null>(null)
   const [editorContent, setEditorContent] = useState('')
   const [projects, setProjects] = useState<{ id: string; name: string }[]>([])
+  const [journalEntries, setJournalEntries] = useState<JournalEntry[]>([])
+  const [loadingJournal, setLoadingJournal] = useState(false)
 
   useEffect(() => {
     async function loadProjects() {
@@ -44,6 +55,38 @@ export function ContentDetailClient({ content }: ContentDetailClientProps) {
     }
     loadProjects()
   }, [content.client_id])
+
+  // Fetch journal entries
+  useEffect(() => {
+    async function fetchJournalEntries() {
+      setLoadingJournal(true)
+      try {
+        // Get entries from content chat
+        const contentEntries = await getJournalEntriesByContent(content.id)
+        
+        // Get entries mentioning the client
+        const clientEntries = await getJournalEntriesByClient(content.client_id)
+        
+        // Combine and dedupe by id
+        const allEntries = [...contentEntries, ...clientEntries]
+        const uniqueEntries = Array.from(
+          new Map(allEntries.map(entry => [entry.id, entry])).values()
+        )
+        
+        // Sort by created_at descending
+        uniqueEntries.sort((a, b) => 
+          new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+        )
+        
+        setJournalEntries(uniqueEntries)
+      } catch (error) {
+        console.error('Failed to load journal entries:', error)
+      } finally {
+        setLoadingJournal(false)
+      }
+    }
+    fetchJournalEntries()
+  }, [content.id, content.client_id])
 
   // Initialize editor content from JSON
   useEffect(() => {
@@ -184,6 +227,65 @@ export function ContentDetailClient({ content }: ContentDetailClientProps) {
                   </span>
                 </div>
               </div>
+            </div>
+
+            {/* Journal Captures */}
+            <div className="border-t border-mid-gray pt-6 mt-6">
+              <div className="flex items-center justify-between mb-3">
+                <h4 className="text-sm font-medium text-silver flex items-center gap-2">
+                  <span>📝</span> Quick Captures
+                </h4>
+                <Link
+                  href="/dashboard/journal"
+                  className="text-xs text-red-primary hover:text-red-bright transition-colors"
+                >
+                  View All →
+                </Link>
+              </div>
+              
+              {loadingJournal ? (
+                <div className="text-center py-4">
+                  <div className="animate-spin w-5 h-5 border-2 border-red-primary border-t-transparent rounded-full mx-auto"></div>
+                </div>
+              ) : journalEntries.length > 0 ? (
+                <div className="space-y-2 max-h-60 overflow-y-auto">
+                  {journalEntries.map(entry => (
+                    <div key={entry.id} className="bg-dark-gray rounded-md p-3 text-sm">
+                      <div 
+                        className="text-foreground mb-1"
+                        dangerouslySetInnerHTML={{ __html: highlightMentions(entry.content) }}
+                      />
+                      <div className="flex items-center gap-2 text-xs text-slate">
+                        <span>
+                          {new Date(entry.created_at).toLocaleDateString('en-US', {
+                            month: 'short',
+                            day: 'numeric'
+                          })}
+                        </span>
+                        {entry.tags && entry.tags.length > 0 && (
+                          <div className="flex gap-1">
+                            {entry.tags.map(tag => (
+                              <span key={tag} className="px-1.5 py-0.5 bg-red-primary/20 text-red-primary rounded">
+                                #{tag}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-4 text-sm text-slate">
+                  <p>No captures yet</p>
+                  <Link
+                    href="/dashboard/journal"
+                    className="text-xs text-red-primary hover:text-red-bright mt-1 inline-block"
+                  >
+                    Create your first capture →
+                  </Link>
+                </div>
+              )}
             </div>
           </div>
 

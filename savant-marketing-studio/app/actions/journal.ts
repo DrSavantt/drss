@@ -302,3 +302,115 @@ export async function createChatForProject(projectId: string, projectName: strin
   revalidatePath('/dashboard/journal')
   return data
 }
+
+export async function createChatForContent(contentId: string, contentTitle: string) {
+  const supabase = await createClient()
+  
+  if (!supabase) {
+    throw new Error('Database connection not configured')
+  }
+  
+  // Get current user
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) {
+    throw new Error('Not authenticated')
+  }
+  
+  // Check if chat already exists for this user
+  const { data: existing } = await supabase
+    .from('journal_chats')
+    .select('id')
+    .eq('type', 'content')
+    .eq('linked_id', contentId)
+    .eq('user_id', user.id)
+    .maybeSingle()
+  
+  if (existing) return existing
+  
+  // Create new chat
+  const { data, error } = await supabase
+    .from('journal_chats')
+    .insert({
+      name: `Content: ${contentTitle}`,
+      type: 'content',
+      linked_id: contentId,
+      user_id: user.id
+    })
+    .select()
+    .single()
+  
+  if (error) throw error
+  revalidatePath('/dashboard/journal')
+  return data
+}
+
+export async function getJournalEntriesByContent(contentId: string) {
+  const supabase = await createClient()
+  
+  if (!supabase) {
+    return []
+  }
+  
+  // Get current user
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) {
+    return []
+  }
+  
+  // Get entries from the content's chat
+  const { data: contentChat } = await supabase
+    .from('journal_chats')
+    .select('id')
+    .eq('type', 'content')
+    .eq('linked_id', contentId)
+    .eq('user_id', user.id)
+    .maybeSingle()
+  
+  if (!contentChat) {
+    return []
+  }
+  
+  const { data, error } = await supabase
+    .from('journal_entries')
+    .select('*')
+    .eq('chat_id', contentChat.id)
+    .order('created_at', { ascending: false })
+    .limit(10)
+  
+  if (error) {
+    console.error('Error fetching content journal entries:', error)
+    return []
+  }
+  
+  return data || []
+}
+
+export async function getJournalEntriesByClient(clientId: string) {
+  const supabase = await createClient()
+  
+  if (!supabase) {
+    return []
+  }
+  
+  // Get current user
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) {
+    return []
+  }
+  
+  // Get entries where mentioned_clients contains this clientId
+  const { data, error } = await supabase
+    .from('journal_entries')
+    .select('*')
+    .eq('user_id', user.id)
+    .contains('mentioned_clients', [clientId])
+    .order('created_at', { ascending: false })
+    .limit(10)
+  
+  if (error) {
+    console.error('Error fetching client journal entries:', error)
+    return []
+  }
+  
+  return data || []
+}
