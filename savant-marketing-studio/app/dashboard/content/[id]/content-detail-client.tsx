@@ -181,27 +181,71 @@ export function ContentDetailClient({ content }: ContentDetailClientProps) {
 
   return (
     <div className="min-h-screen bg-dark-gray">
-      <div className="max-w-4xl mx-auto px-6 py-8 space-y-8">
-        {/* Back Navigation */}
-        <Link
-          href={`/dashboard/clients/${content.client_id}`}
-          className="inline-flex items-center gap-2 text-sm text-silver hover:text-foreground transition-colors"
-        >
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-          </svg>
-          Back to {content.clients?.name || 'Client'}
-        </Link>
+      <div className="max-w-4xl mx-auto px-6 py-8">
+        {/* Header Row - Back Navigation and Actions Menu */}
+        <div className="flex items-center justify-between mb-8">
+          <Link
+            href={`/dashboard/clients/${content.client_id}`}
+            className="inline-flex items-center gap-2 text-sm text-silver hover:text-foreground transition-colors"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+            </svg>
+            Back to {content.clients?.name || 'Client'}
+          </Link>
+
+          {/* Actions Menu */}
+          <div className="relative">
+            <button
+              onClick={() => setShowMenu(!showMenu)}
+              className="p-1.5 text-silver/60 hover:text-silver transition-colors"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
+              </svg>
+            </button>
+
+            {showMenu && (
+              <div className="absolute right-0 mt-2 w-48 bg-charcoal border border-mid-gray rounded-lg shadow-xl z-10">
+                <button
+                  onClick={() => {
+                    setIsEditingContent(!isEditingContent)
+                    setShowMenu(false)
+                  }}
+                  className="w-full text-left px-4 py-3 text-sm text-foreground hover:bg-dark-gray transition-colors flex items-center gap-2"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                  </svg>
+                  {isEditingContent ? 'Stop Editing' : 'Edit Content'}
+                </button>
+                <button
+                  onClick={() => {
+                    handleDelete()
+                    setShowMenu(false)
+                  }}
+                  disabled={loading}
+                  className="w-full text-left px-4 py-3 text-sm text-red-primary hover:bg-dark-gray transition-colors flex items-center gap-2 border-t border-mid-gray disabled:opacity-50"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                  </svg>
+                  Delete
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
 
         {/* Error Message */}
-      {error && (
-          <div className="bg-red-primary/20 border border-red-primary text-red-primary px-4 py-3 rounded-lg text-sm">
+        {error && (
+          <div className="bg-red-primary/20 border border-red-primary text-red-primary px-4 py-3 rounded-lg text-sm mb-6">
             {error}
-        </div>
-      )}
+          </div>
+        )}
 
-        {/* Title - Editable inline */}
-        <div>
+        {/* Title with Dropdown Arrow - Kortex Style */}
+        <div className="flex items-center gap-3 mb-4">
           {isEditingTitle ? (
             <input
               ref={titleInputRef}
@@ -217,107 +261,140 @@ export function ContentDetailClient({ content }: ContentDetailClientProps) {
                 }
               }}
               disabled={loading}
-              className="w-full text-4xl font-bold text-foreground bg-transparent border-none outline-none focus:ring-0 p-0"
+              className="flex-1 text-4xl font-bold text-foreground bg-transparent border-none outline-none focus:ring-0 p-0"
             />
           ) : (
             <h1
               onClick={() => !loading && setIsEditingTitle(true)}
-              className="text-4xl font-bold text-foreground cursor-text hover:text-foreground/80 transition-colors"
+              className="flex-1 text-4xl font-bold text-foreground cursor-text hover:text-foreground/80 transition-colors"
             >
               {title}
-                </h1>
+            </h1>
           )}
+          
+          {/* Dropdown Arrow for Captures */}
+          <button
+            onClick={() => setIsExpanded(!isExpanded)}
+            className="p-1 text-silver/60 hover:text-silver transition-colors rounded"
+            aria-label="Toggle captures"
+          >
+            <svg
+              className={`w-5 h-5 transition-transform ${isExpanded ? 'rotate-180' : ''}`}
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+            </svg>
+          </button>
         </div>
 
-        {/* Metadata Row */}
-        <div className="flex items-center justify-between flex-wrap gap-4">
-          <div className="flex items-center gap-3 flex-wrap">
-            {/* Asset Type Badge */}
-            <span className="px-3 py-1 text-xs font-medium rounded-full bg-success/20 text-success border border-success/30">
-                    {content.asset_type.replace('_', ' ')}
-                  </span>
-
-            {/* Client Badge */}
-            {content.clients && (
+        {/* Collapsible Captures Panel - Kortex Style */}
+        {isExpanded && (
+          <div className="mb-6 bg-charcoal/50 border border-mid-gray/50 rounded-lg p-4">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-sm font-medium text-silver">
+                Captures ({journalEntries.length})
+              </h3>
               <Link
-                href={`/dashboard/clients/${content.client_id}`}
-                className="px-3 py-1 text-xs font-medium rounded-full bg-info/20 text-info border border-info/30 hover:bg-info/30 transition-colors"
+                href="/dashboard/journal"
+                className="text-xs text-silver/60 hover:text-silver transition-colors"
               >
-                {content.clients.name}
+                View All →
               </Link>
-                  )}
+            </div>
 
-            {/* Project Badge */}
-                  {content.projects && (
-              <span className="px-3 py-1 text-xs font-medium rounded-full bg-warning/20 text-warning border border-warning/30">
-                      {content.projects.name}
-                    </span>
-                  )}
-
-            {/* Dates */}
-            <span className="text-xs text-slate">
-              Created: {new Date(content.created_at).toLocaleDateString()}
-              {' • '}
-              Updated: {new Date(content.updated_at).toLocaleDateString()}
-                  </span>
-          </div>
-
-          {/* Actions Menu */}
-          <div className="relative">
-            <button
-              onClick={() => setShowMenu(!showMenu)}
-              className="p-2 text-silver hover:text-foreground hover:bg-charcoal rounded-lg transition-colors"
-            >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
-              </svg>
-            </button>
-
-            {showMenu && (
-              <div className="absolute right-0 mt-2 w-48 bg-charcoal border border-mid-gray rounded-lg shadow-xl z-10">
-                <button
-                  onClick={() => {
-                    setIsEditingContent(!isEditingContent)
-                    setShowMenu(false)
-                  }}
-                  className="w-full text-left px-4 py-3 text-sm text-foreground hover:bg-dark-gray transition-colors flex items-center gap-2"
-            >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                  </svg>
-                  {isEditingContent ? 'Stop Editing' : 'Edit Content'}
-            </button>
-            <button
-                  onClick={() => {
-                    handleDelete()
-                    setShowMenu(false)
-                  }}
-                  disabled={loading}
-                  className="w-full text-left px-4 py-3 text-sm text-red-primary hover:bg-dark-gray transition-colors flex items-center gap-2 border-t border-mid-gray disabled:opacity-50"
-            >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                  </svg>
-              Delete
-            </button>
+            {loadingJournal ? (
+              <div className="flex items-center justify-center py-8">
+                <div className="w-6 h-6 border-3 border-red-primary border-t-transparent rounded-full animate-spin"></div>
+              </div>
+            ) : journalEntries.length === 0 ? (
+              <div className="text-center py-8">
+                <p className="text-sm text-silver/60 mb-2">No captures yet</p>
+                <p className="text-xs text-silver/40">
+                  Mention @{content.title} in journal to see captures here
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {journalEntries.map((entry) => (
+                  <div
+                    key={entry.id}
+                    className="p-3 bg-dark-gray/50 rounded border border-mid-gray/30 hover:border-mid-gray/60 transition-colors"
+                  >
+                    <div
+                      className="text-sm text-foreground/90 leading-relaxed"
+                      dangerouslySetInnerHTML={{ __html: highlightMentions(entry.content) }}
+                    />
+                    <div className="flex items-center gap-3 mt-2 text-xs text-silver/60">
+                      <span>
+                        {new Date(entry.created_at).toLocaleDateString('en-US', {
+                          month: 'short',
+                          day: 'numeric',
+                          hour: 'numeric',
+                          minute: '2-digit'
+                        })}
+                      </span>
+                      {entry.tags && entry.tags.length > 0 && (
+                        <div className="flex gap-1">
+                          {entry.tags.map((tag) => (
+                            <span
+                              key={tag}
+                              className="px-1.5 py-0.5 bg-red-primary/20 text-red-primary/80 rounded text-xs"
+                            >
+                              #{tag}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ))}
               </div>
             )}
           </div>
-            </div>
+        )}
 
-        {/* Divider */}
-        <hr className="border-mid-gray" />
+        {/* Metadata Row - Subtle */}
+        <div className="flex items-center gap-2 flex-wrap mb-8 text-xs">
+          {/* Asset Type Badge */}
+          <span className="px-2 py-1 rounded bg-success/10 text-success/80 border border-success/20">
+            {content.asset_type.replace('_', ' ')}
+          </span>
 
-        {/* Content Area - Notion-like */}
-        <div className="bg-charcoal rounded-xl border border-mid-gray p-8">
-              <TiptapEditor
-                content={editorContent}
+          {/* Client Badge */}
+          {content.clients && (
+            <Link
+              href={`/dashboard/clients/${content.client_id}`}
+              className="px-2 py-1 rounded bg-info/10 text-info/80 border border-info/20 hover:bg-info/20 transition-colors"
+            >
+              {content.clients.name}
+            </Link>
+          )}
+
+          {/* Project Badge */}
+          {content.projects && (
+            <span className="px-2 py-1 rounded bg-warning/10 text-warning/80 border border-warning/20">
+              {content.projects.name}
+            </span>
+          )}
+
+          {/* Dates */}
+          <span className="text-silver/50">
+            Created {new Date(content.created_at).toLocaleDateString()} • Updated {new Date(content.updated_at).toLocaleDateString()}
+          </span>
+        </div>
+
+        {/* Content Area - Minimal Document Style */}
+        <div className="min-h-[400px]">
+          <TiptapEditor
+            content={editorContent}
             onChange={setEditorContent}
             editable={isEditingContent}
           />
 
           {isEditingContent && (
-            <div className="flex items-center gap-3 mt-6 pt-6 border-t border-mid-gray">
+            <div className="flex items-center gap-3 mt-8 pt-6 border-t border-mid-gray/30">
               <button
                 onClick={handleSaveContent}
                 disabled={loading}
@@ -337,111 +414,11 @@ export function ContentDetailClient({ content }: ContentDetailClientProps) {
                   }
                 }}
                 disabled={loading}
-                className="px-6 py-2 border border-mid-gray text-silver hover:text-foreground hover:bg-dark-gray rounded-lg transition-colors disabled:opacity-50"
+                className="px-6 py-2 border border-mid-gray/50 text-silver hover:text-foreground hover:border-mid-gray rounded-lg transition-colors disabled:opacity-50"
               >
                 Cancel
               </button>
             </div>
-          )}
-        </div>
-
-        {/* Divider */}
-        <hr className="border-mid-gray" />
-
-        {/* Quick Captures - Collapsible */}
-        <div className="bg-charcoal rounded-xl border border-mid-gray p-6">
-          <button
-            onClick={() => setIsExpanded(!isExpanded)}
-            className="w-full flex items-center justify-between text-left hover:opacity-80 transition-opacity"
-          >
-            <div className="flex items-center gap-3">
-              <span className="text-xl">📝</span>
-              <div>
-                <h3 className="text-lg font-semibold text-foreground">Quick Captures</h3>
-                <p className="text-xs text-silver">
-                  {loadingJournal ? 'Loading...' : `${journalEntries.length} ${journalEntries.length === 1 ? 'entry' : 'entries'}`}
-                </p>
-              </div>
-            </div>
-            <div className="flex items-center gap-3">
-              <Link
-                href="/dashboard/journal"
-                onClick={(e) => e.stopPropagation()}
-                className="text-xs text-red-primary hover:text-red-bright font-medium transition-colors"
-              >
-                View All →
-              </Link>
-              <svg
-                className={`w-5 h-5 text-silver transition-transform ${isExpanded ? 'rotate-180' : ''}`}
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-              </svg>
-            </div>
-          </button>
-
-          {isExpanded && (
-            <div className="mt-6">
-              {loadingJournal ? (
-                <div className="flex items-center justify-center py-12">
-                  <div className="w-8 h-8 border-4 border-red-primary border-t-transparent rounded-full animate-spin"></div>
-                </div>
-              ) : journalEntries.length === 0 ? (
-                <div className="text-center py-12 border-2 border-dashed border-mid-gray rounded-lg">
-                  <span className="text-4xl mb-3 block">📭</span>
-                  <h3 className="text-base font-medium text-foreground mb-2">No captures yet</h3>
-                  <p className="text-sm text-silver mb-4">
-                    Create a journal capture mentioning @{content.title} to see it here
-                  </p>
-                  <Link
-                    href="/dashboard/journal"
-                    className="inline-block bg-red-primary text-pure-white px-4 py-2 rounded-lg hover:bg-red-bright transition-all duration-200 text-sm font-medium"
-                  >
-                    Create Capture
-                  </Link>
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  {journalEntries.map((entry) => (
-                    <div
-                      key={entry.id}
-                      className="border border-mid-gray rounded-lg p-4 hover:border-red-bright/50 transition-all duration-200"
-                    >
-                      <div
-                        className="text-sm text-foreground mb-3 leading-relaxed"
-                        dangerouslySetInnerHTML={{ __html: highlightMentions(entry.content) }}
-                      />
-                      <div className="flex items-center justify-between text-xs text-slate">
-                        <div className="flex items-center gap-3">
-                          <span>
-                            {new Date(entry.created_at).toLocaleDateString('en-US', {
-                              month: 'short',
-                              day: 'numeric',
-                              hour: 'numeric',
-                              minute: '2-digit'
-                            })}
-                          </span>
-                          {entry.tags && entry.tags.length > 0 && (
-                            <div className="flex gap-1">
-                              {entry.tags.map((tag) => (
-                                <span
-                                  key={tag}
-                                  className="px-2 py-0.5 bg-red-primary/20 text-red-primary rounded-full"
-                                >
-                                  #{tag}
-                                </span>
-                              ))}
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-          </div>
           )}
         </div>
       </div>
