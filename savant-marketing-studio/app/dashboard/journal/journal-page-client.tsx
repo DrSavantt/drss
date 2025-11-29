@@ -16,7 +16,6 @@ import {
   bulkUnpinJournalEntries,
   bulkAddTagsToJournalEntries
 } from '@/app/actions/journal'
-import { useRouter } from 'next/navigation'
 
 interface Entry {
   id: string
@@ -91,7 +90,7 @@ export function JournalPageClient({
     content?: string
     clientId?: string
     projectId?: string
-  } | null>(null)
+  } | undefined>(undefined)
 
   // When chat changes, fetch new entries
   const handleChatChange = useCallback(async (chatId: string) => {
@@ -306,7 +305,7 @@ export function JournalPageClient({
             </div>
             <button
               onClick={() => {
-                setNoteInitialData(null)
+                setNoteInitialData(undefined)
                 setIsNoteModalOpen(true)
               }}
               className="flex-shrink-0 px-4 py-2 bg-red-primary text-white rounded-lg hover:bg-red-bright transition-colors font-medium flex items-center gap-2"
@@ -412,7 +411,7 @@ export function JournalPageClient({
         isOpen={isNoteModalOpen}
         onClose={() => {
           setIsNoteModalOpen(false)
-          setNoteInitialData(null)
+          setNoteInitialData(undefined)
         }}
         onSave={handleSaveNote}
         clients={clients}
