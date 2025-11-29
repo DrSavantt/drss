@@ -37,11 +37,18 @@ export async function getOrCreateInbox() {
     throw new Error('Database connection not configured')
   }
   
-  // Try to get existing Inbox
+  // Get current user
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) {
+    throw new Error('Not authenticated')
+  }
+  
+  // Try to get existing Inbox for this user
   const { data: existing } = await supabase
     .from('journal_chats')
     .select('id')
     .eq('type', 'inbox')
+    .eq('user_id', user.id)
     .maybeSingle()
   
   if (existing) return existing.id
@@ -49,7 +56,7 @@ export async function getOrCreateInbox() {
   // Create new Inbox if doesn't exist
   const { data, error } = await supabase
     .from('journal_chats')
-    .insert({ name: 'Inbox', type: 'inbox' })
+    .insert({ name: 'Inbox', type: 'inbox', user_id: user.id })
     .select()
     .single()
   
@@ -69,16 +76,46 @@ export async function createJournalEntry(
     throw new Error('Database connection not configured')
   }
   
-  const { error } = await supabase
+  // Get current user - REQUIRED for user_id
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) {
+    throw new Error('Not authenticated')
+  }
+  
+  // Validate required fields
+  if (!content || !content.trim()) {
+    throw new Error('Content is required')
+  }
+  
+  if (!chatId) {
+    throw new Error('Chat ID is required')
+  }
+  
+  console.log('Creating journal entry:', {
+    user_id: user.id,
+    content,
+    chat_id: chatId,
+    mentioned_clients: mentionedClients,
+    tags
+  })
+  
+  const { data, error } = await supabase
     .from('journal_entries')
     .insert({
-      content,
+      user_id: user.id,
+      content: content.trim(),
       chat_id: chatId,
-      mentioned_clients: mentionedClients,
-      tags
+      mentioned_clients: mentionedClients || [],
+      tags: tags || []
     })
+    .select()
   
-  if (error) throw error
+  if (error) {
+    console.error('Error creating journal entry:', error)
+    throw error
+  }
+  
+  console.log('Journal entry created:', data)
   revalidatePath('/dashboard/journal')
 }
 
@@ -120,6 +157,47 @@ export async function getJournalEntries(chatId?: string) {
   return data
 }
 
+export async function getJournalEntriesByProject(projectId: string) {
+  const supabase = await createClient()
+  
+  if (!supabase) {
+    return []
+  }
+  
+  // Get current user
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) {
+    return []
+  }
+  
+  // Get entries from the project's chat
+  const { data: projectChat } = await supabase
+    .from('journal_chats')
+    .select('id')
+    .eq('type', 'project')
+    .eq('linked_id', projectId)
+    .eq('user_id', user.id)
+    .maybeSingle()
+  
+  if (!projectChat) {
+    return []
+  }
+  
+  const { data, error } = await supabase
+    .from('journal_entries')
+    .select('*')
+    .eq('chat_id', projectChat.id)
+    .order('created_at', { ascending: false })
+    .limit(10)
+  
+  if (error) {
+    console.error('Error fetching project journal entries:', error)
+    return []
+  }
+  
+  return data || []
+}
+
 export async function getJournalChats() {
   const supabase = await createClient()
   
@@ -127,9 +205,16 @@ export async function getJournalChats() {
     return []
   }
   
+  // Get current user
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) {
+    return []
+  }
+  
   const { data, error } = await supabase
     .from('journal_chats')
     .select('*')
+    .eq('user_id', user.id)
     .order('created_at', { ascending: true })
   
   if (error) throw error
@@ -143,12 +228,19 @@ export async function createChatForClient(clientId: string, clientName: string) 
     throw new Error('Database connection not configured')
   }
   
-  // Check if chat already exists
+  // Get current user
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) {
+    throw new Error('Not authenticated')
+  }
+  
+  // Check if chat already exists for this user
   const { data: existing } = await supabase
     .from('journal_chats')
     .select('id')
     .eq('type', 'client')
     .eq('linked_id', clientId)
+    .eq('user_id', user.id)
     .maybeSingle()
   
   if (existing) return existing
@@ -159,7 +251,8 @@ export async function createChatForClient(clientId: string, clientName: string) 
     .insert({
       name: `Client: ${clientName}`,
       type: 'client',
-      linked_id: clientId
+      linked_id: clientId,
+      user_id: user.id
     })
     .select()
     .single()
@@ -176,12 +269,19 @@ export async function createChatForProject(projectId: string, projectName: strin
     throw new Error('Database connection not configured')
   }
   
-  // Check if chat already exists
+  // Get current user
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) {
+    throw new Error('Not authenticated')
+  }
+  
+  // Check if chat already exists for this user
   const { data: existing } = await supabase
     .from('journal_chats')
     .select('id')
     .eq('type', 'project')
     .eq('linked_id', projectId)
+    .eq('user_id', user.id)
     .maybeSingle()
   
   if (existing) return existing
@@ -192,7 +292,8 @@ export async function createChatForProject(projectId: string, projectName: strin
     .insert({
       name: `Project: ${projectName}`,
       type: 'project',
-      linked_id: projectId
+      linked_id: projectId,
+      user_id: user.id
     })
     .select()
     .single()
