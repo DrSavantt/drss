@@ -71,9 +71,12 @@ export function parseMentions(
 
 export function highlightMentions(text: string) {
   let result = text
-  // Highlight @mentions in blue/info color (supports spaces, parentheses, etc.)
-  // Match from @ until we hit a space followed by a non-uppercase letter, or end of string, or a tag
-  result = result.replace(/@([A-Za-z0-9][A-Za-z0-9\s\(\)&\-\.]*[A-Za-z0-9\)])/g, '<span class="text-info font-semibold">@$1</span>')
+  
+  // Highlight @mentions in blue/info color
+  // Only match the exact name pattern: @Word or @Word Word (with capitals/numbers) or @Name (Parentheses)
+  // Stop at the first space followed by a lowercase letter
+  result = result.replace(/@([A-Z0-9][A-Za-z0-9]*(?:\s+(?:[A-Z0-9][A-Za-z0-9]*|\([^)]+\)))*(?:\s+\([^)]+\))?)/g, '<span class="text-info font-semibold">@$1</span>')
+  
   // Highlight #tags in red/primary color
   result = result.replace(/#(\w+)/g, '<span class="text-red-primary font-semibold">#$1</span>')
   return result
