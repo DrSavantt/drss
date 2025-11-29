@@ -19,6 +19,8 @@ interface Project {
 interface Content {
   id: string
   title: string
+  file_url?: string | null
+  asset_type?: string
 }
 
 interface Chat {
@@ -60,7 +62,12 @@ export function JournalCapture({
   const allMentionables = [
     ...clients.map(c => ({ id: c.id, name: c.name, type: 'client' as const })),
     ...projects.map(p => ({ id: p.id, name: p.name, type: 'project' as const })),
-    ...contentAssets.map(c => ({ id: c.id, name: c.title, type: 'content' as const }))
+    ...contentAssets.map(c => ({ 
+      id: c.id, 
+      name: c.title, 
+      type: 'content' as const,
+      subType: c.file_url ? (c.asset_type || 'file') : 'note'
+    }))
   ]
 
   // Handle ESC key to close modals

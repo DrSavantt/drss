@@ -29,10 +29,12 @@ export default async function JournalPage() {
       name: c.name
     }))
 
-    // Transform content to simple format
+    // Transform content to simple format (include file_url and asset_type for distinction)
     const simpleContent = content.map(c => ({
       id: c.id,
-      title: c.title
+      title: c.title,
+      file_url: c.file_url,
+      asset_type: c.asset_type
     }))
 
     return (
