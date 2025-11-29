@@ -203,11 +203,11 @@ export function ContentDetailClient({ content }: ContentDetailClientProps) {
         </Link>
 
         {/* Error Message */}
-        {error && (
+      {error && (
           <div className="bg-red-primary/20 border border-red-primary text-red-primary px-4 py-3 rounded-lg text-sm">
             {error}
-          </div>
-        )}
+        </div>
+      )}
 
         {/* Title - Editable inline */}
         <div>
@@ -234,7 +234,7 @@ export function ContentDetailClient({ content }: ContentDetailClientProps) {
               className="text-4xl font-bold text-foreground cursor-text hover:text-foreground/80 transition-colors"
             >
               {title}
-            </h1>
+                </h1>
           )}
         </div>
 
@@ -243,8 +243,8 @@ export function ContentDetailClient({ content }: ContentDetailClientProps) {
           <div className="flex items-center gap-3 flex-wrap">
             {/* Asset Type Badge */}
             <span className="px-3 py-1 text-xs font-medium rounded-full bg-success/20 text-success border border-success/30">
-              {content.asset_type.replace('_', ' ')}
-            </span>
+                    {content.asset_type.replace('_', ' ')}
+                  </span>
 
             {/* Client Badge */}
             {content.clients && (
@@ -254,21 +254,21 @@ export function ContentDetailClient({ content }: ContentDetailClientProps) {
               >
                 {content.clients.name}
               </Link>
-            )}
+                  )}
 
             {/* Project Badge */}
-            {content.projects && (
+                  {content.projects && (
               <span className="px-3 py-1 text-xs font-medium rounded-full bg-warning/20 text-warning border border-warning/30">
-                {content.projects.name}
-              </span>
-            )}
+                      {content.projects.name}
+                    </span>
+                  )}
 
             {/* Dates */}
             <span className="text-xs text-slate">
               Created: {new Date(content.created_at).toLocaleDateString()}
               {' • '}
               Updated: {new Date(content.updated_at).toLocaleDateString()}
-            </span>
+                  </span>
           </div>
 
           {/* Actions Menu */}
@@ -290,37 +290,37 @@ export function ContentDetailClient({ content }: ContentDetailClientProps) {
                     setShowMenu(false)
                   }}
                   className="w-full text-left px-4 py-3 text-sm text-foreground hover:bg-dark-gray transition-colors flex items-center gap-2"
-                >
+            >
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                   </svg>
                   {isEditingContent ? 'Stop Editing' : 'Edit Content'}
-                </button>
-                <button
+            </button>
+            <button
                   onClick={() => {
                     handleDelete()
                     setShowMenu(false)
                   }}
                   disabled={loading}
                   className="w-full text-left px-4 py-3 text-sm text-red-primary hover:bg-dark-gray transition-colors flex items-center gap-2 border-t border-mid-gray disabled:opacity-50"
-                >
+            >
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                   </svg>
-                  Delete
-                </button>
+              Delete
+            </button>
               </div>
             )}
           </div>
-        </div>
+            </div>
 
         {/* Divider */}
         <hr className="border-mid-gray" />
 
         {/* Content Area - Notion-like */}
         <div className="bg-charcoal rounded-xl border border-mid-gray p-8">
-          <TiptapEditor
-            content={editorContent}
+              <TiptapEditor
+                content={editorContent}
             onChange={setEditorContent}
             editable={isEditingContent}
           />
@@ -450,7 +450,7 @@ export function ContentDetailClient({ content }: ContentDetailClientProps) {
                   ))}
                 </div>
               )}
-            </div>
+          </div>
           )}
         </div>
       </div>

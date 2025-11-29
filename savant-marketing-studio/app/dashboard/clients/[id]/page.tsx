@@ -359,12 +359,12 @@ export default async function ClientDetailPage({
                       )}
                     </div>
                   </div>
-                  <Link
-                    href={`/dashboard/content/${item.id}`}
-                    className="text-sm text-red-primary hover:text-red-bright font-medium transition-colors"
-                  >
-                    View →
-                  </Link>
+                      <Link
+                        href={`/dashboard/content/${item.id}`}
+                        className="text-sm text-red-primary hover:text-red-bright font-medium transition-colors"
+                      >
+                        View →
+                      </Link>
                 </div>
               </div>
             ))}
