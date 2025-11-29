@@ -135,13 +135,17 @@ export function JournalPageClient({
   }, [chats, currentChatId, entries.length])
 
   // Toast helper
+  const removeToast = useCallback((id: string) => {
+    setToasts(prev => prev.filter(t => t.id !== id))
+  }, [])
+
   const addToast = useCallback((message: string, type: 'success' | 'error' | 'info') => {
     const id = Math.random().toString(36).substr(2, 9)
     setToasts(prev => [...prev, { id, message, type }])
     setTimeout(() => {
-      setToasts(prev => prev.filter(t => t.id !== id))
+      removeToast(id)
     }, 3000)
-  }, [])
+  }, [removeToast])
 
   // Selection handlers
   const toggleSelection = useCallback((id: string) => {
@@ -419,7 +423,7 @@ export function JournalPageClient({
       />
 
       {/* Toast Notifications */}
-      <ToastContainer toasts={toasts} />
+      <ToastContainer toasts={toasts} removeToast={removeToast} />
     </div>
   )
 }
