@@ -17,13 +17,14 @@ interface Props {
 
 export function MentionModal({ items, onSelect, onClose, position }: Props) {
   const [search, setSearch] = useState('')
-  const [activeTab, setActiveTab] = useState<'all' | 'clients' | 'projects'>('all')
+  const [activeTab, setActiveTab] = useState<'all' | 'clients' | 'projects' | 'content'>('all')
 
   const filtered = items.filter(item => {
     const matchesSearch = item.name.toLowerCase().includes(search.toLowerCase())
     if (activeTab === 'all') return matchesSearch
     if (activeTab === 'clients') return matchesSearch && item.type === 'client'
     if (activeTab === 'projects') return matchesSearch && item.type === 'project'
+    if (activeTab === 'content') return matchesSearch && item.type === 'content'
     return matchesSearch
   })
 
@@ -69,7 +70,7 @@ export function MentionModal({ items, onSelect, onClose, position }: Props) {
         <div className="flex border-b border-mid-gray bg-dark-gray">
           <button 
             onClick={() => setActiveTab('all')}
-            className={`flex-1 px-4 py-2 text-xs font-medium transition-colors ${
+            className={`flex-1 px-3 py-2 text-xs font-medium transition-colors ${
               activeTab === 'all' 
                 ? 'border-b-2 border-red-primary text-red-primary bg-charcoal' 
                 : 'text-silver hover:text-foreground'
@@ -79,7 +80,7 @@ export function MentionModal({ items, onSelect, onClose, position }: Props) {
           </button>
           <button 
             onClick={() => setActiveTab('clients')}
-            className={`flex-1 px-4 py-2 text-xs font-medium transition-colors ${
+            className={`flex-1 px-3 py-2 text-xs font-medium transition-colors ${
               activeTab === 'clients' 
                 ? 'border-b-2 border-red-primary text-red-primary bg-charcoal' 
                 : 'text-silver hover:text-foreground'
@@ -89,13 +90,23 @@ export function MentionModal({ items, onSelect, onClose, position }: Props) {
           </button>
           <button 
             onClick={() => setActiveTab('projects')}
-            className={`flex-1 px-4 py-2 text-xs font-medium transition-colors ${
+            className={`flex-1 px-3 py-2 text-xs font-medium transition-colors ${
               activeTab === 'projects' 
                 ? 'border-b-2 border-red-primary text-red-primary bg-charcoal' 
                 : 'text-silver hover:text-foreground'
             }`}
           >
             Projects
+          </button>
+          <button 
+            onClick={() => setActiveTab('content')}
+            className={`flex-1 px-3 py-2 text-xs font-medium transition-colors ${
+              activeTab === 'content' 
+                ? 'border-b-2 border-red-primary text-red-primary bg-charcoal' 
+                : 'text-silver hover:text-foreground'
+            }`}
+          >
+            Content
           </button>
         </div>
 
