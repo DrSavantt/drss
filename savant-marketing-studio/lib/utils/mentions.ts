@@ -73,10 +73,13 @@ export function highlightMentions(text: string) {
   let result = text
   
   // Highlight @mentions in blue/info color
-  // Matches any text after @ until we hit a space followed by a lowercase word that seems like a new sentence
-  // or punctuation like ?, !, .
-  // This is a best-effort approach - matches greedily until hitting common sentence starters
-  result = result.replace(/@([A-Za-z0-9]+(?:\s+[A-Za-z0-9]+)*(?:\s*\([^)]+\))?)\s*(?=\?|!|\.|$)/g, '<span class="text-info font-semibold">@$1</span>')
+  // Match @[first word][optional additional CAPITALIZED words][optional parentheses content]
+  // This stops at lowercase words (which are likely the continuation of the sentence)
+  // Examples:
+  // - @Greg → highlights "Greg"
+  // - @Greg yo → highlights "Greg" (yo is lowercase, not part of mention)
+  // - @Candy Business (IG Reel Content) yo → highlights "Candy Business (IG Reel Content)"
+  result = result.replace(/@([A-Za-z0-9]+(?:\s+[A-Z0-9][A-Za-z0-9]*)*(?:\s*\([^)]+\))?)/g, '<span class="text-info font-semibold">@$1</span>')
   
   // Highlight #tags in red/primary color
   result = result.replace(/#(\w+)/g, '<span class="text-red-primary font-semibold">#$1</span>')
