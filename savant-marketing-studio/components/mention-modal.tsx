@@ -6,6 +6,7 @@ interface MentionItem {
   id: string
   name: string
   type: 'client' | 'project' | 'content'
+  subType?: string
 }
 
 interface Props {
@@ -126,7 +127,9 @@ export function MentionModal({ items, onSelect, onClose, position }: Props) {
                 <span className="text-xl">{getIcon(item.type)}</span>
                 <div className="flex-1 min-w-0">
                   <div className="font-medium text-sm text-foreground truncate">{item.name}</div>
-                  <div className="text-xs text-slate capitalize">{item.type}</div>
+                  <div className="text-xs text-slate capitalize">
+                    {item.type === 'content' && item.subType ? item.subType : item.type}
+                  </div>
                 </div>
               </button>
             ))
