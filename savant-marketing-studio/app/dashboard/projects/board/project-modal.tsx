@@ -1,8 +1,11 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { updateProject, deleteProject } from '@/app/actions/projects'
+import { getJournalEntriesByProject } from '@/app/actions/journal'
+import { highlightMentions } from '@/lib/utils/mentions'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 
 interface Project {
   id: string
@@ -26,12 +29,37 @@ interface ProjectModalProps {
   onDelete?: (projectId: string) => void
 }
 
+interface JournalEntry {
+  id: string
+  content: string
+  tags: string[]
+  created_at: string
+}
+
 export function ProjectModal({ project, onClose, onUpdate, onDelete }: ProjectModalProps) {
   const router = useRouter()
   const [isEditing, setIsEditing] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [journalEntries, setJournalEntries] = useState<JournalEntry[]>([])
+  const [loadingJournal, setLoadingJournal] = useState(false)
+
+  // Fetch journal entries for this project
+  useEffect(() => {
+    async function fetchJournalEntries() {
+      setLoadingJournal(true)
+      try {
+        const entries = await getJournalEntriesByProject(project.id)
+        setJournalEntries(entries)
+      } catch (error) {
+        console.error('Failed to load journal entries:', error)
+      } finally {
+        setLoadingJournal(false)
+      }
+    }
+    fetchJournalEntries()
+  }, [project.id])
 
   async function handleSubmit(formData: FormData) {
     setError(null)
@@ -207,6 +235,65 @@ export function ProjectModal({ project, onClose, onUpdate, onDelete }: ProjectMo
                     day: 'numeric',
                   })}
                 </p>
+              </div>
+
+              {/* Journal Captures */}
+              <div className="border-t border-mid-gray pt-6">
+                <div className="flex items-center justify-between mb-3">
+                  <h4 className="text-sm font-medium text-silver flex items-center gap-2">
+                    <span>📝</span> Quick Captures
+                  </h4>
+                  <Link
+                    href="/dashboard/journal"
+                    className="text-xs text-red-primary hover:text-red-bright transition-colors"
+                  >
+                    View All →
+                  </Link>
+                </div>
+                
+                {loadingJournal ? (
+                  <div className="text-center py-4">
+                    <div className="animate-spin w-5 h-5 border-2 border-red-primary border-t-transparent rounded-full mx-auto"></div>
+                  </div>
+                ) : journalEntries.length > 0 ? (
+                  <div className="space-y-2 max-h-60 overflow-y-auto">
+                    {journalEntries.map(entry => (
+                      <div key={entry.id} className="bg-dark-gray rounded-md p-3 text-sm">
+                        <div 
+                          className="text-foreground mb-1"
+                          dangerouslySetInnerHTML={{ __html: highlightMentions(entry.content) }}
+                        />
+                        <div className="flex items-center gap-2 text-xs text-slate">
+                          <span>
+                            {new Date(entry.created_at).toLocaleDateString('en-US', {
+                              month: 'short',
+                              day: 'numeric'
+                            })}
+                          </span>
+                          {entry.tags && entry.tags.length > 0 && (
+                            <div className="flex gap-1">
+                              {entry.tags.map(tag => (
+                                <span key={tag} className="px-1.5 py-0.5 bg-red-primary/20 text-red-primary rounded">
+                                  #{tag}
+                                </span>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-4 text-sm text-slate">
+                    <p>No captures yet</p>
+                    <Link
+                      href="/dashboard/journal"
+                      className="text-xs text-red-primary hover:text-red-bright mt-1 inline-block"
+                    >
+                      Create your first capture →
+                    </Link>
+                  </div>
+                )}
               </div>
 
               {/* Action Buttons */}
