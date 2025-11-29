@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { getJournalEntriesByContent, getJournalEntriesByClient } from '@/app/actions/journal'
 import { highlightMentions } from '@/lib/utils/mentions'
 import Link from 'next/link'
-import { FileText, Download, Calendar, User } from 'lucide-react'
+import { FileText, ExternalLink } from 'lucide-react'
 
 interface Content {
   id: string
@@ -136,13 +136,12 @@ export function FilePreviewClient({ content }: Props) {
         <div className="mt-6">
           <a
             href={content.file_url || '#'}
-            download
             target="_blank"
             rel="noopener noreferrer"
             className="w-full flex items-center justify-center gap-2 rounded-lg bg-red-primary px-6 py-3 text-sm font-semibold text-pure-white hover:bg-red-bright transition-colors"
           >
-            <Download className="w-4 h-4" />
-            Download File
+            <ExternalLink className="w-4 h-4" />
+            Open File
           </a>
         </div>
 
