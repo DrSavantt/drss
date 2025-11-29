@@ -87,7 +87,12 @@ export function JournalPageClient({
   
   // Note editor modal state
   const [isNoteModalOpen, setIsNoteModalOpen] = useState(false)
-  const [noteInitialData, setNoteInitialData] = useState<any>(null)
+  const [noteInitialData, setNoteInitialData] = useState<{
+    title?: string
+    content?: string
+    clientId?: string
+    projectId?: string
+  } | null>(null)
 
   // When chat changes, fetch new entries
   const handleChatChange = useCallback(async (chatId: string) => {
@@ -255,7 +260,7 @@ export function JournalPageClient({
     
     addToast('Note created successfully', 'success')
     // Router will redirect automatically after createContentAsset
-  }, [addToast, router])
+  }, [addToast])
 
   const handleConvertToNote = useCallback((entry: Entry) => {
     // Extract title from first 50 chars of content
