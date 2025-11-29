@@ -32,8 +32,57 @@ export function parseMentions(
 
 export function highlightMentions(text: string) {
   let result = text
-  result = result.replace(/@(\w+)/g, '<span class="text-blue-600 font-semibold">@$1</span>')
-  result = result.replace(/#(\w+)/g, '<span class="text-purple-600 font-semibold">#$1</span>')
+  // Highlight @mentions in blue/info color
+  result = result.replace(/@(\w+)/g, '<span class="text-info font-semibold">@$1</span>')
+  // Highlight #tags in red/primary color
+  result = result.replace(/#(\w+)/g, '<span class="text-red-primary font-semibold">#$1</span>')
   return result
 }
 
+// Group entries by date for display
+export function groupEntriesByDate<T extends { created_at: string }>(entries: T[]) {
+  const groups: { label: string; entries: T[] }[] = []
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  
+  const yesterday = new Date(today)
+  yesterday.setDate(yesterday.getDate() - 1)
+  
+  const weekAgo = new Date(today)
+  weekAgo.setDate(weekAgo.getDate() - 7)
+
+  const todayEntries: T[] = []
+  const yesterdayEntries: T[] = []
+  const thisWeekEntries: T[] = []
+  const olderEntries: T[] = []
+
+  entries.forEach(entry => {
+    const entryDate = new Date(entry.created_at)
+    entryDate.setHours(0, 0, 0, 0)
+
+    if (entryDate.getTime() === today.getTime()) {
+      todayEntries.push(entry)
+    } else if (entryDate.getTime() === yesterday.getTime()) {
+      yesterdayEntries.push(entry)
+    } else if (entryDate >= weekAgo) {
+      thisWeekEntries.push(entry)
+    } else {
+      olderEntries.push(entry)
+    }
+  })
+
+  if (todayEntries.length > 0) {
+    groups.push({ label: '🕐 Today', entries: todayEntries })
+  }
+  if (yesterdayEntries.length > 0) {
+    groups.push({ label: '🕐 Yesterday', entries: yesterdayEntries })
+  }
+  if (thisWeekEntries.length > 0) {
+    groups.push({ label: '🕐 This Week', entries: thisWeekEntries })
+  }
+  if (olderEntries.length > 0) {
+    groups.push({ label: '🕐 Older', entries: olderEntries })
+  }
+
+  return groups
+}

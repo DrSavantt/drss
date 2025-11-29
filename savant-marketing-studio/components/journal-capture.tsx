@@ -4,6 +4,7 @@ import { useState, useRef, useEffect } from 'react'
 import { MentionModal } from './mention-modal'
 import { ChatSelector } from './chat-selector'
 import { createJournalEntry } from '@/app/actions/journal'
+import { parseMentions } from '@/lib/utils/mentions'
 
 interface Client {
   id: string
@@ -27,9 +28,18 @@ interface Props {
   projects: Project[]
   chats: Chat[]
   defaultChatId: string
+  onEntryCreated?: () => void
+  onChatChange?: (chatId: string) => void
 }
 
-export function JournalCapture({ clients, projects, chats, defaultChatId }: Props) {
+export function JournalCapture({ 
+  clients, 
+  projects, 
+  chats, 
+  defaultChatId,
+  onEntryCreated,
+  onChatChange 
+}: Props) {
   const [content, setContent] = useState('')
   const [selectedChatId, setSelectedChatId] = useState(defaultChatId)
   const [showMentionModal, setShowMentionModal] = useState(false)
@@ -37,6 +47,7 @@ export function JournalCapture({ clients, projects, chats, defaultChatId }: Prop
   const [mentionPosition, setMentionPosition] = useState({ top: 0, left: 0 })
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [success, setSuccess] = useState(false)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
 
   const allMentionables = [
@@ -56,9 +67,18 @@ export function JournalCapture({ clients, projects, chats, defaultChatId }: Prop
     return () => window.removeEventListener('keydown', handleEsc)
   }, [])
 
+  // Clear success message after 2 seconds
+  useEffect(() => {
+    if (success) {
+      const timer = setTimeout(() => setSuccess(false), 2000)
+      return () => clearTimeout(timer)
+    }
+  }, [success])
+
   function handleInputChange(e: React.ChangeEvent<HTMLTextAreaElement>) {
     const value = e.target.value
     setContent(value)
+    setError(null)
 
     // Check for @ mention trigger
     const lastChar = value[value.length - 1]
@@ -73,12 +93,26 @@ export function JournalCapture({ clients, projects, chats, defaultChatId }: Prop
     }
   }
 
+  function handleKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {
+    // Submit on Cmd/Ctrl + Enter
+    if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+      e.preventDefault()
+      handleSubmit(e as unknown as React.FormEvent)
+    }
+  }
+
   function insertMention(item: { name: string }) {
     // Remove the @ that triggered the modal
     const newContent = content.slice(0, -1) + '@' + item.name + ' '
     setContent(newContent)
     setShowMentionModal(false)
     textareaRef.current?.focus()
+  }
+
+  function handleChatSelect(chatId: string) {
+    setSelectedChatId(chatId)
+    setShowChatSelector(false)
+    onChatChange?.(chatId)
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -88,22 +122,13 @@ export function JournalCapture({ clients, projects, chats, defaultChatId }: Prop
     setLoading(true)
     setError(null)
     try {
-      // Extract mentioned client/project IDs
-      const mentionedClients: string[] = []
-      const mentionedProjects: string[] = []
-      
-      allMentionables.forEach(item => {
-        if (content.includes(`@${item.name}`)) {
-          if (item.type === 'client') {
-            mentionedClients.push(item.id)
-          } else if (item.type === 'project') {
-            mentionedProjects.push(item.id)
-          }
-        }
-      })
+      // Parse mentions and tags from content
+      const { mentioned_clients, tags } = parseMentions(content, clients)
 
-      await createJournalEntry(content, selectedChatId, mentionedClients, [])
+      await createJournalEntry(content, selectedChatId, mentioned_clients, tags)
       setContent('')
+      setSuccess(true)
+      onEntryCreated?.()
     } catch (err) {
       console.error('Failed to save:', err)
       setError('Failed to save entry. Please try again.')
@@ -117,6 +142,7 @@ export function JournalCapture({ clients, projects, chats, defaultChatId }: Prop
   return (
     <>
       <form onSubmit={handleSubmit} className="bg-charcoal rounded-lg border border-mid-gray p-4 shadow-sm">
+        {/* Chat Selector Button */}
         <div className="flex items-center gap-2 mb-3">
           <button
             type="button"
@@ -136,49 +162,93 @@ export function JournalCapture({ clients, projects, chats, defaultChatId }: Prop
           </button>
         </div>
 
+        {/* Text Input */}
         <textarea
           ref={textareaRef}
           value={content}
           onChange={handleInputChange}
-          placeholder="Capture a quick note... Type @ to mention clients or projects"
+          onKeyDown={handleKeyDown}
+          placeholder="What's on your mind? Type @ to mention clients, # for tags..."
           className="w-full p-3 border border-mid-gray bg-dark-gray rounded-lg focus:ring-2 focus:ring-red-primary focus:border-transparent resize-none text-sm text-foreground placeholder-slate"
           rows={3}
         />
 
+        {/* Error Message */}
         {error && (
           <p className="text-sm text-error mt-2">{error}</p>
         )}
 
+        {/* Success Message */}
+        {success && (
+          <p className="text-sm text-success mt-2 flex items-center gap-1">
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+            </svg>
+            Entry captured!
+          </p>
+        )}
+
+        {/* Actions */}
         <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mt-3 gap-2">
           <div className="flex gap-2">
             <button
               type="button"
-              className="p-2 hover:bg-dark-gray rounded-md transition-colors group"
+              className="p-2 hover:bg-dark-gray rounded-md transition-colors group opacity-50 cursor-not-allowed"
               title="Voice note (coming soon)"
               disabled
             >
-              <span className="text-lg group-hover:scale-110 transition-transform inline-block">🎤</span>
+              <span className="text-lg">🎤</span>
             </button>
             <button
               type="button"
-              onClick={() => setShowMentionModal(true)}
-              className="p-2 hover:bg-dark-gray rounded-md transition-colors flex items-center gap-1 text-xs text-silver"
+              onClick={() => {
+                const rect = textareaRef.current?.getBoundingClientRect()
+                if (rect) {
+                  setMentionPosition({ top: rect.top + 80, left: rect.left + 20 })
+                }
+                setShowMentionModal(true)
+              }}
+              className="p-2 hover:bg-dark-gray rounded-md transition-colors flex items-center gap-1 text-xs text-silver hover:text-foreground"
               title="Insert mention"
             >
-              <span className="text-base">@</span>
+              <span className="text-base font-bold">@</span>
               <span className="hidden sm:inline">Mention</span>
             </button>
+            <button
+              type="button"
+              onClick={() => {
+                setContent(prev => prev + '#')
+                textareaRef.current?.focus()
+              }}
+              className="p-2 hover:bg-dark-gray rounded-md transition-colors flex items-center gap-1 text-xs text-silver hover:text-foreground"
+              title="Add tag"
+            >
+              <span className="text-base font-bold">#</span>
+              <span className="hidden sm:inline">Tag</span>
+            </button>
           </div>
-          <button
-            type="submit"
-            disabled={loading || !content.trim()}
-            className="px-4 py-2 bg-red-primary text-foreground rounded-lg hover:bg-red-bright disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm font-medium"
-          >
-            {loading ? 'Saving...' : 'Capture'}
-          </button>
+          
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-slate hidden sm:inline">⌘+Enter to save</span>
+            <button
+              type="submit"
+              disabled={loading || !content.trim()}
+              className="px-4 py-2 bg-red-primary text-foreground rounded-lg hover:bg-red-bright disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm font-medium flex items-center gap-2"
+            >
+              {loading ? (
+                <>
+                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                  Saving...
+                </>
+              ) : (
+                'Capture'
+              )}
+            </button>
+          </div>
         </div>
       </form>
 
+      {/* Mention Modal */}
       {showMentionModal && (
         <MentionModal
           items={allMentionables}
@@ -188,14 +258,12 @@ export function JournalCapture({ clients, projects, chats, defaultChatId }: Prop
         />
       )}
 
+      {/* Chat Selector Modal */}
       {showChatSelector && (
         <ChatSelector
           chats={chats}
           selectedChatId={selectedChatId}
-          onSelect={(id) => {
-            setSelectedChatId(id)
-            setShowChatSelector(false)
-          }}
+          onSelect={handleChatSelect}
           onClose={() => setShowChatSelector(false)}
         />
       )}
