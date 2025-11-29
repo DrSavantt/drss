@@ -25,6 +25,7 @@ interface Props {
   onEntryDeleted?: (id: string) => void
   selectedIds?: Set<string>
   onToggleSelection?: (id: string) => void
+  onConvertToNote?: (entry: Entry) => void
 }
 
 export function JournalFeed({ 
@@ -32,7 +33,8 @@ export function JournalFeed({
   clients, 
   onEntryDeleted,
   selectedIds = new Set(),
-  onToggleSelection
+  onToggleSelection,
+  onConvertToNote
 }: Props) {
   const [deleting, setDeleting] = useState<string | null>(null)
 
@@ -171,11 +173,24 @@ export function JournalFeed({
                       </div>
                     )}
 
+                    {/* Convert to Note Button */}
+                    {onConvertToNote && (
+                      <button
+                        onClick={() => onConvertToNote(entry)}
+                        className="ml-auto text-xs text-info hover:text-info/80 transition-colors opacity-0 group-hover:opacity-100 flex items-center gap-1"
+                      >
+                        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                        </svg>
+                        Convert to Note
+                      </button>
+                    )}
+
                     {/* Delete Button */}
                     <button
                       onClick={() => handleDelete(entry.id)}
                       disabled={deleting === entry.id}
-                      className="ml-auto text-xs text-slate hover:text-red-primary disabled:opacity-50 disabled:cursor-not-allowed transition-colors opacity-0 group-hover:opacity-100"
+                      className="text-xs text-slate hover:text-red-primary disabled:opacity-50 disabled:cursor-not-allowed transition-colors opacity-0 group-hover:opacity-100"
                     >
                       {deleting === entry.id ? (
                         <span className="flex items-center gap-1">

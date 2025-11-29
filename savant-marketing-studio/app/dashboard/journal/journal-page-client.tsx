@@ -8,6 +8,7 @@ import { JournalBulkActionBar } from '@/app/components/journal-bulk-action-bar'
 import { ConfirmationModal } from '@/app/components/confirmation-modal'
 import { TagModal } from '@/app/components/tag-modal'
 import { ToastContainer } from '@/app/components/toast'
+import { NoteEditorModal } from '@/app/components/note-editor-modal'
 import { 
   getJournalEntries,
   bulkDeleteJournalEntries,
@@ -15,6 +16,7 @@ import {
   bulkUnpinJournalEntries,
   bulkAddTagsToJournalEntries
 } from '@/app/actions/journal'
+import { useRouter } from 'next/navigation'
 
 interface Entry {
   id: string
@@ -71,6 +73,7 @@ export function JournalPageClient({
   content,
   defaultChatId 
 }: Props) {
+  const router = useRouter()
   const [entries, setEntries] = useState<Entry[]>(initialEntries)
   const [currentChatId, setCurrentChatId] = useState(defaultChatId)
   const [isLoading, setIsLoading] = useState(false)
@@ -81,6 +84,10 @@ export function JournalPageClient({
   const [isTagModalOpen, setIsTagModalOpen] = useState(false)
   const [isBulkLoading, setIsBulkLoading] = useState(false)
   const [toasts, setToasts] = useState<ToastMessage[]>([])
+  
+  // Note editor modal state
+  const [isNoteModalOpen, setIsNoteModalOpen] = useState(false)
+  const [noteInitialData, setNoteInitialData] = useState<any>(null)
 
   // When chat changes, fetch new entries
   const handleChatChange = useCallback(async (chatId: string) => {
@@ -235,6 +242,39 @@ export function JournalPageClient({
     }
   }, [selectedIds, currentChatId, addToast])
 
+  // Note editor handlers
+  const handleSaveNote = useCallback(async (data: { title: string; clientId: string; projectId: string | null; content: string }) => {
+    const formData = new FormData()
+    formData.append('title', data.title)
+    formData.append('project_id', data.projectId || '')
+    formData.append('content_json', JSON.stringify({ type: 'doc', content: [{ type: 'paragraph', content: [{ type: 'text', text: data.content }] }] }))
+    
+    // Import createContentAsset dynamically
+    const { createContentAsset } = await import('@/app/actions/content')
+    await createContentAsset(data.clientId, formData)
+    
+    addToast('Note created successfully', 'success')
+    // Router will redirect automatically after createContentAsset
+  }, [addToast, router])
+
+  const handleConvertToNote = useCallback((entry: Entry) => {
+    // Extract title from first 50 chars of content
+    const title = entry.content.substring(0, 50).replace(/@[^\s]+/g, '').trim()
+    
+    // Try to find mentioned client
+    const clientId = entry.mentioned_clients && entry.mentioned_clients.length > 0 
+      ? entry.mentioned_clients[0] 
+      : ''
+    
+    setNoteInitialData({
+      title,
+      content: entry.content,
+      clientId,
+      projectId: ''
+    })
+    setIsNoteModalOpen(true)
+  }, [])
+
   return (
     <div className="flex h-[calc(100vh-4rem)] overflow-hidden">
       {/* Sidebar */}
@@ -251,13 +291,27 @@ export function JournalPageClient({
       <div className="flex-1 overflow-y-auto">
         <div className="space-y-6 max-w-3xl mx-auto p-6">
           {/* Header */}
-          <div className="text-center">
-            <h1 className="text-2xl sm:text-3xl font-bold text-foreground mb-2">
-              Quick Capture Journal
-            </h1>
-            <p className="text-sm text-silver">
-              Capture ideas instantly with @mentions and #tags
-            </p>
+          <div className="flex items-center justify-between">
+            <div className="flex-1 text-center">
+              <h1 className="text-2xl sm:text-3xl font-bold text-foreground mb-2">
+                Quick Capture Journal
+              </h1>
+              <p className="text-sm text-silver">
+                Capture ideas instantly with @mentions and #tags
+              </p>
+            </div>
+            <button
+              onClick={() => {
+                setNoteInitialData(null)
+                setIsNoteModalOpen(true)
+              }}
+              className="flex-shrink-0 px-4 py-2 bg-red-primary text-white rounded-lg hover:bg-red-bright transition-colors font-medium flex items-center gap-2"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+              </svg>
+              New Note
+            </button>
           </div>
 
           {/* Capture Input */}
@@ -313,6 +367,7 @@ export function JournalPageClient({
               onEntryDeleted={handleEntryDeleted}
               selectedIds={selectedIds}
               onToggleSelection={toggleSelection}
+              onConvertToNote={handleConvertToNote}
             />
           )}
         </div>
@@ -346,6 +401,18 @@ export function JournalPageClient({
         onClose={() => setIsTagModalOpen(false)}
         onConfirm={handleBulkAddTags}
         title={`Add Tags to ${selectedIds.size} ${selectedIds.size === 1 ? 'Entry' : 'Entries'}`}
+      />
+
+      {/* Note Editor Modal */}
+      <NoteEditorModal
+        isOpen={isNoteModalOpen}
+        onClose={() => {
+          setIsNoteModalOpen(false)
+          setNoteInitialData(null)
+        }}
+        onSave={handleSaveNote}
+        clients={clients}
+        initialData={noteInitialData}
       />
 
       {/* Toast Notifications */}
