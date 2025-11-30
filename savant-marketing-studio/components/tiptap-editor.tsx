@@ -2,7 +2,7 @@
 
 import { useEditor, EditorContent } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 
 interface TiptapEditorProps {
   content?: string
@@ -29,11 +29,25 @@ export function TiptapEditor({
     editorProps: {
       attributes: {
         class: editable 
-          ? 'prose prose-invert max-w-none focus:outline-none min-h-[300px] p-6 text-foreground/90 prose-headings:text-foreground prose-p:text-foreground/90 prose-p:leading-relaxed'
-          : 'prose prose-invert max-w-none focus:outline-none min-h-[200px] text-foreground prose-headings:text-foreground prose-p:text-foreground prose-p:leading-relaxed'
+          ? 'prose prose-invert max-w-none focus:outline-none min-h-[300px] p-6 text-foreground prose-headings:text-foreground prose-p:text-foreground prose-p:leading-relaxed'
+          : 'prose prose-invert max-w-none focus:outline-none min-h-[200px] p-4 text-foreground prose-headings:text-foreground prose-p:text-foreground prose-p:leading-relaxed'
       }
     }
   })
+
+  // Update editor content when prop changes
+  useEffect(() => {
+    if (editor && content && content !== editor.getHTML()) {
+      editor.commands.setContent(content)
+    }
+  }, [editor, content])
+
+  // Update editable state when prop changes
+  useEffect(() => {
+    if (editor) {
+      editor.setEditable(editable)
+    }
+  }, [editor, editable])
 
   if (!editor) {
     return null
