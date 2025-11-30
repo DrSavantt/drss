@@ -254,7 +254,8 @@ export function JournalPageClient({
     const formData = new FormData()
     formData.append('title', data.title)
     formData.append('project_id', data.projectId || '')
-    formData.append('content_json', JSON.stringify({ type: 'doc', content: [{ type: 'paragraph', content: [{ type: 'text', text: data.content }] }] }))
+    // Pass HTML content directly - don't wrap in JSON structure
+    formData.append('content_json', data.content)
     
     // Import createContentAsset dynamically
     const { createContentAsset } = await import('@/app/actions/content')

@@ -5,7 +5,7 @@ import StarterKit from '@tiptap/starter-kit'
 import { useState, useEffect } from 'react'
 
 interface TiptapEditorProps {
-  content?: string
+  content?: string | object
   onChange?: (html: string) => void
   editable?: boolean
 }
@@ -35,10 +35,17 @@ export function TiptapEditor({
     }
   })
 
-  // Update editor content when prop changes
+  // Update editor content when prop changes (handles both HTML string and JSON object)
   useEffect(() => {
-    if (editor && content && content !== editor.getHTML()) {
-      editor.commands.setContent(content)
+    if (editor && content) {
+      const currentHTML = editor.getHTML()
+      // If content is string (HTML), compare directly
+      // If content is object (JSON), setContent can handle it directly
+      if (typeof content === 'string' && content !== currentHTML) {
+        editor.commands.setContent(content)
+      } else if (typeof content === 'object') {
+        editor.commands.setContent(content)
+      }
     }
   }, [editor, content])
 
