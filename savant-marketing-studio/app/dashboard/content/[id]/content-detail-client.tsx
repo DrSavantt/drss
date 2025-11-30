@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { updateContentAsset, deleteContentAsset } from '@/app/actions/content'
-import { getJournalEntriesByContent, getJournalEntriesByClient } from '@/app/actions/journal'
+import { getJournalEntriesByContent } from '@/app/actions/journal'
 import { highlightMentions } from '@/lib/utils/mentions'
 import { TiptapEditor } from '@/components/tiptap-editor'
 import { useRouter } from 'next/navigation'
@@ -52,24 +52,20 @@ export function ContentDetailClient({ content }: ContentDetailClientProps) {
   const titleInputRef = useRef<HTMLInputElement>(null)
 
 
-  // Fetch journal entries
+  // Fetch journal entries - ONLY captures that @mention this specific content
   useEffect(() => {
     async function fetchJournalEntries() {
       setLoadingJournal(true)
       try {
+        // Only get captures that specifically @mention this content
         const contentEntries = await getJournalEntriesByContent(content.id)
-        const clientEntries = await getJournalEntriesByClient(content.client_id)
         
-        const allEntries = [...contentEntries, ...clientEntries]
-        const uniqueEntries = Array.from(
-          new Map(allEntries.map(entry => [entry.id, entry])).values()
-        )
-        
-        uniqueEntries.sort((a, b) => 
+        // Sort by newest first
+        contentEntries.sort((a, b) => 
           new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
         )
         
-        setJournalEntries(uniqueEntries)
+        setJournalEntries(contentEntries)
       } catch (error) {
         console.error('Failed to load journal entries:', error)
       } finally {
@@ -77,7 +73,7 @@ export function ContentDetailClient({ content }: ContentDetailClientProps) {
       }
     }
     fetchJournalEntries()
-  }, [content.id, content.client_id])
+  }, [content.id])
 
   // Initialize editor content from JSON
   useEffect(() => {
@@ -385,8 +381,15 @@ export function ContentDetailClient({ content }: ContentDetailClientProps) {
           </span>
         </div>
 
-        {/* Content Area - Minimal Document Style */}
-        <div className="min-h-[400px]">
+        {/* Content Area - Click to Edit (like Notion/Kortex) */}
+        <div 
+          onClick={() => !isEditingContent && !loading && setIsEditingContent(true)}
+          className={`min-h-[400px] rounded-lg transition-colors ${
+            !isEditingContent 
+              ? 'cursor-text hover:bg-charcoal/20' 
+              : ''
+          }`}
+        >
           <TiptapEditor
             content={editorContent}
             onChange={setEditorContent}
@@ -396,14 +399,18 @@ export function ContentDetailClient({ content }: ContentDetailClientProps) {
           {isEditingContent && (
             <div className="flex items-center gap-3 mt-8 pt-6 border-t border-mid-gray/30">
               <button
-                onClick={handleSaveContent}
+                onClick={(e) => {
+                  e.stopPropagation()
+                  handleSaveContent()
+                }}
                 disabled={loading}
                 className="px-6 py-2 bg-red-primary text-white rounded-lg hover:bg-red-bright transition-colors font-medium disabled:opacity-50"
               >
                 {loading ? 'Saving...' : 'Save Changes'}
               </button>
               <button
-                onClick={() => {
+                onClick={(e) => {
+                  e.stopPropagation()
                   setIsEditingContent(false)
                   // Reset content to original
                   if (content.content_json) {
