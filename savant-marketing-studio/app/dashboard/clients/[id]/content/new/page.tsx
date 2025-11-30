@@ -10,7 +10,9 @@ export default function NewContentPage() {
   const params = useParams()
   const clientId = params.id as string
 
+  const [title, setTitle] = useState('')
   const [content, setContent] = useState('')
+  const [projectId, setProjectId] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [projects, setProjects] = useState<{ id: string; name: string }[]>([])
@@ -23,8 +25,14 @@ export default function NewContentPage() {
     loadProjects()
   }, [clientId])
 
-  async function handleSubmit(formData: FormData) {
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault()
     setError(null)
+    
+    if (!title.trim()) {
+      setError('Title is required')
+      return
+    }
     
     if (!content || content === '<p></p>') {
       setError('Content cannot be empty')
@@ -33,8 +41,10 @@ export default function NewContentPage() {
     
     setLoading(true)
 
-    // Add content to form data
-    formData.append('content_json', JSON.stringify(content))
+    const formData = new FormData()
+    formData.append('title', title)
+    formData.append('project_id', projectId)
+    formData.append('content_json', content)
 
     try {
       const result = await createContentAsset(clientId, formData)
@@ -50,54 +60,49 @@ export default function NewContentPage() {
   }
 
   return (
-    <div className="max-w-4xl mx-auto">
-      <div className="mb-8">
-        <Link
-          href={`/dashboard/clients/${clientId}`}
-          className="text-sm text-red-primary hover:text-red-bright no-underline"
-        >
-          ← Back to Client
-        </Link>
-        <h1 className="mt-4 text-3xl font-bold text-foreground">New Content Note</h1>
-        <p className="mt-2 text-silver">
-          Create a new note for this client
-        </p>
-      </div>
-
-      {error && (
-        <div className="mb-6 rounded-md bg-error/20 p-4">
-          <p className="text-sm text-error">{error}</p>
+    <div className="min-h-screen bg-dark-gray">
+      <div className="max-w-4xl mx-auto px-6 py-8">
+        {/* Header */}
+        <div className="flex items-center justify-between mb-8">
+          <Link
+            href={`/dashboard/clients/${clientId}`}
+            className="inline-flex items-center gap-2 text-sm text-silver hover:text-foreground transition-colors"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+            </svg>
+            Back to Client
+          </Link>
         </div>
-      )}
 
-      <form action={handleSubmit} className="space-y-6">
-        <div className="bg-charcoal rounded-lg border border-mid-gray p-6 space-y-6">
-          <div>
-            <label htmlFor="title" className="block text-sm font-medium text-silver">
-              Title *
-            </label>
-            <input
-              type="text"
-              name="title"
-              id="title"
-              required
-              disabled={loading}
-              className="mt-1 block w-full rounded-md border border-mid-gray bg-dark-gray px-3 py-2 text-foreground placeholder-slate shadow-sm focus:border-red-primary focus:outline-none focus:ring-red-primary disabled:bg-charcoal disabled:text-slate"
-              placeholder="Q4 Campaign Copy"
-            />
+        {/* Error Message */}
+        {error && (
+          <div className="bg-red-primary/10 border border-red-primary/30 text-red-primary px-4 py-3 rounded-lg text-sm mb-6">
+            {error}
           </div>
+        )}
 
-          <div>
-            <label htmlFor="project_id" className="block text-sm font-medium text-silver">
-              Link to Project (Optional)
-            </label>
+        <form onSubmit={handleSubmit}>
+          {/* Title - Large inline input like Kortex */}
+          <input
+            type="text"
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            placeholder="Untitled"
+            disabled={loading}
+            className="w-full text-4xl font-bold text-foreground bg-transparent border-none outline-none focus:ring-0 placeholder-silver/30 mb-6"
+          />
+
+          {/* Project selector - subtle */}
+          <div className="flex items-center gap-3 mb-8">
+            <span className="text-xs text-silver/60">Project:</span>
             <select
-              name="project_id"
-              id="project_id"
+              value={projectId}
+              onChange={(e) => setProjectId(e.target.value)}
               disabled={loading}
-              className="mt-1 block w-full rounded-md border border-mid-gray bg-dark-gray px-3 py-2 text-foreground shadow-sm focus:border-red-primary focus:outline-none focus:ring-red-primary disabled:bg-charcoal disabled:text-slate"
+              className="text-xs bg-transparent border border-mid-gray/30 rounded px-2 py-1 text-silver focus:outline-none focus:border-mid-gray/60 transition-colors"
             >
-              <option value="">No project</option>
+              <option value="">None</option>
               {projects.map((project) => (
                 <option key={project.id} value={project.id}>
                   {project.name}
@@ -106,34 +111,33 @@ export default function NewContentPage() {
             </select>
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-silver mb-2">
-              Content *
-            </label>
+          {/* Content Editor */}
+          <div className="mb-8">
             <TiptapEditor
               content={content}
               onChange={(html) => setContent(html)}
               editable={!loading}
             />
           </div>
-        </div>
 
-        <div className="flex gap-4">
-          <button
-            type="submit"
-            disabled={loading}
-            className="flex-1 rounded-md bg-red-primary px-4 py-2 text-sm font-semibold text-foreground hover:bg-red-bright disabled:bg-mid-gray disabled:cursor-not-allowed transition-colors"
-          >
-            {loading ? 'Creating...' : 'Create Note'}
-          </button>
-          <Link
-            href={`/dashboard/clients/${clientId}`}
-            className="flex-1 text-center rounded-md bg-dark-gray px-4 py-2 text-sm font-semibold text-silver hover:bg-mid-gray no-underline transition-colors"
-          >
-            Cancel
-          </Link>
-        </div>
-      </form>
+          {/* Actions - Minimal */}
+          <div className="flex items-center gap-3 pt-6 border-t border-mid-gray/30">
+            <button
+              type="submit"
+              disabled={loading}
+              className="px-5 py-2 bg-red-primary text-white text-sm font-medium rounded-lg hover:bg-red-bright transition-colors disabled:opacity-50"
+            >
+              {loading ? 'Creating...' : 'Create Note'}
+            </button>
+            <Link
+              href={`/dashboard/clients/${clientId}`}
+              className="px-5 py-2 text-sm text-silver/70 hover:text-silver transition-colors"
+            >
+              Cancel
+            </Link>
+          </div>
+        </form>
+      </div>
     </div>
   )
 }
