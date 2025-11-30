@@ -66,6 +66,15 @@ export async function createContentAsset(clientId: string, formData: FormData) {
     return { error: 'Content is required' }
   }
   
+  // Try to parse as JSON (for backwards compatibility), otherwise store as HTML string
+  let contentValue: string | object
+  try {
+    contentValue = JSON.parse(content_json)
+  } catch {
+    // It's HTML content, store as-is
+    contentValue = content_json
+  }
+  
   const { error } = await supabase
     .from('content_assets')
     .insert({
@@ -73,7 +82,7 @@ export async function createContentAsset(clientId: string, formData: FormData) {
       project_id: project_id || null,
       title,
       asset_type: 'note',
-      content_json: JSON.parse(content_json),
+      content_json: contentValue,
       metadata: {}
     })
     .select()
