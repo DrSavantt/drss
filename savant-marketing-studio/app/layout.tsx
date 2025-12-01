@@ -1,11 +1,13 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Roboto, Geist_Mono } from "next/font/google";
 import { ThemeProvider } from "@/lib/theme-provider";
 import "./globals.css";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+const roboto = Roboto({
+  variable: "--font-inter",
   subsets: ["latin"],
+  display: "swap",
+  weight: ['400', '700'], // Regular and Bold
 });
 
 const geistMono = Geist_Mono({
@@ -33,7 +35,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" suppressHydrationWarning className="dark">
+    <html lang="en" suppressHydrationWarning className={`dark ${roboto.variable} ${geistMono.variable}`}>
       <head>
         {/* PWA meta tags */}
         <link rel="manifest" href="/manifest.json" />
@@ -63,7 +65,7 @@ export default function RootLayout({
           }}
         />
       </head>
-      <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
+      <body className={`${roboto.variable} ${geistMono.variable} antialiased font-sans`}>
         <ThemeProvider>
         {children}
         </ThemeProvider>

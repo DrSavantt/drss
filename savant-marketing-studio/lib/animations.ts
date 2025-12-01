@@ -1,31 +1,74 @@
-// Optimized animations - only hover/tap interactions, no entrance animations
-// Focus on 60fps performance with transform and opacity only
+/**
+ * Animation configurations and variants for Framer Motion
+ * Following Linear-style physics-based motion
+ */
 
-// Subtle hover/tap interactions - optimized for 60fps
-export const cardHover = {
-  y: -2,  // Reduced from -4 for subtlety
-  transition: { duration: 0.15 }  // Faster, feels instant
+// Spring transition configs
+export const springTransitions = {
+  // Micro interactions (buttons, toggles)
+  springMicro: {
+    type: "spring" as const,
+    stiffness: 500,
+    damping: 30,
+    mass: 1,
+  },
+  
+  // Medium interactions (modals, panels)
+  springMedium: {
+    type: "spring" as const,
+    stiffness: 350,
+    damping: 35,
+    mass: 1,
+  },
+  
+  // Slow interactions (page transitions)
+  springSlow: {
+    type: "spring" as const,
+    stiffness: 250,
+    damping: 30,
+    mass: 1,
+  },
 }
 
-export const cardTap = {
-  scale: 0.98,  // Subtle press feedback
-  transition: { duration: 0.1 }
+// Framer Motion variants for staggered animations
+export const containerVariants = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.05,
+      delayChildren: 0.1,
+    },
+  },
 }
 
-// Button interactions - minimal and fast
-export const buttonHover = {
-  scale: 1.02,  // Reduced from 1.05
-  transition: { duration: 0.15 }
+export const itemVariants = {
+  hidden: { opacity: 0, y: 10 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: springTransitions.springMicro,
+  },
 }
 
-export const buttonTap = {
-  scale: 0.98,  // Reduced from 0.95
-  transition: { duration: 0.1 }
+// Additional utility variants
+export const fadeInVariant = {
+  hidden: { opacity: 0 },
+  visible: { opacity: 1 },
 }
 
-// Optimized drag - no rotation (expensive)
-export const dragItem = {
-  scale: 1.02,  // Reduced from 1.05
-  transition: { duration: 0 }  // Instant feedback
+export const slideUpVariant = {
+  hidden: { opacity: 0, y: 20 },
+  visible: { opacity: 1, y: 0 },
 }
 
+export const scaleInVariant = {
+  hidden: { opacity: 0, scale: 0.95 },
+  visible: { opacity: 1, scale: 1 },
+}
+
+// Legacy exports for backward compatibility
+export const buttonHover = { scale: 1.02 }
+export const buttonTap = { scale: 0.98 }
+export const cardHover = { scale: 1.02, y: -2 }
+export const cardTap = { scale: 0.98 }

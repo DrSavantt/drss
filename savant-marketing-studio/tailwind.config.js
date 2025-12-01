@@ -8,6 +8,24 @@ module.exports = {
   ],
   theme: {
     extend: {
+      fontFamily: {
+        sans: ['var(--font-inter)', 'sans-serif'],
+        mono: ['var(--font-geist-mono)', 'monospace'],
+      },
+      boxShadow: {
+        'premium-sm': '0px 1px 2px rgba(0,0,0,0.4), 0px 0px 0px 1px rgba(255,255,255,0.05) inset',
+        'premium-card': '0px 4px 12px rgba(0,0,0,0.5), 0px 0px 0px 1px rgba(255,255,255,0.05) inset',
+        'glow': '0px 0px 20px rgba(225, 29, 72, 0.3)',
+      },
+      animation: {
+        'shimmer': 'shimmer 2s linear infinite',
+      },
+      keyframes: {
+        shimmer: {
+          'from': { backgroundPosition: '0 0' },
+          'to': { backgroundPosition: '-200% 0' },
+        },
+      },
       colors: {
         // Base semantic colors
         background: 'hsl(var(--background))',
@@ -97,7 +115,9 @@ module.exports = {
         'info': 'hsl(var(--info))',
         'error': 'hsl(var(--error))',
         
-        // Legacy colors removed - migration complete!
+        // Surface colors for premium depth
+        'surface': 'hsl(var(--surface))',
+        'surface-highlight': 'hsl(var(--surface-highlight))',
       },
       screens: {
         'xs': '320px',

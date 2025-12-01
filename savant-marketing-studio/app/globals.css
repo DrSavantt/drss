@@ -82,21 +82,25 @@ select {
 
 @layer base {
   :root {
-    /* Blacks & Grays - Dark Mode Default */
-    --pure-black: 0 0% 0%;           /* #000000 */
+    /* Blacks & Grays - Dark Mode Default (LCH-based) */
+    --pure-black: 0 0% 6%;           /* #0F0F10 - Off-black for shadow visibility */
     --rich-black: 0 0% 4%;           /* #0A0A0A */
     --charcoal: 0 0% 10%;            /* #1A1A1A */
     --dark-gray: 0 0% 16%;           /* #2A2A2A */
     --mid-gray: 0 0% 25%;            /* #404040 */
+    
+    /* Surface colors for premium depth */
+    --surface: 0 0% 9%;              /* #18181B - Cards, sidebars */
+    --surface-highlight: 0 0% 15%;   /* #27272A - Hover states */
     
     --slate: 0 0% 40%;               /* #666666 */
     --silver: 0 0% 53%;              /* #888888 */
     --light-gray: 0 0% 67%;          /* #AAAAAA */
     --pale-gray: 0 0% 80%;           /* #CCCCCC */
     
-    /* Reds */
+    /* Reds - Desaturated for dark mode to prevent halation */
     --red-dark: 0 100% 40%;          /* #CC0000 */
-    --red-primary: 0 100% 63%;       /* #FF4444 */
+    --red-primary: 351 91% 71%;      /* #FB7185 - Rose-400, prevents eye strain */
     --red-bright: 0 100% 70%;        /* #FF6666 */
     --red-light: 0 100% 76%;         /* #FF8888 */
     --red-pale: 0 100% 83%;          /* #FFAAAA */
@@ -106,18 +110,18 @@ select {
     --off-white: 0 0% 96%;           /* #F5F5F5 */
     --ghost-white: 0 0% 98%;         /* #FAFAFA */
     
-    /* Supporting Colors */
-    --success: 160 100% 43%;         /* #00DD88 */
+    /* Supporting Colors - Desaturated for dark mode */
+    --success: 142 71% 58%;          /* #4ADE80 - Desaturated green */
     --warning: 38 100% 63%;          /* #FFB844 */
     --info: 218 100% 63%;            /* #4488FF */
-    --error: 0 100% 63%;             /* #FF4444 */
+    --error: 353 56% 61%;            /* #CF6679 - Desaturated salmon */
     
     /* Semantic mappings for dark mode (default) */
     --background: var(--pure-black);
     --foreground: var(--pure-white);
-    --card: var(--charcoal);
+    --card: var(--surface);
     --card-foreground: var(--pure-white);
-    --popover: var(--charcoal);
+    --popover: var(--surface);
     --popover-foreground: var(--pure-white);
     --border: var(--mid-gray);
     --input: var(--dark-gray);
@@ -139,9 +143,9 @@ select {
     /* Dark mode uses same values as root */
     --background: var(--pure-black);
     --foreground: var(--pure-white);
-    --card: var(--charcoal);
+    --card: var(--surface);
     --card-foreground: var(--pure-white);
-    --popover: var(--charcoal);
+    --popover: var(--surface);
     --popover-foreground: var(--pure-white);
     --border: var(--mid-gray);
     --input: var(--dark-gray);
@@ -203,8 +207,37 @@ select {
   * {
     @apply border-border;
   }
+  html {
+    font-family: var(--font-inter), -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  }
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground font-sans;
+    font-family: var(--font-inter), -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    font-weight: 400; /* Regular weight for body text */
+  }
+  /* Headings should be bold Roboto */
+  h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-inter), -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    font-weight: 700 !important; /* Bold weight - force with !important */
+  }
+  /* All text elements use Roboto - ensure font-family is applied */
+  p, span, div, button, input, textarea, select, label, a, li, td, th, strong, b {
+    font-family: var(--font-inter), -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  }
+  /* Ensure font-bold class uses Roboto Bold */
+  .font-bold, [class*="font-bold"] {
+    font-family: var(--font-inter), -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    font-weight: 700 !important;
+  }
+  /* Ensure font-semibold uses Roboto Bold */
+  .font-semibold, [class*="font-semibold"] {
+    font-family: var(--font-inter), -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    font-weight: 700 !important;
+  }
+  /* Regular text should be weight 400 */
+  .font-normal, .font-regular, [class*="font-normal"], [class*="font-regular"] {
+    font-family: var(--font-inter), -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    font-weight: 400 !important;
   }
   /* Remove underlines from navigation links */
   header nav a {
