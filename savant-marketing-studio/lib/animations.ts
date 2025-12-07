@@ -72,3 +72,57 @@ export const buttonHover = { scale: 1.02 }
 export const buttonTap = { scale: 0.98 }
 export const cardHover = { scale: 1.02, y: -2 }
 export const cardTap = { scale: 0.98 }
+
+// Metro-style animations (Windows Phone inspired)
+export const metroSlideVariants = {
+  hidden: { opacity: 0, x: -20 },
+  visible: { 
+    opacity: 1, 
+    x: 0,
+    transition: {
+      duration: 0.2,
+      ease: 'easeOut'
+    }
+  }
+}
+
+// Metro stagger (faster than default)
+export const metroContainerVariants = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.03, // Faster stagger for Metro feel
+      delayChildren: 0.05
+    }
+  }
+}
+
+export const metroItemVariants = {
+  hidden: { opacity: 0, x: -10 },
+  visible: {
+    opacity: 1,
+    x: 0,
+    transition: {
+      duration: 0.2,
+      ease: 'easeOut'
+    }
+  }
+}
+
+// Tile flip animation
+export const tileFlipVariants = {
+  front: { rotateY: 0 },
+  back: { rotateY: 180 }
+}
+
+// Tile hover lift (Metro tiles lift on hover)
+export const metroTileHover = { 
+  y: -4, 
+  transition: { duration: 0.15 } 
+}
+
+export const metroTileTap = { 
+  scale: 0.98,
+  transition: { duration: 0.1 }
+}

@@ -82,54 +82,55 @@ select {
 
 @layer base {
   :root {
-    /* Blacks & Grays - Dark Mode Default (LCH-based) */
-    --pure-black: 0 0% 6%;           /* #0F0F10 - Off-black for shadow visibility */
-    --rich-black: 0 0% 4%;           /* #0A0A0A */
-    --charcoal: 0 0% 10%;            /* #1A1A1A */
-    --dark-gray: 0 0% 16%;           /* #2A2A2A */
-    --mid-gray: 0 0% 25%;            /* #404040 */
-    
-    /* Surface colors for premium depth */
-    --surface: 0 0% 9%;              /* #18181B - Cards, sidebars */
-    --surface-highlight: 0 0% 15%;   /* #27272A - Hover states */
-    
-    --slate: 0 0% 40%;               /* #666666 */
-    --silver: 0 0% 53%;              /* #888888 */
-    --light-gray: 0 0% 67%;          /* #AAAAAA */
-    --pale-gray: 0 0% 80%;           /* #CCCCCC */
-    
-    /* Reds - Desaturated for dark mode to prevent halation */
-    --red-dark: 0 100% 40%;          /* #CC0000 */
-    --red-primary: 351 91% 71%;      /* #FB7185 - Rose-400, prevents eye strain */
-    --red-bright: 0 100% 70%;        /* #FF6666 */
-    --red-light: 0 100% 76%;         /* #FF8888 */
-    --red-pale: 0 100% 83%;          /* #FFAAAA */
-    
-    /* Whites */
-    --pure-white: 0 0% 100%;         /* #FFFFFF */
-    --off-white: 0 0% 96%;           /* #F5F5F5 */
-    --ghost-white: 0 0% 98%;         /* #FAFAFA */
-    
-    /* Supporting Colors - Desaturated for dark mode */
-    --success: 142 71% 58%;          /* #4ADE80 - Desaturated green */
-    --warning: 38 100% 63%;          /* #FFB844 */
-    --info: 218 100% 63%;            /* #4488FF */
-    --error: 353 56% 61%;            /* #CF6679 - Desaturated salmon */
-    
-    /* Semantic mappings for dark mode (default) */
-    --background: var(--pure-black);
-    --foreground: var(--pure-white);
+    /* Light mode defaults */
+    --pure-black: 0 0% 0%;
+    --rich-black: 0 0% 4%;
+    --pure-white: 0 0% 100%;
+    --off-white: 0 0% 96%;
+    --ghost-white: 0 0% 98%;
+
+    --charcoal: 0 0% 96%;            /* Light card/surface */
+    --dark-gray: 0 0% 93%;           /* Inputs / subtle fills */
+    --mid-gray: 0 0% 85%;            /* Borders */
+    --slate: 0 0% 40%;
+    --silver: 0 0% 53%;
+    --light-gray: 0 0% 67%;
+    --pale-gray: 0 0% 80%;
+
+    --surface: 0 0% 100%;            /* Card bg */
+    --surface-highlight: 0 0% 95%;   /* Hover */
+
+    --red-dark: 0 100% 40%;
+    --red-primary: 351 91% 71%;
+    --red-bright: 0 100% 70%;
+    --red-light: 0 100% 76%;
+    --red-pale: 0 100% 83%;
+
+    --success: 142 71% 58%;
+    --warning: 38 100% 63%;
+    --info: 218 100% 63%;
+    --error: 353 56% 61%;
+
+    /* Spotlight (light mode: darker glow on light surfaces) */
+    --spotlight-color-start: rgba(251, 113, 133, 0.3);
+    --spotlight-color-mid: rgba(251, 113, 133, 0.15);
+    --spotlight-color-end: rgba(251, 113, 133, 0.05);
+    --spotlight-shadow: inset 0 0 20px rgba(251, 113, 133, 0.1);
+
+    /* Semantic mappings - light */
+    --background: 0 0% 98%;          /* ghost-white */
+    --foreground: 0 0% 0%;           /* black */
     --card: var(--surface);
-    --card-foreground: var(--pure-white);
+    --card-foreground: var(--foreground);
     --popover: var(--surface);
-    --popover-foreground: var(--pure-white);
+    --popover-foreground: var(--foreground);
     --border: var(--mid-gray);
     --input: var(--dark-gray);
     --ring: var(--red-primary);
     --primary: var(--red-primary);
     --primary-foreground: var(--pure-white);
     --secondary: var(--dark-gray);
-    --secondary-foreground: var(--pure-white);
+    --secondary-foreground: var(--foreground);
     --muted: var(--slate);
     --muted-foreground: var(--silver);
     --accent: var(--red-bright);
@@ -140,7 +141,26 @@ select {
   }
 
   .dark {
-    /* Dark mode uses same values as root */
+    /* Dark mode overrides */
+    --pure-black: 0 0% 6%;           /* #0F0F10 */
+    --rich-black: 0 0% 4%;           /* #0A0A0A */
+    --charcoal: 0 0% 10%;            /* #1A1A1A */
+    --dark-gray: 0 0% 16%;           /* #2A2A2A */
+    --mid-gray: 0 0% 25%;            /* #404040 */
+    --surface: 0 0% 9%;              /* #18181B */
+    --surface-highlight: 0 0% 15%;   /* #27272A */
+
+    --slate: 0 0% 40%;
+    --silver: 0 0% 53%;
+    --light-gray: 0 0% 67%;
+    --pale-gray: 0 0% 80%;
+
+    /* Spotlight (dark mode: lighter glow on dark surfaces) */
+    --spotlight-color-start: rgba(251, 113, 133, 0.15);
+    --spotlight-color-mid: rgba(251, 113, 133, 0.08);
+    --spotlight-color-end: rgba(251, 113, 133, 0.0);
+    --spotlight-shadow: none;
+
     --background: var(--pure-black);
     --foreground: var(--pure-white);
     --card: var(--surface);
@@ -156,46 +176,6 @@ select {
     --secondary-foreground: var(--pure-white);
     --muted: var(--slate);
     --muted-foreground: var(--silver);
-    --accent: var(--red-bright);
-    --accent-foreground: var(--pure-white);
-    --destructive: var(--error);
-    --destructive-foreground: var(--pure-white);
-  }
-
-  /* Light mode overrides - MUST override base grayscale variables */
-  .light {
-    /* CRITICAL: Override base grayscale variables for light mode */
-    --charcoal: 0 0% 96%;            /* #F5F5F5 - Light gray for cards */
-    --dark-gray: 0 0% 93%;           /* #EDEDED - Slightly darker gray */
-    --mid-gray: 0 0% 85%;            /* #D9D9D9 - Borders */
-    --slate: 0 0% 40%;               /* #666666 - Keep similar for contrast */
-    --silver: 0 0% 53%;              /* #888888 - Keep similar */
-    --light-gray: 0 0% 67%;          /* #AAAAAA - Keep similar */
-    --pale-gray: 0 0% 80%;           /* #CCCCCC - Keep similar */
-    
-    /* Pure black becomes black text, whites stay white */
-    --pure-black: 0 0% 0%;           /* Black text */
-    --rich-black: 0 0% 4%;           /* Very dark text */
-    --pure-white: 0 0% 100%;         /* White backgrounds */
-    --off-white: 0 0% 96%;           /* Light backgrounds */
-    --ghost-white: 0 0% 98%;         /* Lightest backgrounds */
-    
-    /* Semantic mappings for light mode */
-    --background: 0 0% 98%;          /* #FAFAFA ghost-white */
-    --foreground: 0 0% 0%;           /* #000000 black text */
-    --card: 0 0% 100%;               /* #FFFFFF pure white */
-    --card-foreground: 0 0% 0%;      /* #000000 black text */
-    --popover: 0 0% 100%;            /* #FFFFFF pure white */
-    --popover-foreground: 0 0% 0%;   /* #000000 black text */
-    --border: 0 0% 85%;              /* #D9D9D9 light gray borders */
-    --input: 0 0% 96%;               /* #F5F5F5 off-white */
-    --ring: var(--red-primary);
-    --primary: var(--red-primary);
-    --primary-foreground: var(--pure-white);
-    --secondary: 0 0% 96%;           /* #F5F5F5 off-white */
-    --secondary-foreground: 0 0% 0%; /* Black text */
-    --muted: 0 0% 40%;               /* #666666 slate */
-    --muted-foreground: 0 0% 40%;    /* #666666 slate */
     --accent: var(--red-bright);
     --accent-foreground: var(--pure-white);
     --destructive: var(--error);

@@ -1,6 +1,7 @@
 'use client'
 
 import { LucideIcon } from 'lucide-react'
+import { SpotlightCard } from '@/components/ui/spotlight-card'
 
 interface MetricCardProps {
   title: string
@@ -22,7 +23,7 @@ export function MetricCard({ title, value, subtitle, trend, icon: Icon, color }:
   const accentColor = colorMap[color]
   
   return (
-    <div className="bg-charcoal border border-mid-gray rounded-lg p-6 h-full hover:border-red-bright/50 transition-all duration-200 flex flex-col">
+    <SpotlightCard className="p-6 h-full flex flex-col">
       <div className="flex items-start justify-between mb-3">
         <div className="flex items-center gap-2">
           <Icon className="w-4 h-4" style={{ color: accentColor }} />
@@ -42,6 +43,6 @@ export function MetricCard({ title, value, subtitle, trend, icon: Icon, color }:
           {trend}
         </div>
       )}
-    </div>
+    </SpotlightCard>
   )
 }

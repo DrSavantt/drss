@@ -1,5 +1,7 @@
 'use client'
 
+import { AnimatedButton } from '@/components/animated-button'
+
 interface BulkActionBarProps {
   selectedCount: number
   onDelete: () => void
@@ -35,10 +37,10 @@ export function BulkActionBar({
 
           {/* Action Buttons */}
           <div className="flex flex-wrap items-center gap-2 justify-center sm:justify-end">
-            {/* Delete */}
-            <button
+            <AnimatedButton
+              variant="primary"
               onClick={onDelete}
-              className="px-4 py-2 rounded-md bg-red-primary text-white font-medium hover:bg-red-bright transition-colors flex items-center gap-2"
+              className="h-11 md:h-10 px-4 flex items-center gap-2"
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path
@@ -49,13 +51,13 @@ export function BulkActionBar({
                 />
               </svg>
               Delete
-            </button>
+            </AnimatedButton>
 
-            {/* Archive/Unarchive - show based on selection */}
             {hasArchivedItems && onUnarchive ? (
-              <button
+              <AnimatedButton
+                variant="secondary"
                 onClick={onUnarchive}
-                className="px-4 py-2 rounded-md bg-success/20 border border-success text-success font-medium hover:bg-success/30 transition-colors flex items-center gap-2"
+                className="h-11 md:h-10 px-4 flex items-center gap-2"
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path
@@ -66,11 +68,12 @@ export function BulkActionBar({
                   />
                 </svg>
                 Unarchive
-              </button>
+              </AnimatedButton>
             ) : (
-            <button
+              <AnimatedButton
+                variant="secondary"
               onClick={onArchive}
-              className="px-4 py-2 rounded-md bg-dark-gray border border-mid-gray text-foreground font-medium hover:bg-mid-gray transition-colors flex items-center gap-2"
+                className="h-11 md:h-10 px-4 flex items-center gap-2"
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path
@@ -81,13 +84,13 @@ export function BulkActionBar({
                 />
               </svg>
               Archive
-            </button>
+              </AnimatedButton>
             )}
 
-            {/* Change Project */}
-            <button
+            <AnimatedButton
+              variant="secondary"
               onClick={onChangeProject}
-              className="px-4 py-2 rounded-md bg-dark-gray border border-mid-gray text-foreground font-medium hover:bg-mid-gray transition-colors flex items-center gap-2"
+              className="h-11 md:h-10 px-4 flex items-center gap-2"
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path
@@ -98,15 +101,15 @@ export function BulkActionBar({
                 />
               </svg>
               Change Project
-            </button>
+            </AnimatedButton>
 
-            {/* Cancel */}
-            <button
+            <AnimatedButton
+              variant="ghost"
               onClick={onCancel}
-              className="px-4 py-2 rounded-md border border-mid-gray text-silver hover:text-foreground hover:bg-dark-gray transition-colors"
+              className="h-11 md:h-10 px-4"
             >
               Cancel
-            </button>
+            </AnimatedButton>
           </div>
         </div>
       </div>
