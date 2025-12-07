@@ -5,7 +5,7 @@ export default function PinModal({ open, onClose }: { open: boolean; onClose: ()
   const [pin, setPin] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const [_attempts, setAttempts] = useState(0);
+  const [, setAttempts] = useState(0);
   const [lockout, setLockout] = useState<number | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const router = useRouter();

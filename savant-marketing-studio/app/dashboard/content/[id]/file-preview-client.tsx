@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { getJournalEntriesByContent, getJournalEntriesByClient } from '@/app/actions/journal'
 import { highlightMentions } from '@/lib/utils/mentions'
 import Link from 'next/link'
+import Image from 'next/image'
 import { FileText, ExternalLink } from 'lucide-react'
 
 interface Content {
@@ -249,11 +250,14 @@ export function FilePreviewClient({ content }: Props) {
         <h2 className="text-2xl font-semibold text-foreground mb-6">Preview</h2>
         
         {isImage ? (
-          <div className="rounded-lg overflow-hidden border border-mid-gray">
-            <img
+          <div className="relative rounded-lg overflow-hidden border border-mid-gray min-h-[300px]">
+            <Image
               src={content.file_url || ''}
-              alt={content.title}
-              className="w-full h-auto"
+              alt={content.title || 'File preview'}
+              fill
+              className="object-contain"
+              sizes="(min-width: 1024px) 800px, 100vw"
+              priority
             />
           </div>
         ) : isPDF ? (
