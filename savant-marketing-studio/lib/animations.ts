@@ -3,6 +3,8 @@
  * Following Linear-style physics-based motion
  */
 
+import type { Variants, Easing } from 'framer-motion'
+
 // Spring transition configs
 export const springTransitions = {
   // Micro interactions (buttons, toggles)
@@ -74,20 +76,22 @@ export const cardHover = { scale: 1.02, y: -2 }
 export const cardTap = { scale: 0.98 }
 
 // Metro-style animations (Windows Phone inspired)
-export const metroSlideVariants = {
+const metroEase: Easing = [0.4, 0, 0.2, 1] // Cubic bezier for easeOut
+
+export const metroSlideVariants: Variants = {
   hidden: { opacity: 0, x: -20 },
   visible: { 
     opacity: 1, 
     x: 0,
     transition: {
       duration: 0.2,
-      ease: 'easeOut'
+      ease: metroEase
     }
   }
 }
 
 // Metro stagger (faster than default)
-export const metroContainerVariants = {
+export const metroContainerVariants: Variants = {
   hidden: { opacity: 0 },
   visible: {
     opacity: 1,
@@ -98,14 +102,14 @@ export const metroContainerVariants = {
   }
 }
 
-export const metroItemVariants = {
+export const metroItemVariants: Variants = {
   hidden: { opacity: 0, x: -10 },
   visible: {
     opacity: 1,
     x: 0,
     transition: {
       duration: 0.2,
-      ease: 'easeOut'
+      ease: metroEase
     }
   }
 }
