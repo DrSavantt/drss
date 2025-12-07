@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { Search, User, FolderKanban, FileText, X } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -30,14 +30,17 @@ export function CommandPalette() {
   const resultsRef = useRef<HTMLDivElement>(null)
 
   // Group results by type
-  const groupedResults: GroupedResults = {
+  const groupedResults: GroupedResults = useMemo(() => ({
     clients: results.filter(r => r.type === 'client').slice(0, 5),
     projects: results.filter(r => r.type === 'project').slice(0, 5),
     content: results.filter(r => r.type === 'content').slice(0, 5),
-  }
+  }), [results])
 
-  const totalResults = groupedResults.clients.length + groupedResults.projects.length + groupedResults.content.length
-  const allResults = [...groupedResults.clients, ...groupedResults.projects, ...groupedResults.content]
+  const allResults = useMemo(
+    () => [...groupedResults.clients, ...groupedResults.projects, ...groupedResults.content],
+    [groupedResults]
+  )
+  const totalResults = allResults.length
 
   // Keyboard shortcut listener (Cmd+K or Ctrl+K)
   useEffect(() => {
