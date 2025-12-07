@@ -1,6 +1,8 @@
 'use client'
 
 import { useState, useCallback, useMemo } from 'react'
+import { Menu, X } from 'lucide-react'
+import { useMobile } from '@/hooks/use-mobile'
 import { JournalCapture } from '@/components/journal-capture'
 import { JournalFeed } from '@/components/journal-feed'
 import { JournalSidebar } from '@/components/journal-sidebar'
@@ -72,9 +74,13 @@ export function JournalPageClient({
   content,
   defaultChatId 
 }: Props) {
+  const isMobile = useMobile()
   const [entries, setEntries] = useState<Entry[]>(initialEntries)
   const [currentChatId, setCurrentChatId] = useState(defaultChatId)
   const [isLoading, setIsLoading] = useState(false)
+  
+  // Mobile sidebar drawer state
+  const [sidebarOpen, setSidebarOpen] = useState(false)
   
   // Bulk action state
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
@@ -96,6 +102,7 @@ export function JournalPageClient({
   const handleChatChange = useCallback(async (chatId: string) => {
     setCurrentChatId(chatId)
     setIsLoading(true)
+    setSidebarOpen(false) // Close drawer on mobile after selection
     try {
       const newEntries = await getJournalEntries(chatId)
       setEntries(newEntries || [])
@@ -284,36 +291,108 @@ export function JournalPageClient({
   }, [])
 
   return (
-    <div className="flex h-[calc(100vh-4rem)] overflow-hidden">
-      {/* Sidebar */}
-      <div className="w-64 flex-shrink-0 hidden md:block">
-        <JournalSidebar
-          chats={chats}
-          currentChatId={currentChatId}
-          onChatSelect={handleChatChange}
-          entryCounts={entryCounts}
-        />
-      </div>
+    <div className="relative min-h-screen">
+      {/* MOBILE: Overlay Drawer */}
+      {isMobile && sidebarOpen && (
+        <>
+          {/* Backdrop */}
+          <div 
+            className="fixed inset-0 bg-black/60 z-40"
+            onClick={() => setSidebarOpen(false)}
+          />
+          
+          {/* Drawer Sidebar */}
+          <aside className="fixed top-0 left-0 h-full w-80 bg-surface z-50 
+            transform transition-transform duration-300 overflow-y-auto border-r border-border">
+            <div className="p-4">
+              {/* Close button */}
+              <button 
+                onClick={() => setSidebarOpen(false)}
+                className="mb-4 p-2 rounded-lg hover:bg-surface-highlight transition-colors
+                  flex items-center gap-2 text-foreground min-h-[44px]"
+              >
+                <X className="w-6 h-6" />
+                <span className="text-sm font-medium">Close</span>
+              </button>
+              
+              {/* Sidebar content */}
+              <JournalSidebar
+                chats={chats}
+                currentChatId={currentChatId}
+                onChatSelect={handleChatChange}
+                entryCounts={entryCounts}
+              />
+            </div>
+          </aside>
+        </>
+      )}
 
-      {/* Main Content */}
-      <div className="flex-1 overflow-y-auto">
-        <div className="space-y-6 max-w-3xl mx-auto p-6">
+      {/* DESKTOP: Fixed Sidebar */}
+      {!isMobile && (
+        <aside className="fixed left-0 top-16 h-[calc(100vh-4rem)] w-64 
+          bg-surface border-r border-border overflow-y-auto z-10">
+          <div className="p-4">
+            <JournalSidebar
+              chats={chats}
+              currentChatId={currentChatId}
+              onChatSelect={handleChatChange}
+              entryCounts={entryCounts}
+            />
+          </div>
+        </aside>
+      )}
+
+      {/* MAIN CONTENT */}
+      <main className={`
+        transition-all duration-200 min-h-screen
+        ${isMobile 
+          ? 'w-full px-4 pt-4 pb-24' // Mobile: full width with bottom padding for nav
+          : 'ml-64 px-8 pt-8 pb-8'   // Desktop: offset by sidebar
+        }
+      `}>
+        <div className="space-y-6 max-w-3xl mx-auto">
           {/* Header */}
-          <div className="flex items-center justify-between">
-            <div className="flex-1 text-center">
-              <h1 className="text-2xl sm:text-3xl font-bold text-foreground mb-2">
+          <div className={`
+            flex items-center gap-4
+            ${isMobile ? 'flex-col' : 'flex-row justify-between'}
+          `}>
+            {/* Mobile: Menu button */}
+            {isMobile && (
+              <button
+                onClick={() => setSidebarOpen(true)}
+                className="w-full h-11 px-4 rounded-lg bg-surface hover:bg-surface-highlight
+                  transition-colors flex items-center gap-2 border border-border"
+              >
+                <Menu className="w-5 h-5 text-foreground" />
+                <span className="flex-1 text-left font-medium text-foreground">
+                  {currentChat?.name || 'Inbox'}
+                </span>
+                <span className="text-sm text-muted-foreground">
+                  {entries.length}
+                </span>
+              </button>
+            )}
+            
+            <div className={isMobile ? 'w-full text-center' : 'flex-1'}>
+              <h1 className={`font-bold text-foreground mb-2 ${isMobile ? 'text-2xl' : 'text-3xl'}`}>
                 Quick Capture Journal
               </h1>
-              <p className="text-sm text-silver">
+              <p className="text-sm text-muted-foreground">
                 Capture ideas instantly with @mentions and #tags
               </p>
             </div>
+            
             <button
               onClick={() => {
                 setNoteInitialData(undefined)
                 setIsNoteModalOpen(true)
               }}
-              className="flex-shrink-0 px-4 py-2 bg-red-primary text-white rounded-lg hover:bg-red-bright transition-colors font-medium flex items-center gap-2"
+              className={`
+                bg-red-primary hover:bg-red-bright text-white
+                rounded-lg font-semibold transition-colors
+                flex items-center gap-2 justify-center
+                ${isMobile ? 'w-full h-11 px-4' : 'px-6 py-3 flex-shrink-0'}
+              `}
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
@@ -333,40 +412,60 @@ export function JournalPageClient({
             onChatChange={handleChatChange}
           />
 
-          {/* Current Chat Indicator */}
-          <div className="flex items-center justify-between">
-            <h2 className="text-lg font-semibold text-foreground flex items-center gap-2">
-              <span>
-                {currentChat?.type === 'inbox' && '📥'}
-                {currentChat?.type === 'client' && '👤'}
-                {currentChat?.type === 'project' && '📁'}
-                {currentChat?.type === 'general' && '💬'}
-              </span>
-              {currentChat?.name || 'Inbox'}
-            </h2>
-            <div className="flex items-center gap-3">
-              {entries.length > 0 && (
-                <label className="flex items-center gap-2 cursor-pointer text-sm text-silver hover:text-foreground transition-colors">
-                  <input
-                    type="checkbox"
-                    checked={selectedIds.size === entries.length && entries.length > 0}
-                    onChange={toggleSelectAll}
-                    className="rounded border-mid-gray text-red-primary focus:ring-red-primary focus:ring-offset-charcoal"
-                  />
-                  Select All
-                </label>
-              )}
-              <span className="text-sm text-slate">
+          {/* Current Chat Indicator - Desktop only (mobile shows in header) */}
+          {!isMobile && (
+            <div className="flex items-center justify-between">
+              <h2 className="text-lg font-semibold text-foreground flex items-center gap-2">
+                <span>
+                  {currentChat?.type === 'inbox' && '📥'}
+                  {currentChat?.type === 'client' && '👤'}
+                  {currentChat?.type === 'project' && '📁'}
+                  {currentChat?.type === 'general' && '💬'}
+                </span>
+                {currentChat?.name || 'Inbox'}
+              </h2>
+              <div className="flex items-center gap-3">
+                {entries.length > 0 && (
+                  <label className="flex items-center gap-2 cursor-pointer text-sm text-muted-foreground hover:text-foreground transition-colors min-h-[44px] items-center">
+                    <input
+                      type="checkbox"
+                      checked={selectedIds.size === entries.length && entries.length > 0}
+                      onChange={toggleSelectAll}
+                      className="w-5 h-5 rounded border-border text-red-primary focus:ring-red-primary focus:ring-offset-background"
+                    />
+                    Select All
+                  </label>
+                )}
+                <span className="text-sm text-muted-foreground">
+                  {entries.length} {entries.length === 1 ? 'entry' : 'entries'}
+                </span>
+              </div>
+            </div>
+          )}
+          
+          {/* Mobile: Select All + Entry Count */}
+          {isMobile && entries.length > 0 && (
+            <div className="flex items-center justify-between bg-surface rounded-lg p-3 border border-border">
+              <label className="flex items-center gap-2 cursor-pointer text-sm text-foreground min-h-[44px] items-center">
+                <input
+                  type="checkbox"
+                  checked={selectedIds.size === entries.length && entries.length > 0}
+                  onChange={toggleSelectAll}
+                  className="w-5 h-5 rounded border-border text-red-primary focus:ring-red-primary focus:ring-offset-background"
+                />
+                Select All
+              </label>
+              <span className="text-sm text-muted-foreground">
                 {entries.length} {entries.length === 1 ? 'entry' : 'entries'}
               </span>
             </div>
-          </div>
+          )}
 
           {/* Feed */}
           {isLoading ? (
-            <div className="text-center py-12 bg-charcoal rounded-lg border border-mid-gray">
+            <div className="text-center py-12 bg-surface rounded-lg border border-border">
               <div className="animate-spin w-8 h-8 border-2 border-red-primary border-t-transparent rounded-full mx-auto mb-3"></div>
-              <p className="text-silver">Loading entries...</p>
+              <p className="text-muted-foreground">Loading entries...</p>
             </div>
           ) : (
             <JournalFeed 
@@ -379,7 +478,7 @@ export function JournalPageClient({
             />
           )}
         </div>
-      </div>
+      </main>
 
       {/* Bulk Action Bar */}
       <JournalBulkActionBar
