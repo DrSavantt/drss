@@ -14,7 +14,7 @@ export function LoadingSpinner({ size = 'md' }: { size?: 'sm' | 'md' | 'lg' }) {
   return (
     <div className="flex items-center justify-center">
       <motion.div
-        className="border-4 border-slate-800 border-t-coral rounded-full"
+        className="border-4 border-mid-gray border-t-red-primary rounded-full"
         style={{ width: sizeInPx, height: sizeInPx }}
         animate={{ rotate: 360 }}
         transition={{
@@ -30,7 +30,7 @@ export function LoadingSpinner({ size = 'md' }: { size?: 'sm' | 'md' | 'lg' }) {
 export function LoadingSkeleton({ className = '' }: { className?: string }) {
   return (
     <motion.div
-      className={`bg-slate-900 rounded-xl overflow-hidden ${className}`}
+      className={`bg-surface rounded-xl overflow-hidden ${className}`}
       initial={{ opacity: 0.5 }}
       animate={{ opacity: [0.5, 1, 0.5] }}
       transition={{

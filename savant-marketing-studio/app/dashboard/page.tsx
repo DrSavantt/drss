@@ -1,26 +1,221 @@
 'use client'
 
 import { motion } from 'framer-motion'
-import { StatCard } from '@/components/stat-card'
-import { UrgentItems } from '@/components/urgent-items'
-import { MetricCard } from '@/components/metric-card'
-import { QuickActionButton } from '@/components/quick-action-button'
-import { EmptyState } from '@/components/empty-state'
-import { ProgressRing } from '@/components/progress-ring'
-import { Users, FolderKanban, FileText, TrendingUp, Clock, Plus, CheckCircle, Database, Zap } from 'lucide-react'
+import { SpotlightCard } from '@/components/ui/spotlight-card'
+import { metroContainerVariants, metroItemVariants, metroTileHover, metroTileTap } from '@/lib/animations'
+import { useMobile, useScreenSize } from '@/hooks/use-mobile'
+import { 
+  Users, FolderKanban, FileText, TrendingUp, Clock, CheckCircle, 
+  Database, Zap, AlertCircle, Target, ChevronRight, BookOpen
+} from 'lucide-react'
 import Link from 'next/link'
-import { formatDistanceToNow, format } from 'date-fns'
+import { formatDistanceToNow } from 'date-fns'
 import { DashboardSkeleton } from '@/components/skeleton-loader'
-import { useState, useEffect } from 'react'
+import { UrgentItems } from '@/components/urgent-items'
+import { EmptyState } from '@/components/empty-state'
+import { useState, useEffect, ReactNode } from 'react'
+
+// Metro Typography Components
+const MetroHeader = ({ children }: { children: ReactNode }) => (
+  <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold uppercase tracking-wider mb-8 text-foreground">
+    {children}
+  </h1>
+)
+
+const MetroSection = ({ title, children }: { title: string; children: ReactNode }) => (
+  <section className="mb-12 md:mb-16">
+    <h2 className="text-2xl md:text-3xl lg:text-4xl font-bold uppercase tracking-wide mb-4 md:mb-6 text-foreground border-b-2 border-border pb-2">
+      {title}
+    </h2>
+    {children}
+  </section>
+)
+
+// Action Tile Component (replaces Quick Actions)
+const ActionTile = ({ 
+  icon, 
+  label, 
+  href, 
+  count 
+}: {
+  icon: ReactNode
+  label: string
+  href: string
+  count?: number
+}) => {
+  return (
+    <Link href={href}>
+      <SpotlightCard className="h-full">
+        <motion.div
+          className="p-6 md:p-8 aspect-square flex flex-col items-center justify-center gap-3 md:gap-4
+            bg-surface hover:bg-surface-highlight transition-all cursor-pointer group
+            relative overflow-hidden rounded-lg"
+          whileHover={{ ...metroTileHover, scale: 1.02 }}
+          whileTap={metroTileTap}
+        >
+          {/* Icon */}
+          <div className="text-3xl md:text-4xl lg:text-5xl text-muted-foreground group-hover:text-red-primary transition-colors">
+            {icon}
+          </div>
+          
+          {/* Label */}
+          <div className="text-base md:text-lg lg:text-xl font-bold uppercase tracking-wide text-center text-foreground">
+            {label}
+          </div>
+          
+          {/* Count badge (optional) */}
+          {count !== undefined && (
+            <div className="absolute top-2 right-2 md:top-3 md:right-3 bg-red-primary/20 backdrop-blur-sm 
+              px-2 md:px-3 py-0.5 md:py-1 rounded-full text-xs md:text-sm font-bold text-red-primary border border-red-primary/30">
+              {count}
+            </div>
+          )}
+          
+          {/* Red accent line on hover */}
+          <div className="absolute bottom-0 left-0 right-0 h-1 bg-red-primary transform scale-x-0 group-hover:scale-x-100 transition-transform origin-left" />
+        </motion.div>
+      </SpotlightCard>
+    </Link>
+  )
+}
+
+// Hero Tile Component (large featured tiles)
+const HeroTile = ({ 
+  icon, 
+  title, 
+  value, 
+  subtitle
+}: {
+  icon: ReactNode
+  title: string
+  value: string | number
+  subtitle: string
+}) => (
+  <SpotlightCard className="h-full group cursor-pointer">
+    <div className="p-6 md:p-8 flex flex-col h-full">
+      {/* Icon & Title */}
+      <div className="flex items-center gap-3 mb-4">
+        <div className="text-xl md:text-2xl text-muted-foreground group-hover:text-red-primary transition-colors">{icon}</div>
+        <h3 className="text-xs md:text-sm uppercase tracking-wide text-muted-foreground font-semibold">
+          {title}
+        </h3>
+      </div>
+      
+      {/* Big Number */}
+      <div className="flex-1 flex items-center">
+        <span className="text-5xl md:text-6xl lg:text-7xl font-bold text-foreground leading-none">
+          {value}
+        </span>
+      </div>
+      
+      {/* Subtitle */}
+      <p className="text-xs md:text-sm font-medium text-muted-foreground group-hover:text-red-primary transition-colors mt-2">
+        {subtitle}
+      </p>
+    </div>
+  </SpotlightCard>
+)
+
+// Performance Tile Component (variable sizes)
+const PerformanceTile = ({ 
+  title, 
+  value, 
+  subtitle, 
+  icon
+}: {
+  title: string
+  value: string | number
+  subtitle: string
+  icon: ReactNode
+}) => {
+  return (
+    <SpotlightCard className="h-full">
+      <div className="p-4 md:p-6 flex flex-col justify-between h-[180px]">
+        <div className="flex items-center gap-2 mb-2">
+          <div className="text-base md:text-lg text-muted-foreground">{icon}</div>
+          <span className="text-xs uppercase tracking-wide text-muted-foreground font-semibold">
+            {title}
+          </span>
+        </div>
+        
+        <div className="flex-1 flex items-center">
+          <span className="text-3xl md:text-4xl lg:text-5xl font-bold text-foreground">
+            {value}
+          </span>
+        </div>
+        
+        <p className="text-xs text-muted-foreground mt-2">
+          {subtitle}
+        </p>
+      </div>
+    </SpotlightCard>
+  )
+}
+
+// Activity Card Component (full-width)
+const ActivityCard = ({ 
+  activity 
+}: { 
+  activity: { 
+    id: string
+    type: string
+    title: string
+    client: string
+    created_at: string
+    href: string
+  } 
+}) => {
+  const isMobile = useMobile()
+  
+  const iconBg = activity.type === 'project' 
+    ? 'bg-info/20 text-info'
+    : 'bg-success/20 text-success'
+
+  const Icon = activity.type === 'project' ? FolderKanban : FileText
+
+  return (
+    <Link href={activity.href}>
+      <SpotlightCard className="p-4 md:p-6 hover:border-red-primary/40 transition-all group cursor-pointer">
+        <div className="flex items-center gap-4">
+          {/* Icon */}
+          <div className={`w-10 h-10 md:w-12 md:h-12 rounded-full ${iconBg} flex items-center justify-center flex-shrink-0`}>
+            <Icon className="w-5 h-5 md:w-6 md:h-6" />
+          </div>
+          
+          {/* Content */}
+          <div className="flex-1 min-w-0">
+            <h4 className="text-base md:text-lg font-bold text-foreground truncate group-hover:text-red-primary transition-colors">
+              {activity.title}
+            </h4>
+            <div className="flex items-center gap-2 text-xs md:text-sm text-muted-foreground mt-1 flex-wrap">
+              <span className={`px-2 py-0.5 rounded text-xs font-semibold uppercase ${iconBg}`}>
+                {activity.type}
+              </span>
+              {activity.client && (
+                <>
+                  <span className="hidden md:inline">•</span>
+                  <span className="truncate">{activity.client}</span>
+                </>
+              )}
+              <span className="hidden md:inline">•</span>
+              <span className="text-xs">
+                {formatDistanceToNow(new Date(activity.created_at), { addSuffix: true })}
+              </span>
+            </div>
+          </div>
+          
+          {/* Arrow (desktop only) */}
+          {!isMobile && (
+            <ChevronRight className="w-5 h-5 text-muted-foreground group-hover:text-red-primary transition-colors flex-shrink-0" />
+          )}
+        </div>
+      </SpotlightCard>
+    </Link>
+  )
+}
 
 export default function DashboardPage() {
-  // Helper functions
-  function getGreeting() {
-    const hour = new Date().getHours()
-    if (hour < 12) return 'Good morning'
-    if (hour < 18) return 'Good afternoon'
-    return 'Good evening'
-  }
+  const { isMobile, isTablet } = useScreenSize()
 
   interface ActivityItem {
     id: string
@@ -89,7 +284,6 @@ export default function DashboardPage() {
     totalProjects,
     totalContent,
     projectsByStatus,
-    completionPercentage,
     urgentItems,
     recentActivity,
     totalActivityThisWeek,
@@ -106,307 +300,178 @@ export default function DashboardPage() {
   } = stats
 
   return (
-    <div className="space-y-8 pb-8 pt-4">
-      {/* Welcome + Today's Focus */}
-      <div className="mb-8">
-        {/* Welcome message */}
-        <div className="mb-6">
-          <h1 className="text-3xl font-bold text-red-primary">
-            Welcome back
-          </h1>
-          <p className="text-silver mt-1">
-            {getGreeting()} • {format(new Date(), 'EEEE, MMMM d, yyyy')}
-          </p>
-        </div>
+    <div className="space-y-8 md:space-y-12 pb-8 pt-4">
+      {/* Metro Header */}
+      <MetroHeader>DASHBOARD</MetroHeader>
 
-        {/* Today's focus - 3 equal cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {/* This week card */}
-          <div className="bg-charcoal border border-success/30 rounded-lg p-6 h-full flex flex-col">
-            <div className="flex items-center gap-2 mb-2">
-              <TrendingUp className="w-4 h-4 text-success" />
-              <span className="text-sm text-silver">This Week</span>
-            </div>
-            <div className="text-2xl font-bold text-foreground">{totalActivityThisWeek}</div>
-            <div className="text-xs text-success mt-1">
-              Keep the momentum going!
-            </div>
-          </div>
-
-          {/* Due today card */}
-          <div className="bg-charcoal border border-red-primary/30 rounded-lg p-6 h-full flex flex-col">
-            <div className="flex items-center gap-2 mb-2">
-              <Clock className="w-4 h-4 text-red-primary" />
-              <span className="text-sm text-silver">Due This Week</span>
-            </div>
-            <div className="text-2xl font-bold text-foreground">{dueThisWeek}</div>
-            <div className="text-xs text-red-primary mt-1">
-              {dueThisWeek === 0 ? 'Nothing urgent' : 'Needs attention'}
-            </div>
-          </div>
-
-          {/* Quick win card */}
-          <div className="bg-charcoal border border-warning/30 rounded-lg p-6 h-full flex flex-col">
-            <div className="flex items-center gap-2 mb-2">
-              <Zap className="w-4 h-4 text-warning" />
-              <span className="text-sm text-silver">Focus</span>
-            </div>
-            <div className="text-sm text-foreground font-medium line-clamp-2">
-              {projectsByStatus.in_progress > 0 
-                ? `${projectsByStatus.in_progress} projects in motion` 
-                : 'All systems go! 🚀'}
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Primary Metrics Grid - 4 equal cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <div className="h-full">
-          <StatCard
-            label="Total Clients"
-            value={totalClients}
-            trend={totalClients > 0 ? {
-              value: totalClients,
-              isPositive: true,
-              label: 'active'
-            } : undefined}
-            cta={{
-              label: 'Manage clients',
-              href: '/dashboard/clients'
-            }}
-            icon={<Users size={24} />}
+      {/* Hero Stats - Large Tiles */}
+      <motion.div 
+        className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6"
+        variants={metroContainerVariants}
+        initial="hidden"
+        animate="visible"
+      >
+        <motion.div variants={metroItemVariants}>
+          <HeroTile
+            icon={<TrendingUp />}
+            title="This Week"
+            value={totalActivityThisWeek}
+            subtitle={totalActivityThisWeek > 0 ? "Keep the momentum going!" : "Time to get started"}
           />
-        </div>
-
-        <div className="h-full">
-          <div className="bg-charcoal rounded-lg border border-mid-gray hover:border-success/30 transition-all h-full p-6 flex flex-col justify-between">
-            <div className="flex items-center justify-between mb-4">
-              <p className="text-xs text-silver uppercase tracking-wide font-medium">
-                Project Completion
-              </p>
-              <FolderKanban size={20} className="text-slate" />
-            </div>
-            <div className="flex items-center gap-6 flex-1">
-              <div className="flex-1 flex items-center justify-center">
-                <ProgressRing value={completionPercentage} size={80} color="hsl(var(--success))" />
-              </div>
-              <div className="flex-1">
-                <p className="text-3xl font-bold text-foreground">{projectsByStatus.done}</p>
-                <p className="text-sm text-silver">of {totalProjects} done</p>
-              </div>
-            </div>
-            <Link
-              href="/dashboard/projects/board"
-              className="inline-flex items-center gap-1 mt-4 text-sm text-success hover:text-success/80 font-medium transition-colors"
-            >
-              View board →
-            </Link>
-          </div>
-        </div>
-
-        <div className="h-full">
-          <StatCard
-            label="Content Assets"
-            value={totalContent}
-            cta={{
-              label: 'Browse library',
-              href: '/dashboard/content'
-            }}
-            icon={<FileText size={24} />}
+        </motion.div>
+        <motion.div variants={metroItemVariants}>
+          <HeroTile
+            icon={<AlertCircle />}
+            title="Due This Week"
+            value={dueThisWeek}
+            subtitle={dueThisWeek > 0 ? "Needs attention" : "Nothing urgent"}
           />
-        </div>
+        </motion.div>
+        <motion.div variants={metroItemVariants}>
+          <HeroTile
+            icon={<Target />}
+            title="Focus"
+            value={projectsByStatus.in_progress}
+            subtitle={projectsByStatus.in_progress > 0 ? `${projectsByStatus.in_progress} projects in motion` : "Ready to start"}
+          />
+        </motion.div>
+      </motion.div>
 
-        <div className="h-full">
-          <div className="bg-charcoal rounded-lg border border-mid-gray h-full p-6 flex flex-col">
-            <p className="text-xs text-silver uppercase tracking-wide font-medium mb-4">
-              Active Projects
-            </p>
-            <div className="grid grid-cols-2 gap-3 mb-4 flex-1">
-              <motion.div
-                whileHover={{ scale: 1.02 }}
-                transition={{ duration: 0.15 }}
-                className="flex flex-col justify-center"
-              >
-                <p className="text-3xl font-bold text-info">{projectsByStatus.in_progress}</p>
-                <p className="text-xs text-slate">In Progress</p>
-              </motion.div>
-              <motion.div
-                whileHover={{ scale: 1.02 }}
-                transition={{ duration: 0.15 }}
-                className="flex flex-col justify-center"
-              >
-                <p className="text-3xl font-bold text-warning">{projectsByStatus.in_review}</p>
-                <p className="text-xs text-slate">In Review</p>
-              </motion.div>
-            </div>
-            <div className="text-xs text-slate">
-              {projectsByStatus.backlog} in backlog
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Urgent Items Section */}
+      {/* Urgent Items (if any) */}
       {urgentItems.length > 0 && (
         <div>
           <UrgentItems items={urgentItems} />
         </div>
       )}
 
-      {/* Performance Metrics - 6 equal cards */}
-      <div className="space-y-4">
-        <h2 className="text-2xl font-semibold text-foreground">Performance Metrics</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          <MetricCard
-            title="Content This Week"
-            value={weeklyContent}
-            trend="Created in last 7 days"
-            icon={TrendingUp}
-            color="success"
-          />
-          <MetricCard
-            title="Projects Completed"
-            value={completedThisMonth}
-            trend={`${completionRate}% completion rate`}
-            icon={CheckCircle}
-            color="primary"
-          />
-          <MetricCard
-            title="Storage Used"
-            value={`${storageUsed} MB`}
-            subtitle={`${filesCount} files`}
-            icon={Database}
-            color="warning"
-          />
-          <MetricCard
-            title="Active Clients"
-            value={activeClients}
-            subtitle={`${inactiveClients} inactive`}
-            icon={Users}
-            color="success"
-          />
-          <MetricCard
-            title="Due This Week"
-            value={dueThisWeek}
-            trend={overdue > 0 ? `${overdue} overdue` : "On track"}
-            icon={Clock}
-            color={overdue > 0 ? "primary" : "success"}
-          />
-          <MetricCard
-            title="Avg Response Time"
-            value="< 24h"
-            subtitle="Last updated to client"
-            icon={Zap}
-            color="warning"
-          />
-        </div>
-      </div>
-
-      {/* Quick Actions - Compact */}
-      <div>
-        <h2 className="text-2xl font-semibold text-foreground mb-4">Quick Actions</h2>
-        <div className="flex flex-wrap gap-3">
-          <QuickActionButton 
-            icon={Plus} 
-            label="Content" 
-            href="/dashboard/content"
-            variant="primary"
-          />
-          <QuickActionButton 
-            icon={Users} 
-            label="Client" 
-            href="/dashboard/clients/new"
-            variant="secondary"
-          />
-          <QuickActionButton 
-            icon={FolderKanban} 
-            label="Project" 
-            href="/dashboard/projects/board"
-            variant="secondary"
-          />
-          <QuickActionButton 
-            icon={FileText} 
-            label="Note" 
-            href="/dashboard/journal"
-            variant="secondary"
-          />
-        </div>
-      </div>
-
-      {/* Recent Activity - Instant load */}
-      <div>
-        <div className="bg-charcoal rounded-lg border border-mid-gray p-6">
-          <div className="flex items-center justify-between mb-6">
-            <h3 className="text-lg font-semibold text-foreground">Recent Activity</h3>
-            <Clock size={20} className="text-slate" />
-          </div>
-
-          {recentActivity.length === 0 ? (
-            <EmptyState
-              icon={TrendingUp}
-              title="No activity yet"
-              description="Start by creating a client or project to see your activity here."
-              cta={{
-                label: 'Create your first client',
-                href: '/dashboard/clients/new'
-              }}
+      {/* Action Tiles - Replaces Quick Actions */}
+      <MetroSection title="CREATE">
+        <motion.div 
+          className="grid grid-cols-2 md:grid-cols-4 gap-4"
+          variants={metroContainerVariants}
+          initial="hidden"
+          animate="visible"
+        >
+          <motion.div variants={metroItemVariants}>
+            <ActionTile
+              icon={<FileText />}
+              label="Content"
+              href="/dashboard/content"
+              count={totalContent}
             />
-          ) : (
-            <div className="space-y-3">
-              {recentActivity.map((activity) => {
-                const isProject = activity.type === 'project'
-                const iconBg = isProject ? 'bg-info/10' : 'bg-success/10'
-                const iconColor = isProject ? 'text-info' : 'text-success'
-                
-                return (
-                  <div
-                    key={`${activity.type}-${activity.id}`}
-                  >
-                    <Link
-                      href={activity.href}
-                      className="flex items-center gap-4 p-3 rounded-lg hover:bg-dark-gray transition-all group"
-                    >
-                      <motion.div 
-                        className={`w-10 h-10 ${iconBg} rounded-lg flex items-center justify-center flex-shrink-0`}
-                        whileHover={{ scale: 1.05 }}
-                        transition={{ duration: 0.15 }}
-                      >
-                        {isProject ? (
-                          <FolderKanban size={18} className={iconColor} />
-                        ) : (
-                          <FileText size={18} className={iconColor} />
-                        )}
-                      </motion.div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-foreground font-medium truncate group-hover:text-red-primary transition-colors">
-                          {activity.title}
-                        </p>
-                        <div className="flex items-center gap-2 mt-0.5">
-                          <span className={`text-xs px-2 py-0.5 rounded-full ${
-                            isProject ? 'bg-info/20 text-info' : 'bg-success/20 text-success'
-                          }`}>
-                            {activity.type}
-                          </span>
-                          {activity.client && (
-                            <span className="text-xs text-slate">
-                              {activity.client}
-                            </span>
-                          )}
-                          <span className="text-xs text-slate">•</span>
-                          <span className="text-xs text-slate">
-                            {formatDistanceToNow(new Date(activity.created_at), { addSuffix: true })}
-                          </span>
-                        </div>
-                      </div>
-                    </Link>
-                  </div>
-                )
-              })}
-            </div>
-          )}
-        </div>
-      </div>
+          </motion.div>
+          <motion.div variants={metroItemVariants}>
+            <ActionTile
+              icon={<Users />}
+              label="Client"
+              href="/dashboard/clients/new"
+              count={totalClients}
+            />
+          </motion.div>
+          <motion.div variants={metroItemVariants}>
+            <ActionTile
+              icon={<FolderKanban />}
+              label="Project"
+              href="/dashboard/projects/board"
+              count={totalProjects}
+            />
+          </motion.div>
+          <motion.div variants={metroItemVariants}>
+            <ActionTile
+              icon={<BookOpen />}
+              label="Note"
+              href="/dashboard/journal"
+            />
+          </motion.div>
+        </motion.div>
+      </MetroSection>
+
+      {/* Performance Metrics - Variable Size Grid */}
+      <MetroSection title="PERFORMANCE">
+        <motion.div 
+          className="grid grid-cols-2 md:grid-cols-3 gap-4 auto-rows-[1fr]"
+          variants={metroContainerVariants}
+          initial="hidden"
+          animate="visible"
+        >
+          <motion.div variants={metroItemVariants}>
+            <PerformanceTile 
+              title="Content" 
+              value={weeklyContent} 
+              subtitle="Created last 7 days" 
+              icon={<FileText />} 
+            />
+          </motion.div>
+          <motion.div variants={metroItemVariants}>
+            <PerformanceTile 
+              title="Projects" 
+              value={completedThisMonth} 
+              subtitle={`${completionRate}% completion rate`} 
+              icon={<CheckCircle />} 
+            />
+          </motion.div>
+          <motion.div variants={metroItemVariants}>
+            <PerformanceTile 
+              title="Storage" 
+              value={`${storageUsed} MB`} 
+              subtitle={`${filesCount} files`} 
+              icon={<Database />} 
+            />
+          </motion.div>
+          <motion.div variants={metroItemVariants}>
+            <PerformanceTile 
+              title="Clients" 
+              value={activeClients} 
+              subtitle={`${inactiveClients} inactive`} 
+              icon={<Users />} 
+            />
+          </motion.div>
+          <motion.div variants={metroItemVariants}>
+            <PerformanceTile 
+              title="Due" 
+              value={dueThisWeek} 
+              subtitle={overdue > 0 ? `${overdue} overdue` : "On track"} 
+              icon={<Clock />} 
+            />
+          </motion.div>
+          <motion.div variants={metroItemVariants}>
+            <PerformanceTile 
+              title="Response" 
+              value="< 24h" 
+              subtitle="Last client update" 
+              icon={<Zap />} 
+            />
+          </motion.div>
+        </motion.div>
+      </MetroSection>
+
+      {/* Activity Stream - Full Width Cards */}
+      <MetroSection title="RECENT ACTIVITY">
+        {recentActivity.length === 0 ? (
+          <EmptyState
+            icon={TrendingUp}
+            title="No activity yet"
+            description="Start by creating a client or project to see your activity here."
+            cta={{
+              label: 'Create your first client',
+              href: '/dashboard/clients/new'
+            }}
+          />
+        ) : (
+          <motion.div 
+            className="space-y-3"
+            variants={metroContainerVariants}
+            initial="hidden"
+            animate="visible"
+          >
+            {recentActivity.map((activity) => (
+              <motion.div key={activity.id} variants={metroItemVariants}>
+                <ActivityCard activity={activity} />
+              </motion.div>
+            ))}
+          </motion.div>
+        )}
+      </MetroSection>
 
       {/* Empty State for No Clients */}
       {totalClients === 0 && (

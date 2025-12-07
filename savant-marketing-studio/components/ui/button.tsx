@@ -20,17 +20,17 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(
     const baseStyles = `
       relative inline-flex items-center justify-center rounded-md text-sm font-medium 
       transition-colors focus-visible:outline-none 
-      focus-visible:ring-2 focus-visible:ring-rose-500/50 
-      focus-visible:ring-offset-2 focus-visible:ring-offset-[#0F0F10]
+      focus-visible:ring-2 focus-visible:ring-red-primary/50 
+      focus-visible:ring-offset-2 focus-visible:ring-offset-background
       disabled:opacity-50 disabled:pointer-events-none
-      h-9 px-4 py-2
+      h-11 md:h-10 px-4 py-2
     `
 
     const variants = {
-      primary: 'bg-[#E11D48] text-white shadow-premium-sm hover:bg-[#BE123C]',
-      secondary: 'bg-surface text-white border border-white/10 hover:bg-surface-highlight',
-      ghost: 'hover:bg-white/5 text-slate-300 hover:text-white',
-      outline: 'border border-white/20 text-white hover:bg-white/5',
+      primary: 'bg-red-primary text-foreground shadow-premium-sm hover:bg-red-dark',
+      secondary: 'bg-surface text-foreground border border-white/10 hover:bg-surface-highlight',
+      ghost: 'hover:bg-surface text-silver hover:text-foreground',
+      outline: 'border border-white/20 text-foreground hover:bg-surface',
     }
 
     return (

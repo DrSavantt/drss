@@ -3,6 +3,8 @@
 import { useState, useEffect } from 'react'
 import { TiptapEditor } from '@/components/tiptap-editor'
 import { getClientProjects } from '@/app/actions/content'
+import { ResponsiveModal } from '@/components/responsive-modal'
+import { AnimatedButton } from '@/components/animated-button'
 
 interface Client {
   id: string
@@ -44,7 +46,6 @@ export function NoteEditorModal({
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  // Load projects when client changes
   useEffect(() => {
     async function loadProjects() {
       if (selectedClientId) {
@@ -58,7 +59,6 @@ export function NoteEditorModal({
     loadProjects()
   }, [selectedClientId])
 
-  // Reset form when modal closes or initial data changes
   useEffect(() => {
     if (initialData) {
       setTitle(initialData.title || '')
@@ -67,8 +67,6 @@ export function NoteEditorModal({
       setSelectedProjectId(initialData.projectId || '')
     }
   }, [initialData, isOpen])
-
-  if (!isOpen) return null
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -97,7 +95,6 @@ export function NoteEditorModal({
         projectId: selectedProjectId || null,
         content
       })
-      // Reset form
       setTitle('')
       setContent('')
       setSelectedClientId('')
@@ -123,34 +120,24 @@ export function NoteEditorModal({
   }
 
   return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 overflow-y-auto">
-      <div className="bg-dark-gray border border-mid-gray/40 rounded-lg shadow-xl max-w-2xl w-full my-8">
+    <ResponsiveModal
+      open={isOpen}
+      onOpenChange={(val) => { if (!val) handleClose() }}
+      title="New Note"
+      className="max-w-2xl"
+    >
         <form onSubmit={handleSubmit} className="flex flex-col max-h-[85vh]">
-          {/* Header - Minimal */}
-          <div className="flex items-center justify-between px-5 py-4 border-b border-mid-gray/30">
+        <div className="flex items-center justify-between pb-4 border-b border-mid-gray/30">
             <h2 className="text-lg font-semibold text-foreground">New Note</h2>
-            <button
-              type="button"
-              onClick={handleClose}
-              disabled={loading}
-              className="p-1 text-silver/60 hover:text-silver transition-colors disabled:opacity-50"
-            >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
           </div>
 
-          {/* Body - Scrollable */}
-          <div className="flex-1 overflow-y-auto px-5 py-4 space-y-4">
-            {/* Error Message */}
+        <div className="flex-1 overflow-y-auto py-4 space-y-4">
             {error && (
               <div className="bg-red-primary/10 border border-red-primary/30 text-red-primary px-3 py-2 rounded text-sm">
                 {error}
               </div>
             )}
 
-            {/* Title */}
             <div>
               <label htmlFor="title" className="block text-xs font-medium text-silver/70 mb-1.5">
                 Title
@@ -166,9 +153,7 @@ export function NoteEditorModal({
               />
             </div>
 
-            {/* Client & Project Row */}
             <div className="grid grid-cols-2 gap-3">
-              {/* Client Selector */}
               <div>
                 <label htmlFor="client" className="block text-xs font-medium text-silver/70 mb-1.5">
                   Client
@@ -192,7 +177,6 @@ export function NoteEditorModal({
                 </select>
               </div>
 
-              {/* Project Selector */}
               <div>
                 <label htmlFor="project" className="block text-xs font-medium text-silver/70 mb-1.5">
                   Project
@@ -214,7 +198,6 @@ export function NoteEditorModal({
               </div>
             </div>
 
-            {/* Content Editor */}
             <div>
               <label className="block text-xs font-medium text-silver/70 mb-1.5">
                 Content
@@ -227,32 +210,26 @@ export function NoteEditorModal({
             </div>
           </div>
 
-          {/* Footer - Minimal */}
-          <div className="flex items-center justify-end gap-2 px-5 py-4 border-t border-mid-gray/30">
-            <button
+        <div className="flex items-center justify-end gap-2 pt-4 border-t border-mid-gray/30">
+          <AnimatedButton
               type="button"
+            variant="secondary"
               onClick={handleClose}
               disabled={loading}
-              className="px-4 py-2 text-sm text-silver/70 hover:text-silver transition-colors disabled:opacity-50"
+            className="h-11 md:h-10 px-4"
             >
               Cancel
-            </button>
-            <button
+          </AnimatedButton>
+          <AnimatedButton
               type="submit"
+            variant="primary"
               disabled={loading}
-              className="px-4 py-2 bg-red-primary text-white text-sm font-medium rounded-lg hover:bg-red-bright transition-colors disabled:opacity-50 flex items-center gap-2"
-            >
-              {loading && (
-                <svg className="animate-spin h-3.5 w-3.5" fill="none" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                </svg>
-              )}
+            className="h-11 md:h-10 px-4"
+          >
               {loading ? 'Saving...' : 'Save'}
-            </button>
+          </AnimatedButton>
           </div>
         </form>
-      </div>
-    </div>
+    </ResponsiveModal>
   )
 }

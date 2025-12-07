@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { ResponsiveModal } from '@/components/responsive-modal';
+import { AnimatedButton } from '@/components/animated-button';
 
 export default function PinModal({ open, onClose }: { open: boolean; onClose: () => void }) {
   const [pin, setPin] = useState('');
@@ -57,18 +59,16 @@ export default function PinModal({ open, onClose }: { open: boolean; onClose: ()
     }
   };
 
-  if (!open) return null;
-
   const remaining = lockout ? Math.max(0, Math.floor((lockout - Date.now())/1000)) : 0;
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 animate-fade-in"
-      aria-modal="true" role="dialog" tabIndex={-1}
-      onClick={onClose}
+    <ResponsiveModal
+      open={open}
+      onOpenChange={(val) => { if (!val) onClose() }}
+      title="Admin PIN"
+      className="max-w-sm"
     >
-      <div className="bg-charcoal rounded-xl p-8 w-full max-w-xs mx-auto text-center relative" onClick={e => e.stopPropagation()} style={{ transition: 'opacity .3s' }}>
-        <h2 className="font-bold text-xl mb-4 text-foreground">Admin PIN</h2>
+      <div className="text-center">
         {lockout ? (
           <div className="text-error mb-2 font-semibold">Locked for {Math.ceil(remaining/60)}m {remaining%60}s</div>
         ) : null}
@@ -91,8 +91,12 @@ export default function PinModal({ open, onClose }: { open: boolean; onClose: ()
           )}
         </div>
         <div className="mt-3 text-sm min-h-[20px] text-error">{error}</div>
-        <button onClick={onClose} className="absolute top-2 right-2 text-silver hover:text-red-primary text-lg">×</button>
+        <div className="mt-4 flex justify-center">
+          <AnimatedButton variant="secondary" onClick={onClose} className="h-11 md:h-10 px-4">
+            Close
+          </AnimatedButton>
+        </div>
       </div>
-    </div>
+    </ResponsiveModal>
   );
 }

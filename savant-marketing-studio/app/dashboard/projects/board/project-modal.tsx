@@ -6,6 +6,8 @@ import { getJournalEntriesByProject } from '@/app/actions/journal'
 import { highlightMentions } from '@/lib/utils/mentions'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import { ResponsiveModal } from '@/components/responsive-modal'
+import { AnimatedButton } from '@/components/animated-button'
 
 interface Project {
   id: string
@@ -136,30 +138,14 @@ export function ProjectModal({ project, onClose, onUpdate, onDelete }: ProjectMo
   }
 
   return (
-    <div
-      className="fixed inset-0 bg-pure-black/50 flex items-center justify-center p-4 z-50"
-      onClick={(e) => {
-        if (e.target === e.currentTarget) onClose()
-      }}
-    >
-      <div className="bg-charcoal border border-mid-gray rounded-lg shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-        {/* Modal Header */}
-        <div className="sticky top-0 bg-charcoal border-b border-mid-gray px-6 py-4 flex items-center justify-between">
-          <h2 className="text-xl font-semibold text-foreground">
-            {isEditing ? 'Edit Project' : 'Project Details'}
-          </h2>
-          <button
-            onClick={onClose}
-            className="text-silver hover:text-foreground transition-colors"
-          >
-            <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
-        </div>
-
-        {/* Modal Content */}
-        <div className="px-6 py-6">
+    <>
+      <ResponsiveModal
+        open={true}
+        onOpenChange={(val) => { if (!val) onClose() }}
+        title={isEditing ? 'Edit Project' : 'Project Details'}
+        className="max-w-2xl"
+      >
+        <div className="space-y-6">
           {error && (
             <div className="mb-6 rounded-md bg-error/10 border border-error/30 p-4">
               <p className="text-sm text-error">{error}</p>
@@ -336,20 +322,21 @@ export function ProjectModal({ project, onClose, onUpdate, onDelete }: ProjectMo
                 )}
               </div>
 
-              {/* Action Buttons */}
               <div className="flex gap-3 pt-4">
-                <button
+                <AnimatedButton
+                  variant="primary"
                   onClick={() => setIsEditing(true)}
-                  className="flex-1 rounded-md bg-red-primary px-4 py-2 text-sm font-semibold text-pure-white hover:bg-red-bright"
+                  className="flex-1 h-11 md:h-10"
                 >
                   Edit Project
-                </button>
-                <button
+                </AnimatedButton>
+                <AnimatedButton
+                  variant="secondary"
                   onClick={() => setIsDeleting(true)}
-                  className="rounded-md bg-error px-4 py-2 text-sm font-semibold text-pure-white hover:bg-red-dark"
+                  className="h-11 md:h-10"
                 >
                   Delete
-                </button>
+                </AnimatedButton>
               </div>
             </div>
           ) : (
@@ -437,56 +424,61 @@ export function ProjectModal({ project, onClose, onUpdate, onDelete }: ProjectMo
               </div>
 
               <div className="flex gap-3">
-                <button
+                <AnimatedButton
                   type="submit"
+                  variant="primary"
                   disabled={loading}
-                  className="flex-1 rounded-md bg-red-primary px-4 py-2 text-sm font-semibold text-pure-white hover:bg-red-bright disabled:bg-red-primary/50 disabled:cursor-not-allowed"
+                  className="flex-1 h-11 md:h-10"
                 >
                   {loading ? 'Saving...' : 'Save Changes'}
-                </button>
-                <button
+                </AnimatedButton>
+                <AnimatedButton
                   type="button"
+                  variant="secondary"
                   onClick={() => setIsEditing(false)}
                   disabled={loading}
-                  className="rounded-md bg-dark-gray px-4 py-2 text-sm font-semibold text-foreground hover:bg-mid-gray"
+                  className="h-11 md:h-10"
                 >
                   Cancel
-                </button>
+                </AnimatedButton>
               </div>
             </form>
           )}
         </div>
-      </div>
+      </ResponsiveModal>
 
-      {/* Delete Confirmation Dialog */}
       {isDeleting && (
-        <div className="fixed inset-0 bg-pure-black/50 flex items-center justify-center p-4 z-[60]">
-          <div className="bg-charcoal border border-mid-gray rounded-lg p-6 max-w-md w-full">
-            <h3 className="text-lg font-semibold text-foreground mb-2">
-              Delete {project.name}?
-            </h3>
-            <p className="text-sm text-silver mb-6">
+        <ResponsiveModal
+          open={isDeleting}
+          onOpenChange={(val) => { if (!val) setIsDeleting(false) }}
+          title={`Delete ${project.name}?`}
+          className="max-w-md"
+        >
+          <div className="space-y-4">
+            <p className="text-sm text-silver">
               This will permanently delete this project. This action cannot be undone.
             </p>
             <div className="flex gap-4">
-              <button
+              <AnimatedButton
+                variant="primary"
                 onClick={handleDelete}
                 disabled={loading}
-                className="flex-1 rounded-md bg-error px-4 py-2 text-sm font-semibold text-pure-white hover:bg-red-dark disabled:bg-error/50"
+                className="flex-1 h-11 md:h-10"
               >
                 {loading ? 'Deleting...' : 'Delete'}
-              </button>
-              <button
+              </AnimatedButton>
+              <AnimatedButton
+                variant="secondary"
                 onClick={() => setIsDeleting(false)}
                 disabled={loading}
-                className="flex-1 rounded-md bg-dark-gray px-4 py-2 text-sm font-semibold text-foreground hover:bg-mid-gray"
+                className="flex-1 h-11 md:h-10"
               >
                 Cancel
-              </button>
+              </AnimatedButton>
             </div>
           </div>
-        </div>
+        </ResponsiveModal>
       )}
-    </div>
+    </>
   )
 }

@@ -2,6 +2,7 @@
 
 import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
+import { SpotlightCard } from '@/components/ui/spotlight-card'
 
 interface Project {
   id: string
@@ -53,28 +54,25 @@ export function ProjectCard({ project, onClick }: ProjectCardProps) {
       {...attributes}
       {...listeners}
       onClick={onClick}
-      className="bg-charcoal border border-mid-gray rounded-lg p-4 hover:border-red-bright/50 transition-all duration-200 cursor-grab active:cursor-grabbing"
+      className="cursor-grab active:cursor-grabbing"
     >
-      {/* Project Name */}
+      <SpotlightCard className="p-4 hover:border-red-bright/50 transition-all duration-200 h-full">
       <h3 className="font-semibold text-foreground mb-2">
         {project.name}
       </h3>
 
-      {/* Description Preview */}
       {project.description && (
         <p className="text-sm text-silver mb-3 line-clamp-2">
           {project.description}
         </p>
       )}
 
-      {/* Client Badge */}
       <div className="mb-3">
         <span className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium rounded bg-info/10 text-info border border-info/30">
           {project.clients?.name || 'Unknown Client'}
         </span>
       </div>
 
-      {/* Priority & Due Date */}
       <div className="flex items-center justify-between gap-2 text-xs">
         <span
           className={`px-2 py-1 rounded font-medium ${
@@ -92,6 +90,7 @@ export function ProjectCard({ project, onClick }: ProjectCardProps) {
           </span>
         )}
       </div>
+      </SpotlightCard>
     </div>
   )
 }

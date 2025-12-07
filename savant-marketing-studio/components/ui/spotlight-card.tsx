@@ -6,9 +6,10 @@ import { cn } from '@/lib/utils'
 interface SpotlightCardProps {
   children: ReactNode
   className?: string
+  onClick?: () => void
 }
 
-export const SpotlightCard = ({ children, className = '' }: SpotlightCardProps) => {
+export const SpotlightCard = ({ children, className = '', onClick }: SpotlightCardProps) => {
   const divRef = useRef<HTMLDivElement>(null)
   const [position, setPosition] = useState({ x: 0, y: 0 })
   const [opacity, setOpacity] = useState(0)
@@ -43,8 +44,9 @@ export const SpotlightCard = ({ children, className = '' }: SpotlightCardProps) 
       onBlur={handleBlur}
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
+      onClick={onClick}
       className={cn(
-        'relative rounded-xl border border-white/10 bg-[#18181B] overflow-hidden',
+        'relative rounded-xl border border-white/10 bg-surface overflow-hidden',
         className
       )}
     >
@@ -52,7 +54,8 @@ export const SpotlightCard = ({ children, className = '' }: SpotlightCardProps) 
         className="pointer-events-none absolute -inset-px opacity-0 transition duration-300"
         style={{
           opacity,
-          background: `radial-gradient(600px circle at ${position.x}px ${position.y}px, rgba(255,255,255,0.06), transparent 40%)`,
+          background: `radial-gradient(600px circle at ${position.x}px ${position.y}px, var(--spotlight-color-start), var(--spotlight-color-mid), var(--spotlight-color-end) 40%)`,
+          boxShadow: 'var(--spotlight-shadow)',
         }}
       />
       <div className="relative h-full">{children}</div>

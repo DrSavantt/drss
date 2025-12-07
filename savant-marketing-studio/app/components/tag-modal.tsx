@@ -1,6 +1,8 @@
 'use client'
 
 import { useState } from 'react'
+import { ResponsiveModal } from '@/components/responsive-modal'
+import { AnimatedButton } from '@/components/animated-button'
 
 interface TagModalProps {
   isOpen: boolean
@@ -12,8 +14,6 @@ interface TagModalProps {
 export function TagModal({ isOpen, onClose, onConfirm, title = "Add Tags" }: TagModalProps) {
   const [tagInput, setTagInput] = useState('')
   const [tags, setTags] = useState<string[]>([])
-
-  if (!isOpen) return null
 
   const handleAddTag = () => {
     const tag = tagInput.trim()
@@ -50,12 +50,14 @@ export function TagModal({ isOpen, onClose, onConfirm, title = "Add Tags" }: Tag
   }
 
   return (
-    <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <div className="bg-charcoal border border-mid-gray rounded-xl shadow-2xl max-w-md w-full p-6">
-        <h3 className="text-xl font-semibold text-foreground mb-4">{title}</h3>
-        
-        {/* Tag Input */}
-        <div className="mb-4">
+    <ResponsiveModal
+      open={isOpen}
+      onOpenChange={(val) => { if (!val) handleCancel() }}
+      title={title}
+      className="max-w-md"
+    >
+      <div className="space-y-4">
+        <div>
           <label className="block text-sm font-medium text-silver mb-2">
             Enter tags (press Enter to add)
           </label>
@@ -68,18 +70,14 @@ export function TagModal({ isOpen, onClose, onConfirm, title = "Add Tags" }: Tag
               placeholder="e.g., urgent, idea, todo"
               className="flex-1 px-3 py-2 bg-dark-gray border border-mid-gray rounded-lg text-foreground placeholder-slate focus:outline-none focus:border-red-primary"
             />
-            <button
-              onClick={handleAddTag}
-              className="px-4 py-2 bg-red-primary text-white rounded-lg hover:bg-red-bright transition-colors font-medium"
-            >
+            <AnimatedButton variant="primary" onClick={handleAddTag} className="h-11 md:h-10 px-4">
               Add
-            </button>
+            </AnimatedButton>
           </div>
         </div>
 
-        {/* Current Tags */}
         {tags.length > 0 && (
-          <div className="mb-4">
+          <div>
             <p className="text-sm font-medium text-silver mb-2">Tags to add:</p>
             <div className="flex flex-wrap gap-2">
               {tags.map((tag) => (
@@ -102,23 +100,24 @@ export function TagModal({ isOpen, onClose, onConfirm, title = "Add Tags" }: Tag
           </div>
         )}
 
-        {/* Actions */}
         <div className="flex gap-3 justify-end">
-          <button
+          <AnimatedButton
+            variant="secondary"
             onClick={handleCancel}
-            className="px-4 py-2 border border-mid-gray text-silver hover:text-foreground hover:bg-dark-gray rounded-lg transition-colors"
+            className="h-11 md:h-10 px-4"
           >
             Cancel
-          </button>
-          <button
+          </AnimatedButton>
+          <AnimatedButton
+            variant="primary"
             onClick={handleConfirm}
             disabled={tags.length === 0}
-            className="px-4 py-2 bg-red-primary text-white rounded-lg hover:bg-red-bright transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+            className="h-11 md:h-10 px-4 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             Add {tags.length} {tags.length === 1 ? 'Tag' : 'Tags'}
-          </button>
+          </AnimatedButton>
         </div>
       </div>
-    </div>
+    </ResponsiveModal>
   )
 }

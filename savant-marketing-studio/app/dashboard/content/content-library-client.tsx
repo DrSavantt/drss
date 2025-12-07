@@ -2,12 +2,16 @@
 
 import { useState, useMemo, useCallback, useEffect } from 'react'
 import Link from 'next/link'
+import { motion } from 'framer-motion'
 import { getClientName } from '@/lib/supabase/types'
 import { bulkDeleteContent, bulkArchiveContent, bulkUnarchiveContent, bulkChangeProject, getAllProjects } from '@/app/actions/content'
 import { BulkActionBar } from '@/app/components/bulk-action-bar'
 import { ConfirmationModal } from '@/app/components/confirmation-modal'
 import { ProjectSelectorModal } from '@/app/components/project-selector-modal'
 import { ToastContainer } from '@/app/components/toast'
+import { SpotlightCard } from '@/components/ui/spotlight-card'
+import { metroContainerVariants, metroItemVariants } from '@/lib/animations'
+import { useScreenSize } from '@/hooks/use-mobile'
 
 interface ContentAsset {
   id: string
@@ -42,6 +46,8 @@ interface ToastMessage {
 }
 
 export function ContentLibraryClient({ initialContent }: ContentLibraryClientProps) {
+  const { isMobile } = useScreenSize()
+  
   // Load preferences from localStorage
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedType, setSelectedType] = useState<string>(() => {
@@ -608,79 +614,83 @@ export function ContentLibraryClient({ initialContent }: ContentLibraryClientPro
           <p className="text-silver">No content matches your filters</p>
         </div>
       ) : (
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        <motion.div
+          className={`grid gap-4 ${
+            isMobile ? 'grid-cols-1' : 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3'
+          }`}
+          variants={metroContainerVariants}
+          initial="hidden"
+          animate="visible"
+        >
           {filteredAndSortedContent.map((item) => {
             const isSelected = selectedIds.has(item.id)
             return (
-              <div
-                key={item.id}
-                className={`group bg-charcoal rounded-lg border-2 p-4 transition-all ${
-                  isSelected 
-                    ? 'border-red-primary bg-red-primary/5' 
-                    : 'border-mid-gray hover:border-red-bright hover:bg-dark-gray'
-                }`}
-              >
-                {/* Checkbox */}
-                <div className="flex items-start gap-3 mb-3">
-                  <input
-                    type="checkbox"
-                    checked={isSelected}
-                    onChange={(e) => {
-                      e.stopPropagation()
-                      toggleSelection(item.id)
-                    }}
-                    className="mt-1 w-4 h-4 rounded border-mid-gray bg-dark-gray accent-red-primary cursor-pointer flex-shrink-0"
-                    onClick={(e) => e.stopPropagation()}
-                  />
-                  <Link
-                    href={`/dashboard/content/${item.id}`}
-                    className="flex-1 min-w-0"
-                  >
-                    {/* Title */}
-                    <h3 className="font-semibold text-foreground mb-2 group-hover:text-red-primary transition-colors">
-                      {item.title}
-                    </h3>
+              <motion.div key={item.id} variants={metroItemVariants}>
+                <SpotlightCard
+                  className={`group p-4 transition-all h-full min-h-[44px] ${
+                    isSelected 
+                      ? 'border-2 border-red-primary bg-red-primary/5' 
+                      : 'hover:border-red-bright/60'
+                  }`}
+                >
+                  <div className="flex items-start gap-3 mb-3">
+                    <input
+                      type="checkbox"
+                      checked={isSelected}
+                      onChange={(e) => {
+                        e.stopPropagation()
+                        toggleSelection(item.id)
+                      }}
+                      className="mt-1 w-4 h-4 rounded border-mid-gray bg-dark-gray accent-red-primary cursor-pointer flex-shrink-0"
+                      onClick={(e) => e.stopPropagation()}
+                    />
+                    <Link
+                      href={`/dashboard/content/${item.id}`}
+                      className="flex-1 min-w-0"
+                    >
+                      <h3 className="font-semibold text-foreground mb-2 group-hover:text-red-primary transition-colors">
+                        {item.title}
+                      </h3>
 
-                    {/* Badges */}
-                    <div className="flex flex-wrap gap-2 mb-3">
-                      <span
-                        className={`px-2 py-1 text-xs font-medium rounded-full ${
-                          typeColors[item.asset_type as keyof typeof typeColors] || 'bg-slate/20 text-slate border border-slate/30'
-                        }`}
-                      >
-                        {item.asset_type.replace('_', ' ')}
-                      </span>
-                      {item.is_archived && (
-                        <span className="px-2 py-1 text-xs font-medium rounded-full bg-warning/20 text-warning border border-warning/30">
-                          Archived
+                      <div className="flex flex-wrap gap-2 mb-3">
+                        <span
+                          className={`px-2 py-1 text-xs font-medium rounded-full ${
+                            typeColors[item.asset_type as keyof typeof typeColors] || 'bg-surface-highlight text-foreground border border-white/10'
+                          }`}
+                        >
+                          {item.asset_type.replace('_', ' ')}
                         </span>
-                      )}
-                      {getClientName(item.clients) && (
-                        <span className="px-2 py-1 text-xs font-medium rounded-full bg-slate/20 text-foreground border border-slate/30">
-                          {getClientName(item.clients)}
-                        </span>
-                      )}
-                      {item.projects && (
-                        <span className="px-2 py-1 text-xs font-medium rounded-full bg-info/20 text-info border border-info/30">
-                          {item.projects.name}
-                        </span>
-                      )}
-                    </div>
+                        {item.is_archived && (
+                          <span className="px-2 py-1 text-xs font-medium rounded-full bg-warning/20 text-warning border border-warning/30">
+                            Archived
+                          </span>
+                        )}
+                        {getClientName(item.clients) && (
+                          <span className="px-2 py-1 text-xs font-medium rounded-full bg-surface-highlight text-foreground border border-white/10">
+                            {getClientName(item.clients)}
+                          </span>
+                        )}
+                        {item.projects && (
+                          <span className="px-2 py-1 text-xs font-medium rounded-full bg-info/20 text-info border border-info/30">
+                            {item.projects.name}
+                          </span>
+                        )}
+                      </div>
 
-                    {/* Date */}
-                    <p className="text-xs text-slate">
-                      Created {new Date(item.created_at).toLocaleDateString('en-US', {
-                        month: 'short',
-                        day: 'numeric',
-                        year: 'numeric'
-                      })}
-                    </p>
-                  </Link>
-                </div>
-              </div>
+                      <p className="text-xs text-slate">
+                        Created {new Date(item.created_at).toLocaleDateString('en-US', {
+                          month: 'short',
+                          day: 'numeric',
+                          year: 'numeric'
+                        })}
+                      </p>
+                    </Link>
+                  </div>
+                </SpotlightCard>
+              </motion.div>
             )
           })}
-        </div>
+        </motion.div>
       )}
 
       {/* Bulk Action Bar */}

@@ -1,5 +1,8 @@
+'use client'
+
 import { ArrowUp, ArrowDown } from 'lucide-react'
 import Link from 'next/link'
+import { SpotlightCard } from '@/components/ui/spotlight-card'
 
 interface StatCardProps {
   label: string
@@ -21,12 +24,7 @@ export function StatCard({ label, value, trend, cta, size = 'default', icon }: S
   const isHero = size === 'hero'
   
   return (
-    <div className={`
-      bg-charcoal rounded-lg border border-mid-gray 
-      hover:border-red-primary/30 transition-all duration-300
-      h-full flex flex-col
-      ${isHero ? 'p-8' : 'p-6'}
-    `}>
+    <SpotlightCard className={`h-full flex flex-col ${isHero ? 'p-8' : 'p-6'}`}>
       {/* Label */}
       <div className="flex items-center justify-between mb-2">
         <p className="text-xs text-silver uppercase tracking-wide font-medium">
@@ -73,6 +71,6 @@ export function StatCard({ label, value, trend, cta, size = 'default', icon }: S
           {cta.label} →
         </Link>
       )}
-    </div>
+    </SpotlightCard>
   )
 }
