@@ -117,18 +117,18 @@ export function KanbanBoard({
   const sensors = useSensors(
     useSensor(MouseSensor, {
       activationConstraint: {
-        distance: 10,
+        distance: 8, // 8px movement before drag starts
       },
     }),
     useSensor(TouchSensor, {
       activationConstraint: {
-        delay: 150,
-        tolerance: 8,
+        delay: 250, // 250ms long-press to drag (prevents scroll conflict)
+        tolerance: 5, // 5px tolerance during long-press
       },
     }),
     useSensor(PointerSensor, {
       activationConstraint: {
-        distance: 10,
+        distance: 8,
       },
     })
   )
@@ -142,6 +142,11 @@ export function KanbanBoard({
 
   function handleDragStart(event: DragStartEvent) {
     setActiveId(event.active.id as string)
+    
+    // Haptic feedback on mobile
+    if ('vibrate' in navigator) {
+      navigator.vibrate(50)
+    }
   }
 
   async function handleDragEnd(event: DragEndEvent) {
@@ -207,6 +212,11 @@ export function KanbanBoard({
     // Update database
     try {
       await updateProjectStatus(activeId, newStatus, newPosition)
+      
+      // Haptic feedback on successful drop
+      if ('vibrate' in navigator) {
+        navigator.vibrate([30, 20, 30])
+      }
     } catch (error) {
       console.error('Failed to update project:', error)
       // Revert on error
@@ -402,46 +412,86 @@ export function KanbanBoard({
         </DndContext>
       </div>
 
-      {/* Mobile: Horizontal Scroll Columns */}
+      {/* Mobile: Horizontal Scroll Columns with Touch Drag */}
       <div className="lg:hidden pb-20">
-        <div className="overflow-x-auto scrollbar-hide" style={{ WebkitOverflowScrolling: 'touch', scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
-          <div className="flex gap-4 min-w-max px-4 py-4">
-            {columns.map((column) => {
-              const columnProjects = getProjectsByStatus(column.id)
-              
-              return (
-                <div key={column.id} className="w-[85vw] flex-shrink-0">
-                  <div className="flex flex-col h-full">
-                    {/* Column Header */}
-                    <div className="bg-charcoal border border-mid-gray rounded-t-lg px-4 py-3 border-b border-mid-gray">
-                      <div className="flex items-center justify-between">
-                        <h2 className="font-semibold text-foreground">{column.title}</h2>
-                        <span className="text-xs font-medium text-slate">{columnProjects.length}</span>
-                      </div>
-                    </div>
-                    
-                    {/* Column Content */}
-                    <div className="bg-charcoal border-l border-r border-b border-mid-gray rounded-b-lg p-4 space-y-3 min-h-[400px]">
-                      {columnProjects.length === 0 ? (
-                        <div className="flex items-center justify-center h-32 text-sm text-slate">
-                          No projects
-                        </div>
-                      ) : (
-                        columnProjects.map((project) => (
-                          <ProjectCard
-                            key={project.id}
-                            project={project}
-                            onClick={() => setSelectedProject(project)}
-                          />
-                        ))
-                      )}
-                    </div>
+        <DndContext
+          sensors={sensors}
+          onDragStart={handleDragStart}
+          onDragEnd={handleDragEnd}
+          onDragCancel={handleDragCancel}
+        >
+          <div className="overflow-x-auto scrollbar-hide" style={{ WebkitOverflowScrolling: 'touch', scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+            <div className="flex gap-4 min-w-max px-4 py-4">
+              {columns.map((column) => {
+                const columnProjects = getProjectsByStatus(column.id)
+                
+                return (
+                  <div key={column.id} className="w-[85vw] flex-shrink-0">
+                    <DroppableColumn
+                      id={column.id}
+                      title={column.title}
+                      count={columnProjects.length}
+                    >
+                      <SortableContext
+                        items={columnProjects.map(p => p.id)}
+                        strategy={verticalListSortingStrategy}
+                      >
+                        {columnProjects.length === 0 ? (
+                          <div className="flex items-center justify-center h-32 text-sm text-slate">
+                            Long-press to drag
+                          </div>
+                        ) : (
+                          columnProjects.map((project) => (
+                            <div key={project.id} className="touch-manipulation">
+                              <ProjectCard
+                                project={project}
+                                onClick={() => setSelectedProject(project)}
+                              />
+                            </div>
+                          ))
+                        )}
+                      </SortableContext>
+                    </DroppableColumn>
                   </div>
-                </div>
-              )
-            })}
+                )
+              })}
+            </div>
           </div>
-        </div>
+
+          {/* Mobile Drag Overlay */}
+          <DragOverlay>
+            {activeProject ? (
+              <div className="w-[80vw] bg-charcoal border-2 border-red-primary rounded-lg p-4 shadow-2xl transform scale-105 touch-none">
+                <h3 className="font-semibold text-foreground mb-2">
+                  {activeProject.name}
+                </h3>
+                {activeProject.description && (
+                  <p className="text-sm text-silver mb-3 line-clamp-2">
+                    {activeProject.description}
+                  </p>
+                )}
+                <div className="mb-3">
+                  <span className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium rounded bg-info/20 text-info border border-info/30">
+                    {activeProject.clients?.name || 'Unknown Client'}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between text-xs gap-2">
+                  <span className="px-2 py-1 rounded font-medium bg-info/20 text-info border border-info/30">
+                    {activeProject.priority}
+                  </span>
+                  {activeProject.due_date && (
+                    <span className="text-slate">
+                      {new Date(activeProject.due_date).toLocaleDateString('en-US', {
+                        month: 'short',
+                        day: 'numeric'
+                      })}
+                    </span>
+                  )}
+                </div>
+              </div>
+            ) : null}
+          </DragOverlay>
+        </DndContext>
       </div>
 
       {/* Project Modal */}
