@@ -54,9 +54,19 @@ export function ProjectCard({ project, onClick }: ProjectCardProps) {
       {...attributes}
       {...listeners}
       onClick={onClick}
-      className="cursor-grab active:cursor-grabbing"
+      className={`
+        cursor-grab active:cursor-grabbing
+        touch-manipulation
+        ${isDragging ? 'opacity-50 scale-95' : 'active:scale-98'}
+      `}
     >
-      <SpotlightCard className="p-4 hover:border-red-bright/50 transition-all duration-200 h-full">
+      <SpotlightCard className={`
+        p-4 transition-all duration-200 h-full
+        ${isDragging 
+          ? 'border-red-primary shadow-lg' 
+          : 'hover:border-red-bright/50'
+        }
+      `}>
       <h3 className="font-semibold text-foreground mb-2">
         {project.name}
       </h3>
