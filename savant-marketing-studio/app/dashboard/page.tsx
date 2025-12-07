@@ -204,8 +204,10 @@ const ActivityCard = ({
             </div>
           </div>
           
-          {/* Arrow - hidden on mobile via CSS to prevent hydration mismatch */}
-          <ChevronRight className="hidden md:block w-5 h-5 text-muted-foreground group-hover:text-red-primary transition-colors flex-shrink-0" />
+          {/* Arrow (desktop only) */}
+          {!isMobile && (
+            <ChevronRight className="w-5 h-5 text-muted-foreground group-hover:text-red-primary transition-colors flex-shrink-0" />
+          )}
         </div>
       </SpotlightCard>
     </Link>

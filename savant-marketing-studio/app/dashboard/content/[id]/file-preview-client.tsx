@@ -4,8 +4,8 @@ import { useState, useEffect } from 'react'
 import { getJournalEntriesByContent, getJournalEntriesByClient } from '@/app/actions/journal'
 import { highlightMentions } from '@/lib/utils/mentions'
 import Link from 'next/link'
-import Image from 'next/image'
-import { FileText, ExternalLink } from 'lucide-react'
+import { ExternalLink } from 'lucide-react'
+import { ResponsiveFilePreview } from '@/components/responsive-file-preview'
 
 interface Content {
   id: string
@@ -73,10 +73,6 @@ export function FilePreviewClient({ content }: Props) {
     }
     fetchJournalEntries()
   }, [content.id, content.client_id, content.title])
-
-  // Determine if file is an image
-  const isImage = content.file_type?.startsWith('image/')
-  const isPDF = content.file_type === 'application/pdf'
 
   return (
     <div className="space-y-8 pb-8">
@@ -246,37 +242,14 @@ export function FilePreviewClient({ content }: Props) {
       </div>
 
       {/* File Preview Section */}
-      <div className="bg-charcoal border border-mid-gray rounded-xl p-8 hover:border-red-bright/50 transition-all duration-200">
-        <h2 className="text-2xl font-semibold text-foreground mb-6">Preview</h2>
+      <div className="bg-charcoal border border-mid-gray rounded-xl p-4 md:p-8 hover:border-red-bright/50 transition-all duration-200">
+        <h2 className="text-xl md:text-2xl font-semibold text-foreground mb-4 md:mb-6">Preview</h2>
         
-        {isImage ? (
-          <div className="relative rounded-lg overflow-hidden border border-mid-gray min-h-[300px]">
-            <Image
-              src={content.file_url || ''}
-              alt={content.title || 'File preview'}
-              fill
-              className="object-contain"
-              sizes="(min-width: 1024px) 800px, 100vw"
-              priority
-            />
-          </div>
-        ) : isPDF ? (
-          <div className="rounded-lg overflow-hidden border border-mid-gray bg-dark-gray" style={{ height: '800px' }}>
-            <iframe
-              src={content.file_url || ''}
-              className="w-full h-full"
-              title={content.title}
-            />
-          </div>
-        ) : (
-          <div className="text-center py-16 border-2 border-dashed border-mid-gray rounded-lg">
-            <FileText size={48} className="mx-auto text-slate mb-4" />
-            <h3 className="text-base font-medium text-foreground mb-2">Preview not available</h3>
-            <p className="text-sm text-silver">
-              Click the download button above to view this file
-            </p>
-          </div>
-        )}
+        <ResponsiveFilePreview
+          fileUrl={content.file_url || ''}
+          fileName={content.title}
+          fileType={content.file_type}
+        />
       </div>
     </div>
   )
