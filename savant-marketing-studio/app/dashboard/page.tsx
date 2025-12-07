@@ -215,6 +215,8 @@ const ActivityCard = ({
 }
 
 export default function DashboardPage() {
+  // Screen size detection available for future responsive features
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const { isMobile, isTablet } = useScreenSize()
 
   interface ActivityItem {
