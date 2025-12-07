@@ -4,8 +4,11 @@ import { useState, useEffect } from 'react'
 
 export function useMediaQuery(query: string): boolean {
   const [matches, setMatches] = useState(false)
+  const [mounted, setMounted] = useState(false)
 
   useEffect(() => {
+    setMounted(true)
+    
     // Handle SSR safely
     if (typeof window === 'undefined') return
 
@@ -27,6 +30,12 @@ export function useMediaQuery(query: string): boolean {
       return () => media.removeListener(listener)
     }
   }, [query])
+
+  // Return false during SSR to prevent hydration mismatch
+  // This ensures server and initial client render are identical
+  if (!mounted) {
+    return false
+  }
 
   return matches
 }
