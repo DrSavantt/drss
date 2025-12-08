@@ -1,9 +1,8 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useMobile } from '@/hooks/use-mobile'
-import { Download, ZoomIn, ZoomOut, Maximize2, Minimize2 } from 'lucide-react'
-import Image from 'next/image'
+import { Download, ZoomIn, ZoomOut, Maximize2, Minimize2, ExternalLink } from 'lucide-react'
 
 interface ResponsiveFilePreviewProps {
   fileUrl: string
@@ -22,15 +21,35 @@ export function ResponsiveFilePreview({
   const [zoom, setZoom] = useState(1)
   const [isFullscreen, setIsFullscreen] = useState(false)
   
+  // Debug logging
+  useEffect(() => {
+    console.log('FilePreview - URL:', fileUrl)
+    console.log('FilePreview - Type:', fileType)
+    console.log('FilePreview - Name:', fileName)
+  }, [fileUrl, fileType, fileName])
+  
   const isPDF = fileType === 'application/pdf' || fileName.endsWith('.pdf')
   const isImage = fileType?.startsWith('image/')
+  const isVideo = fileType?.startsWith('video/')
+  const isWordDoc = fileType?.includes('wordprocessingml') || 
+                    fileType?.includes('msword') ||
+                    fileName.match(/\.(doc|docx)$/i)
+  
+  // More debug logging
+  useEffect(() => {
+    console.log('FilePreview - Is PDF:', isPDF)
+    console.log('FilePreview - Is Image:', isImage)
+    console.log('FilePreview - Is Video:', isVideo)
+    console.log('FilePreview - Is Word Doc:', isWordDoc)
+  }, [isPDF, isImage, isVideo, isWordDoc])
 
   return (
     <div className={`flex flex-col ${className}`}>
       {/* Preview Controls */}
-      <div className="flex items-center justify-between mb-4 p-3 bg-surface rounded-lg border border-border">
+      <div className="flex items-center justify-between mb-4 p-4 bg-surface rounded-lg border border-border">
         <div className="flex-1 min-w-0">
-          <p className="text-xs text-muted-foreground truncate">
+          <h3 className="font-semibold text-foreground mb-1">{fileName}</h3>
+          <p className="text-sm text-muted-foreground">
             {fileType || 'Unknown type'}
           </p>
         </div>
@@ -91,42 +110,53 @@ export function ResponsiveFilePreview({
           <a
             href={fileUrl}
             download={fileName}
-            className="p-2 rounded-lg hover:bg-surface-highlight transition-colors"
-            aria-label="Download file"
-            title="Download file"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="px-4 py-2 bg-red-primary hover:bg-red-bright text-white 
+              rounded-lg transition-colors flex items-center gap-2"
           >
-            <Download className="w-4 h-4 text-foreground" />
+            <Download className="w-4 h-4" />
+            Download
           </a>
         </div>
       </div>
 
       {/* Preview Container */}
       <div className={`
-        rounded-lg overflow-hidden border border-border
-        ${isFullscreen ? 'fixed inset-0 z-50 bg-background' : 'bg-surface'}
+        rounded-lg overflow-hidden border border-border bg-white
+        ${isFullscreen ? 'fixed inset-0 z-50' : ''}
       `}>
         {isPDF ? (
-          <div className={`
-            mx-auto bg-white
-            ${isMobile 
-              ? 'w-full' 
-              : 'max-w-5xl' // Desktop: 1024px max width for better readability
-            }
-          `}>
-            <iframe
-              src={`${fileUrl}#view=FitH&toolbar=1&navpanes=0`}
-              className={`
-                w-full border-0
-                ${isMobile 
-                  ? 'h-[60vh] min-h-[400px]' // Mobile: 60% viewport height, min 400px
-                  : isFullscreen
-                    ? 'h-screen'
-                    : 'h-[600px] lg:h-[700px] xl:h-[800px]' // Desktop: responsive heights
-                }
-              `}
-              title={fileName}
-              sandbox="allow-same-origin allow-scripts allow-downloads"
-            />
+          <div className="w-full max-w-4xl mx-auto">
+            {/* Try object tag first for better PDF rendering */}
+            <object
+              data={fileUrl}
+              type="application/pdf"
+              className="w-full border-0"
+              style={{ height: '800px' }}
+            >
+              {/* Fallback to iframe */}
+              <iframe
+                src={fileUrl}
+                className="w-full border-0"
+                style={{ height: '800px' }}
+                title={fileName}
+                sandbox="allow-same-origin allow-scripts allow-popups"
+              />
+            </object>
+            
+            {/* Always show direct link as backup */}
+            <div className="mt-4 text-center p-4 bg-surface">
+              <a
+                href={fileUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-red-primary hover:underline inline-flex items-center gap-2"
+              >
+                <ExternalLink className="w-4 h-4" />
+                Open PDF in new tab
+              </a>
+            </div>
           </div>
         ) : isImage ? (
           <div className={`
@@ -134,48 +164,74 @@ export function ResponsiveFilePreview({
             ${isFullscreen ? 'h-screen p-8' : 'min-h-[400px] p-4'}
             bg-background
           `}>
-            <div 
-              className="relative w-full h-full transition-transform duration-200 ease-out"
+            <img
+              src={fileUrl}
+              alt={fileName}
+              className="w-full h-auto object-contain transition-transform duration-200 ease-out"
               style={{
                 transform: `scale(${zoom})`,
-                transformOrigin: 'center',
                 maxWidth: isFullscreen ? '100%' : isMobile ? '100%' : '900px',
                 maxHeight: isFullscreen ? '100%' : isMobile ? '60vh' : '700px'
               }}
+            />
+          </div>
+        ) : isVideo ? (
+          <div className="w-full max-w-4xl mx-auto p-4">
+            <video
+              src={fileUrl}
+              controls
+              className="w-full rounded-lg"
+              style={{ maxHeight: '600px' }}
             >
-              <Image
-                src={fileUrl}
-                alt={fileName}
-                fill
-                className="object-contain"
-                sizes={isFullscreen 
-                  ? '100vw' 
-                  : isMobile 
-                    ? '(max-width: 768px) 100vw' 
-                    : '(max-width: 1024px) 800px, 900px'
-                }
-                priority
-                quality={90}
-              />
+              Your browser doesn&apos;t support video playback.
+            </video>
+          </div>
+        ) : isWordDoc ? (
+          <div className="w-full max-w-4xl mx-auto">
+            {/* Google Docs Viewer for Word documents */}
+            <iframe
+              src={`https://docs.google.com/viewer?url=${encodeURIComponent(fileUrl)}&embedded=true`}
+              className="w-full border-0"
+              style={{ height: '800px', backgroundColor: 'white' }}
+              title={fileName}
+            />
+            
+            {/* Fallback download if viewer fails */}
+            <div className="mt-4 text-center p-4 bg-surface rounded-lg">
+              <p className="text-sm text-muted-foreground mb-2">
+                Having trouble viewing?
+              </p>
+              <a
+                href={fileUrl}
+                download={fileName}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-red-primary hover:underline inline-flex items-center gap-2"
+              >
+                <Download className="w-4 h-4" />
+                Download document →
+              </a>
             </div>
           </div>
         ) : (
-          <div className="flex flex-col items-center justify-center h-64 text-center p-8">
+          <div className="flex flex-col items-center justify-center p-12 text-center min-h-[400px]">
             <div className="text-6xl mb-4">📄</div>
-            <p className="text-lg font-medium text-foreground mb-2">
+            <h3 className="text-xl font-semibold text-foreground mb-2">
               Preview not available
-            </p>
-            <p className="text-sm text-muted-foreground mb-4">
+            </h3>
+            <p className="text-muted-foreground mb-6">
               {fileType || 'Unknown file type'}
             </p>
             <a
               href={fileUrl}
               download={fileName}
-              className="px-6 py-3 bg-red-primary hover:bg-red-bright text-white
+              target="_blank"
+              rel="noopener noreferrer"
+              className="px-6 py-3 bg-red-primary hover:bg-red-bright text-white 
                 rounded-lg font-semibold transition-colors inline-flex items-center gap-2"
             >
               <Download className="w-4 h-4" />
-              Download File
+              Download to view
             </a>
           </div>
         )}
