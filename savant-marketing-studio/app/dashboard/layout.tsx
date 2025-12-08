@@ -9,6 +9,7 @@ import { ThemeToggle } from '@/components/theme-toggle'
 import { CommandPalette } from '@/components/command-palette'
 import Link from 'next/link'
 import { useState, useEffect } from 'react'
+import { usePathname } from 'next/navigation'
 
 export default function DashboardLayout({
   children,
@@ -16,6 +17,7 @@ export default function DashboardLayout({
   children: React.ReactNode
 }) {
   const [userEmail, setUserEmail] = useState<string | null>(null)
+  const pathname = usePathname()
 
   useEffect(() => {
     // Fetch user on client side
@@ -52,31 +54,61 @@ export default function DashboardLayout({
             <nav className="flex gap-6">
               <Link 
                 href="/dashboard" 
-                className="text-sm font-medium text-silver hover:text-foreground transition-colors no-underline"
+                className={`
+                  text-sm font-medium transition-colors no-underline px-3 py-1.5 rounded-lg
+                  ${pathname === '/dashboard'
+                    ? 'text-red-primary bg-red-primary/10 font-semibold'
+                    : 'text-silver hover:text-foreground hover:bg-surface-highlight'
+                  }
+                `}
               >
                 Dashboard
               </Link>
               <Link 
                 href="/dashboard/clients" 
-                className="text-sm font-medium text-silver hover:text-foreground transition-colors no-underline"
+                className={`
+                  text-sm font-medium transition-colors no-underline px-3 py-1.5 rounded-lg
+                  ${pathname.startsWith('/dashboard/clients')
+                    ? 'text-red-primary bg-red-primary/10 font-semibold'
+                    : 'text-silver hover:text-foreground hover:bg-surface-highlight'
+                  }
+                `}
               >
                 Clients
               </Link>
               <Link 
                 href="/dashboard/projects/board" 
-                className="text-sm font-medium text-silver hover:text-foreground transition-colors no-underline"
+                className={`
+                  text-sm font-medium transition-colors no-underline px-3 py-1.5 rounded-lg
+                  ${pathname.startsWith('/dashboard/projects')
+                    ? 'text-red-primary bg-red-primary/10 font-semibold'
+                    : 'text-silver hover:text-foreground hover:bg-surface-highlight'
+                  }
+                `}
               >
                 Projects
               </Link>
               <Link 
                 href="/dashboard/content" 
-                className="text-sm font-medium text-silver hover:text-foreground transition-colors no-underline"
+                className={`
+                  text-sm font-medium transition-colors no-underline px-3 py-1.5 rounded-lg
+                  ${pathname.startsWith('/dashboard/content')
+                    ? 'text-red-primary bg-red-primary/10 font-semibold'
+                    : 'text-silver hover:text-foreground hover:bg-surface-highlight'
+                  }
+                `}
               >
                 Content
               </Link>
               <Link 
                 href="/dashboard/journal" 
-                className="text-sm font-medium text-silver hover:text-foreground transition-colors no-underline"
+                className={`
+                  text-sm font-medium transition-colors no-underline px-3 py-1.5 rounded-lg
+                  ${pathname.startsWith('/dashboard/journal')
+                    ? 'text-red-primary bg-red-primary/10 font-semibold'
+                    : 'text-silver hover:text-foreground hover:bg-surface-highlight'
+                  }
+                `}
               >
                 Journal
               </Link>

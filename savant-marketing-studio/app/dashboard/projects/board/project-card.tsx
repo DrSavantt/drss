@@ -38,6 +38,7 @@ export function ProjectCard({ project, onClick }: ProjectCardProps) {
     transform: CSS.Transform.toString(transform),
     transition,
     opacity: isDragging ? 0.5 : 1,
+    touchAction: 'none' as const,
   }
 
   const priorityColors = {
@@ -56,7 +57,7 @@ export function ProjectCard({ project, onClick }: ProjectCardProps) {
       onClick={onClick}
       className={`
         cursor-grab active:cursor-grabbing
-        touch-manipulation
+        touch-manipulation touch-none select-none
         ${isDragging ? 'opacity-50 scale-95' : 'active:scale-98'}
       `}
     >

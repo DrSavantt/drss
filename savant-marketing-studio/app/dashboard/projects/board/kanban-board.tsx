@@ -122,8 +122,8 @@ export function KanbanBoard({
     }),
     useSensor(TouchSensor, {
       activationConstraint: {
-        delay: 250, // 250ms long-press to drag (prevents scroll conflict)
-        tolerance: 5, // 5px tolerance during long-press
+        delay: 150, // 150ms long-press to drag (prevents scroll conflict)
+        tolerance: 8, // 8px tolerance during long-press
       },
     }),
     useSensor(PointerSensor, {
@@ -143,6 +143,10 @@ export function KanbanBoard({
   function handleDragStart(event: DragStartEvent) {
     setActiveId(event.active.id as string)
     
+    // Prevent scrolling during drag on mobile
+    document.body.style.overflow = 'hidden'
+    document.body.style.touchAction = 'none'
+    
     // Haptic feedback on mobile
     if ('vibrate' in navigator) {
       navigator.vibrate(50)
@@ -151,6 +155,10 @@ export function KanbanBoard({
 
   async function handleDragEnd(event: DragEndEvent) {
     const { active, over } = event
+    
+    // Restore scrolling and touch behavior on mobile
+    document.body.style.overflow = ''
+    document.body.style.touchAction = ''
     
     if (!over) {
       setActiveId(null)
@@ -420,7 +428,7 @@ export function KanbanBoard({
           onDragEnd={handleDragEnd}
           onDragCancel={handleDragCancel}
         >
-          <div className="overflow-x-auto scrollbar-hide" style={{ WebkitOverflowScrolling: 'touch', scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+          <div className="overflow-x-auto scrollbar-hide touch-pan-y" style={{ WebkitOverflowScrolling: 'touch', scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
             <div className="flex gap-4 min-w-max px-4 py-4">
               {columns.map((column) => {
                 const columnProjects = getProjectsByStatus(column.id)

@@ -66,8 +66,13 @@ const ActionTile = ({
           {/* Count badge (optional) */}
           {count !== undefined && (
             <div className="absolute top-2 right-2 md:top-3 md:right-3 bg-red-primary/20 backdrop-blur-sm 
-              px-2 md:px-3 py-0.5 md:py-1 rounded-full text-xs md:text-sm font-bold text-red-primary border border-red-primary/30">
-              {count}
+              px-2 md:px-3 py-0.5 md:py-1 rounded-full flex items-center gap-1.5 border border-red-primary/30">
+              <div className="text-xs md:text-sm text-red-primary">
+                {icon}
+              </div>
+              <span className="text-xs md:text-sm font-bold text-red-primary">
+                {count}
+              </span>
             </div>
           )}
           
@@ -356,14 +361,6 @@ export default function DashboardPage() {
         >
           <motion.div variants={metroItemVariants}>
             <ActionTile
-              icon={<FileText />}
-              label="Content"
-              href="/dashboard/content"
-              count={totalContent}
-            />
-          </motion.div>
-          <motion.div variants={metroItemVariants}>
-            <ActionTile
               icon={<Users />}
               label="Client"
               href="/dashboard/clients/new"
@@ -376,6 +373,14 @@ export default function DashboardPage() {
               label="Project"
               href="/dashboard/projects/board"
               count={totalProjects}
+            />
+          </motion.div>
+          <motion.div variants={metroItemVariants}>
+            <ActionTile
+              icon={<FileText />}
+              label="Content"
+              href="/dashboard/content"
+              count={totalContent}
             />
           </motion.div>
           <motion.div variants={metroItemVariants}>
