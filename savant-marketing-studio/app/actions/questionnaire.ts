@@ -11,6 +11,10 @@ export async function saveQuestionnaire(
   try {
     const supabase = await createClient();
 
+    if (!supabase) {
+      return { success: false, error: 'Failed to connect to database' };
+    }
+
     // Structure as JSONB for database
     const intakeResponses = {
       version: '1.0',
@@ -87,11 +91,12 @@ export async function saveQuestionnaire(
     revalidatePath('/dashboard/clients');
 
     return { success: true };
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Failed to save questionnaire:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Failed to save questionnaire';
     return {
       success: false,
-      error: error?.message || 'Failed to save questionnaire',
+      error: errorMessage,
     };
   }
 }

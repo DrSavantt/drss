@@ -2,7 +2,6 @@
 
 import { useState } from 'react';
 import QuestionWrapper from '@/components/questionnaire/question-types/question-wrapper';
-import ShortTextQuestion from '@/components/questionnaire/question-types/short-text-question';
 import LongTextQuestion from '@/components/questionnaire/question-types/long-text-question';
 import MultipleChoiceQuestion from '@/components/questionnaire/question-types/multiple-choice-question';
 import { HelpPanel, HelpContent } from '@/components/questionnaire/help-system';

@@ -41,7 +41,7 @@ export default function QuestionnaireReview({ clientId }: Props) {
         setError(result.error || 'Failed to save questionnaire');
         setSubmitting(false);
       }
-    } catch (err) {
+    } catch {
       setError('An unexpected error occurred');
       setSubmitting(false);
     }

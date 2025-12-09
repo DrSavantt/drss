@@ -12,7 +12,7 @@ interface UseQuestionnaireFormReturn {
   progress: number;
   saveStatus: FormStatus;
   updateQuestion: (questionId: string, value: string | string[]) => void;
-  validateQuestion: (questionId: string) => string | null;
+  validateQuestion: (questionId: string) => string | undefined;
   markQuestionCompleted: (questionId: string) => void;
   goToSection: (sectionNumber: number) => void;
   manualSave: () => void;
@@ -153,18 +153,22 @@ export function useQuestionnaireForm(clientId: string): UseQuestionnaireFormRetu
   }, []);
 
   // Validate question
-  const validateQuestion = useCallback((questionId: string): string | null => {
+  const validateQuestion = useCallback((questionId: string): string | undefined => {
     const schema = questionSchemas[questionId];
-    if (!schema) return null;
+    if (!schema) return undefined;
 
     // Get the value from formData
     const value = getQuestionValue(questionId, formData);
 
     try {
       schema.parse(value);
-      return null;
-    } catch (error: any) {
-      return error.errors?.[0]?.message || 'Invalid input';
+      return undefined;
+    } catch (error: unknown) {
+      if (error && typeof error === 'object' && 'errors' in error) {
+        const zodError = error as { errors: Array<{ message: string }> };
+        return zodError.errors?.[0]?.message || 'Invalid input';
+      }
+      return 'Invalid input';
     }
   }, [formData]);
 
@@ -254,35 +258,35 @@ function getQuestionKey(questionId: string): string {
 }
 
 // Helper function to get question value from formData
-function getQuestionValue(questionId: string, formData: QuestionnaireData): any {
+function getQuestionValue(questionId: string, formData: QuestionnaireData): string | string[] {
   const key = `${questionId}_${getQuestionKey(questionId)}`;
   
   if (questionId.startsWith('q1') || questionId.startsWith('q2') || 
       questionId.startsWith('q3') || questionId.startsWith('q4') || 
       questionId.startsWith('q5')) {
-    return (formData.avatar_definition as any)[key];
+    return (formData.avatar_definition as Record<string, string | string[]>)[key] || '';
   } else if (questionId.startsWith('q6') || questionId.startsWith('q7') || 
              questionId.startsWith('q8') || questionId.startsWith('q9') || 
              questionId.startsWith('q10')) {
-    return (formData.dream_outcome as any)[key];
+    return (formData.dream_outcome as Record<string, string>)[key] || '';
   } else if (questionId.startsWith('q11') || questionId.startsWith('q12') || 
              questionId.startsWith('q13') || questionId.startsWith('q14') || 
              questionId.startsWith('q15')) {
-    return (formData.problems_obstacles as any)[key];
+    return (formData.problems_obstacles as Record<string, string>)[key] || '';
   } else if (questionId.startsWith('q16') || questionId.startsWith('q17') || 
              questionId.startsWith('q18') || questionId.startsWith('q19')) {
-    return (formData.solution_methodology as any)[key];
+    return (formData.solution_methodology as Record<string, string>)[key] || '';
   } else if (questionId.startsWith('q20') || questionId.startsWith('q21') || 
              questionId.startsWith('q22') || questionId.startsWith('q23')) {
-    return (formData.brand_voice as any)[key];
+    return (formData.brand_voice as Record<string, string>)[key] || '';
   } else if (questionId.startsWith('q24') || questionId.startsWith('q25') || 
              questionId.startsWith('q26') || questionId.startsWith('q27')) {
-    return (formData.proof_transformation as any)[key];
+    return (formData.proof_transformation as Record<string, string>)[key] || '';
   } else if (questionId.startsWith('q28') || questionId.startsWith('q29') || 
              questionId.startsWith('q30')) {
-    return (formData.faith_integration as any)[key];
+    return (formData.faith_integration as Record<string, string>)[key] || '';
   } else if (questionId.startsWith('q31') || questionId.startsWith('q32')) {
-    return (formData.business_metrics as any)[key];
+    return (formData.business_metrics as Record<string, string>)[key] || '';
   }
   
   return '';

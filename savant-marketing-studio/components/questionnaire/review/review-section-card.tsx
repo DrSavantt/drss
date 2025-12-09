@@ -6,7 +6,7 @@ import { Check, ChevronDown, ChevronUp, AlertCircle } from 'lucide-react';
 interface ReviewSectionCardProps {
   sectionNumber: number;
   title: string;
-  questions: Record<string, any>;
+  questions: Record<string, string | string[]>;
   questionKeys: string[];
   requiredQuestions: string[];
   completedQuestions: Set<string>;

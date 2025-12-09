@@ -6,9 +6,9 @@ interface LongTextQuestionProps {
   value: string;
   onChange: (value: string) => void;
   placeholder?: string;
-  minLength?: number;
   maxLength?: number;
   error?: string;
+  minLength?: number;
 }
 
 export default function LongTextQuestion({
