@@ -85,5 +85,37 @@ export const helpGuide: Record<string, HelpGuideEntry> = {
     goodExample: "LinkedIn daily, listens to 'My First Million' podcast, attends local BNI meetings",
     weakExample: "Social media",
     quickTip: "You need to be where they already are - can't create new behavior."
+  },
+  q33: {
+    title: "Upload brand assets (optional)",
+    whereToFind: [
+      "Your design files",
+      "Brand style guide",
+      "Marketing materials"
+    ],
+    howToExtract: [
+      "Logos (PNG, SVG, AI)",
+      "Brand style guides (PDF)",
+      "Color palettes and fonts"
+    ],
+    goodExample: "Logo files, brand guidelines PDF, color palette reference",
+    weakExample: "Low-resolution screenshots",
+    quickTip: "Upload high-quality files - we'll use these for content creation."
+  },
+  q34: {
+    title: "Upload proof materials (optional)",
+    whereToFind: [
+      "Testimonial screenshots",
+      "Case study documents",
+      "Results screenshots"
+    ],
+    howToExtract: [
+      "Client testimonials (images/PDFs)",
+      "Before/after screenshots",
+      "Case study documents"
+    ],
+    goodExample: "Client testimonial screenshots, case study PDFs, results dashboards",
+    weakExample: "Blurry or incomplete screenshots",
+    quickTip: "Real proof builds trust - upload your best results and testimonials."
   }
 };

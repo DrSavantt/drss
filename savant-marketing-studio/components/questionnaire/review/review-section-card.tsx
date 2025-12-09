@@ -2,11 +2,12 @@
 
 import { useState } from 'react';
 import { Check, ChevronDown, ChevronUp, AlertCircle } from 'lucide-react';
+import { UploadedFile } from '@/lib/questionnaire/types';
 
 interface ReviewSectionCardProps {
   sectionNumber: number;
   title: string;
-  questions: Record<string, string | string[]>;
+  questions: Record<string, string | string[] | UploadedFile[] | undefined>;
   questionKeys: string[];
   requiredQuestions: string[];
   completedQuestions: Set<string>;
@@ -70,7 +71,20 @@ export default function ReviewSectionCard({
             const questionNumber = key.split('_')[0];
             const isRequired = requiredQuestions.includes(questionNumber);
             const isCompleted = completedQuestions.has(questionNumber);
-            const displayValue = Array.isArray(value) ? value.join(', ') : value;
+            
+            // Handle different value types
+            let displayValue: string;
+            if (Array.isArray(value) && value.length > 0 && typeof value[0] === 'object' && 'name' in value[0]) {
+              // File upload array
+              const files = value as UploadedFile[];
+              displayValue = `${files.length} file(s) uploaded: ${files.map(f => f.name).join(', ')}`;
+            } else if (Array.isArray(value)) {
+              // String array
+              displayValue = value.join(', ');
+            } else {
+              // String
+              displayValue = value || '';
+            }
 
             return (
               <div

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { QuestionnaireData, FormStatus, REQUIRED_QUESTIONS, EMPTY_QUESTIONNAIRE_DATA } from './types';
+import { QuestionnaireData, FormStatus, REQUIRED_QUESTIONS, EMPTY_QUESTIONNAIRE_DATA, UploadedFile } from './types';
 import { questionSchemas } from './validation-schemas';
 import { shouldShowQuestion } from './conditional-logic';
 
@@ -11,7 +11,7 @@ interface UseQuestionnaireFormReturn {
   completedQuestions: Set<string>;
   progress: number;
   saveStatus: FormStatus;
-  updateQuestion: (questionId: string, value: string | string[]) => void;
+  updateQuestion: (questionId: string, value: string | string[] | UploadedFile[]) => void;
   validateQuestion: (questionId: string) => string | undefined;
   validateSection: (sectionNumber: number) => { isValid: boolean; error?: string };
   markQuestionCompleted: (questionId: string) => void;
@@ -95,7 +95,7 @@ export function useQuestionnaireForm(clientId: string): UseQuestionnaireFormRetu
   }, [completedQuestions, formData]);
 
   // Update question value
-  const updateQuestion = useCallback((questionId: string, value: string | string[]) => {
+  const updateQuestion = useCallback((questionId: string, value: string | string[] | UploadedFile[]) => {
     setFormData(prev => {
       const updated = { ...prev };
       
@@ -131,18 +131,20 @@ export function useQuestionnaireForm(clientId: string): UseQuestionnaireFormRetu
           [`${questionId}_${key}`]: value as string
         };
       } else if (questionId.startsWith('q20') || questionId.startsWith('q21') || 
-                 questionId.startsWith('q22') || questionId.startsWith('q23')) {
+                 questionId.startsWith('q22') || questionId.startsWith('q23') ||
+                 questionId === 'q33') {
         const key = getQuestionKey(questionId);
         updated.brand_voice = {
           ...updated.brand_voice,
-          [`${questionId}_${key}`]: value as string
+          [`${questionId}_${key}`]: value as string | UploadedFile[]
         };
       } else if (questionId.startsWith('q24') || questionId.startsWith('q25') || 
-                 questionId.startsWith('q26') || questionId.startsWith('q27')) {
+                 questionId.startsWith('q26') || questionId.startsWith('q27') ||
+                 questionId === 'q34') {
         const key = getQuestionKey(questionId);
         updated.proof_transformation = {
           ...updated.proof_transformation,
-          [`${questionId}_${key}`]: value as string
+          [`${questionId}_${key}`]: value as string | UploadedFile[]
         };
       } else if (questionId.startsWith('q28') || questionId.startsWith('q29') || 
                  questionId.startsWith('q30')) {
@@ -327,6 +329,8 @@ function getQuestionKey(questionId: string): string {
     q30: 'biblical_principles',
     q31: 'annual_revenue',
     q32: 'primary_goal',
+    q33: 'brand_assets',
+    q34: 'proof_assets',
   };
   return keyMap[questionId] || '';
 }
@@ -334,6 +338,9 @@ function getQuestionKey(questionId: string): string {
 // Helper function to get question value from formData
 function getQuestionValue(questionId: string, formData: QuestionnaireData): string | string[] {
   const key = `${questionId}_${getQuestionKey(questionId)}`;
+  
+  // Skip file upload questions - they don't need validation
+  if (questionId === 'q33' || questionId === 'q34') return '';
   
   if (questionId.startsWith('q1') || questionId.startsWith('q2') || 
       questionId.startsWith('q3') || questionId.startsWith('q4') || 
@@ -352,10 +359,12 @@ function getQuestionValue(questionId: string, formData: QuestionnaireData): stri
     return (formData.solution_methodology as Record<string, string>)[key] || '';
   } else if (questionId.startsWith('q20') || questionId.startsWith('q21') || 
              questionId.startsWith('q22') || questionId.startsWith('q23')) {
-    return (formData.brand_voice as Record<string, string>)[key] || '';
+    const value = (formData.brand_voice as Record<string, unknown>)[key];
+    return typeof value === 'string' ? value : '';
   } else if (questionId.startsWith('q24') || questionId.startsWith('q25') || 
              questionId.startsWith('q26') || questionId.startsWith('q27')) {
-    return (formData.proof_transformation as Record<string, string>)[key] || '';
+    const value = (formData.proof_transformation as Record<string, unknown>)[key];
+    return typeof value === 'string' ? value : '';
   } else if (questionId.startsWith('q28') || questionId.startsWith('q29') || 
              questionId.startsWith('q30')) {
     return (formData.faith_integration as Record<string, string>)[key] || '';

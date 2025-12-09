@@ -1,3 +1,12 @@
+export interface UploadedFile {
+  id: string;
+  name: string;
+  size: number;
+  type: string;
+  url?: string;
+  file?: File;
+}
+
 export interface QuestionnaireData {
   avatar_definition: {
     q1_ideal_customer: string;
@@ -31,12 +40,14 @@ export interface QuestionnaireData {
     q21_personality_words: string;
     q22_signature_phrases: string;
     q23_avoid_topics: string;
+    q33_brand_assets?: UploadedFile[]; // Optional: logos, style guides, etc.
   };
   proof_transformation: {
     q24_transformation_story: string;
     q25_measurable_results: string;
     q26_credentials: string;
     q27_guarantees: string;
+    q34_proof_assets?: UploadedFile[]; // Optional: testimonials, case studies, etc.
   };
   faith_integration: {
     q28_faith_preference: string;
@@ -98,12 +109,14 @@ export const EMPTY_QUESTIONNAIRE_DATA: QuestionnaireData = {
     q21_personality_words: '',
     q22_signature_phrases: '',
     q23_avoid_topics: '',
+    q33_brand_assets: [],
   },
   proof_transformation: {
     q24_transformation_story: '',
     q25_measurable_results: '',
     q26_credentials: '',
     q27_guarantees: '',
+    q34_proof_assets: [],
   },
   faith_integration: {
     q28_faith_preference: '',
