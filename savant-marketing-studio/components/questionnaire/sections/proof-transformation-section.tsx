@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import QuestionWrapper from '../question-types/question-wrapper';
 import LongTextQuestion from '../question-types/long-text-question';
+import { FileUploadQuestion } from '../question-types/file-upload-question';
 import SectionContainer from './section-container';
 import { useQuestionnaireForm } from '@/lib/questionnaire/use-questionnaire-form';
 import { HelpPanel, HelpContent } from '../help-system';
@@ -127,6 +128,27 @@ export default function ProofTransformationSection({ clientId }: Props) {
             minLength={30}
             maxLength={500}
             error={validateQuestion('q27')}
+          />
+        </QuestionWrapper>
+
+        <QuestionWrapper
+          questionNumber={34}
+          questionText="Upload proof materials (optional)"
+          isRequired={false}
+          onHelpClick={() => openHelp(34)}
+          estimatedTime="2 min"
+        >
+          <FileUploadQuestion
+            value={formData.proof_transformation.q34_proof_assets || []}
+            onChange={(files) => {
+              updateQuestion('q34', files);
+              markQuestionCompleted('q34');
+            }}
+            label="Proof Materials"
+            description="Upload testimonials, case studies, screenshots, or any proof materials (optional)"
+            maxFiles={5}
+            maxSizeInMB={10}
+            acceptedTypes={['image/*', 'application/pdf', '.doc', '.docx']}
           />
         </QuestionWrapper>
       </SectionContainer>

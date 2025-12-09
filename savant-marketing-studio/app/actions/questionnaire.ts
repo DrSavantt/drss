@@ -2,7 +2,62 @@
 
 import { createClient } from '@/lib/supabase/server';
 import { revalidatePath } from 'next/cache';
-import { QuestionnaireData } from '@/lib/questionnaire/types';
+import { QuestionnaireData, UploadedFile } from '@/lib/questionnaire/types';
+
+/**
+ * Upload files to Supabase Storage
+ */
+async function uploadFiles(
+  supabase: NonNullable<Awaited<ReturnType<typeof createClient>>>,
+  clientId: string,
+  files: UploadedFile[],
+  folder: string
+): Promise<string[]> {
+  const uploadedUrls: string[] = [];
+
+  for (const fileData of files) {
+    if (!fileData.file) {
+      // If file already has a URL (already uploaded), keep it
+      if (fileData.url) {
+        uploadedUrls.push(fileData.url);
+      }
+      continue;
+    }
+
+    try {
+      const file = fileData.file;
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${clientId}/${folder}/${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
+
+      // Convert File to ArrayBuffer then to Uint8Array
+      const arrayBuffer = await file.arrayBuffer();
+      const uint8Array = new Uint8Array(arrayBuffer);
+
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from('questionnaire-uploads')
+        .upload(fileName, uint8Array, {
+          contentType: file.type,
+          upsert: false,
+        });
+
+      if (uploadError) {
+        console.error('Upload error:', uploadError);
+        continue;
+      }
+
+      // Get public URL
+      const { data: urlData } = supabase.storage
+        .from('questionnaire-uploads')
+        .getPublicUrl(uploadData.path);
+
+      uploadedUrls.push(urlData.publicUrl);
+    } catch (error) {
+      console.error('File upload failed:', error);
+    }
+  }
+
+  return uploadedUrls;
+}
 
 export async function saveQuestionnaire(
   clientId: string,
@@ -13,6 +68,18 @@ export async function saveQuestionnaire(
 
     if (!supabase) {
       return { success: false, error: 'Failed to connect to database' };
+    }
+
+    // Upload files if present
+    let brandAssetUrls: string[] = [];
+    let proofAssetUrls: string[] = [];
+
+    if (data.brand_voice.q33_brand_assets && data.brand_voice.q33_brand_assets.length > 0) {
+      brandAssetUrls = await uploadFiles(supabase, clientId, data.brand_voice.q33_brand_assets, 'brand-assets');
+    }
+
+    if (data.proof_transformation.q34_proof_assets && data.proof_transformation.q34_proof_assets.length > 0) {
+      proofAssetUrls = await uploadFiles(supabase, clientId, data.proof_transformation.q34_proof_assets, 'proof-assets');
     }
 
     // Structure as JSONB for database
@@ -52,12 +119,14 @@ export async function saveQuestionnaire(
           q21_personality_words: data.brand_voice.q21_personality_words,
           q22_signature_phrases: data.brand_voice.q22_signature_phrases,
           q23_avoid_topics: data.brand_voice.q23_avoid_topics,
+          q33_brand_assets: brandAssetUrls,
         },
         proof_transformation: {
           q24_transformation_story: data.proof_transformation.q24_transformation_story,
           q25_measurable_results: data.proof_transformation.q25_measurable_results,
           q26_credentials: data.proof_transformation.q26_credentials,
           q27_guarantees: data.proof_transformation.q27_guarantees,
+          q34_proof_assets: proofAssetUrls,
         },
         faith_integration: {
           q28_faith_preference: data.faith_integration.q28_faith_preference,

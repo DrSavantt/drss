@@ -5,6 +5,7 @@ import QuestionWrapper from '../question-types/question-wrapper';
 import LongTextQuestion from '../question-types/long-text-question';
 import ShortTextQuestion from '../question-types/short-text-question';
 import MultipleChoiceQuestion from '../question-types/multiple-choice-question';
+import { FileUploadQuestion } from '../question-types/file-upload-question';
 import SectionContainer from './section-container';
 import { useQuestionnaireForm } from '@/lib/questionnaire/use-questionnaire-form';
 import { HelpPanel, HelpContent } from '../help-system';
@@ -130,6 +131,27 @@ export default function BrandVoiceSection({ clientId }: Props) {
             minLength={20}
             maxLength={500}
             error={validateQuestion('q23')}
+          />
+        </QuestionWrapper>
+
+        <QuestionWrapper
+          questionNumber={33}
+          questionText="Upload brand assets (optional)"
+          isRequired={false}
+          onHelpClick={() => openHelp(33)}
+          estimatedTime="2 min"
+        >
+          <FileUploadQuestion
+            value={formData.brand_voice.q33_brand_assets || []}
+            onChange={(files) => {
+              updateQuestion('q33', files);
+              markQuestionCompleted('q33');
+            }}
+            label="Brand Assets"
+            description="Upload logos, style guides, color palettes, or any brand materials (optional)"
+            maxFiles={5}
+            maxSizeInMB={10}
+            acceptedTypes={['image/*', 'application/pdf', '.doc', '.docx']}
           />
         </QuestionWrapper>
       </SectionContainer>
