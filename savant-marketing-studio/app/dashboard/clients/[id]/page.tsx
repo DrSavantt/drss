@@ -95,15 +95,46 @@ export default async function ClientDetailPage({
         {/* Questionnaire Status & Button */}
         <div className="border-t border-mid-gray pt-6 mt-6 mb-6">
           {client.questionnaire_status !== 'completed' ? (
-            <Link href={`/dashboard/clients/onboarding/${client.id}`}>
-              <button className="bg-red-primary text-white px-6 py-3 rounded-lg font-bold hover:bg-red-primary/90 transition-colors">
-                {client.questionnaire_status === 'in_progress' ? 'Resume Questionnaire' : 'Complete Questionnaire'}
-              </button>
-            </Link>
+            <div className="bg-red-primary/10 border border-red-primary/30 rounded-lg p-6">
+              <div className="flex items-start justify-between gap-4">
+                <div className="flex-1">
+                  <h3 className="text-lg font-bold text-foreground mb-2">
+                    {client.questionnaire_status === 'in_progress' ? '📝 Questionnaire In Progress' : '🚀 Complete Your Onboarding'}
+                  </h3>
+                  <p className="text-sm text-silver mb-4">
+                    {client.questionnaire_status === 'in_progress' 
+                      ? 'Pick up where you left off. Your progress has been saved.'
+                      : 'Help us understand your business better by completing the onboarding questionnaire. Takes about 45 minutes.'}
+                  </p>
+                  <Link href={`/dashboard/clients/onboarding/${client.id}`}>
+                    <button className="bg-red-primary text-white px-8 py-3 rounded-lg font-bold hover:bg-red-primary/90 transition-colors text-base">
+                      {client.questionnaire_status === 'in_progress' ? 'Resume Questionnaire →' : 'Start Questionnaire →'}
+                    </button>
+                  </Link>
+                </div>
+              </div>
+            </div>
           ) : (
-            <div className="flex items-center gap-2 text-green-500">
-              <Check className="w-5 h-5" />
-              <span className="font-semibold">Onboarding Complete</span>
+            <div className="bg-green-500/10 border border-green-500/30 rounded-lg p-6">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-12 h-12 rounded-full bg-green-500 flex items-center justify-center">
+                    <Check className="w-6 h-6 text-white" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-bold text-foreground">Onboarding Complete</h3>
+                    <p className="text-sm text-silver">
+                      Completed {client.questionnaire_completed_at ? new Date(client.questionnaire_completed_at).toLocaleDateString() : 'recently'}
+                    </p>
+                  </div>
+                </div>
+                <Link
+                  href={`/dashboard/clients/${client.id}/questionnaire-responses`}
+                  className="text-sm text-red-primary hover:text-red-bright font-semibold transition-colors"
+                >
+                  View Responses →
+                </Link>
+              </div>
             </div>
           )}
         </div>
