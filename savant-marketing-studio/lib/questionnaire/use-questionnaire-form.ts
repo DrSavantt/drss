@@ -13,8 +13,13 @@ interface UseQuestionnaireFormReturn {
   saveStatus: FormStatus;
   updateQuestion: (questionId: string, value: string | string[]) => void;
   validateQuestion: (questionId: string) => string | undefined;
+  validateSection: (sectionNumber: number) => { isValid: boolean; error?: string };
   markQuestionCompleted: (questionId: string) => void;
   goToSection: (sectionNumber: number) => void;
+  goToNextStep: () => boolean;
+  goToPreviousStep: () => void;
+  canGoNext: () => boolean;
+  canGoPrevious: () => boolean;
   manualSave: () => void;
   isDraft: boolean;
 }
@@ -39,6 +44,12 @@ export function useQuestionnaireForm(clientId: string): UseQuestionnaireFormRetu
         const completed = localStorage.getItem(`questionnaire_completed_${clientId}`);
         if (completed) {
           setCompletedQuestions(new Set(JSON.parse(completed)));
+        }
+
+        // Restore current step
+        const savedStep = localStorage.getItem(`questionnaire_current_step_${clientId}`);
+        if (savedStep) {
+          setCurrentSection(parseInt(savedStep, 10));
         }
       } catch (error) {
         console.error('Failed to restore draft:', error);
@@ -177,12 +188,66 @@ export function useQuestionnaireForm(clientId: string): UseQuestionnaireFormRetu
     setCompletedQuestions(prev => new Set(prev).add(questionId));
   }, []);
 
+  // Validate entire section
+  const validateSection = useCallback((sectionNumber: number): { isValid: boolean; error?: string } => {
+    const sectionQuestionMap: Record<number, string[]> = {
+      1: ['q1', 'q2', 'q3', 'q4', 'q5'],
+      2: ['q6', 'q7', 'q8', 'q9', 'q10'],
+      3: ['q11', 'q12', 'q14', 'q15'], // Q13 optional
+      4: ['q16', 'q17', 'q18', 'q19'],
+      5: ['q20', 'q21', 'q22', 'q23'],
+      6: ['q24', 'q25', 'q27'], // Q26 optional
+      7: [], // All optional
+      8: ['q31', 'q32'],
+    };
+
+    const requiredQuestions = sectionQuestionMap[sectionNumber] || [];
+    const incompleteQuestions = requiredQuestions.filter(q => !completedQuestions.has(q));
+
+    if (incompleteQuestions.length > 0) {
+      return {
+        isValid: false,
+        error: `Please complete ${incompleteQuestions.length} required question${incompleteQuestions.length > 1 ? 's' : ''} before continuing`,
+      };
+    }
+
+    return { isValid: true };
+  }, [completedQuestions]);
+
   // Navigate to section
   const goToSection = useCallback((sectionNumber: number) => {
     setCurrentSection(sectionNumber);
-    const element = document.getElementById(`section-${sectionNumber}`);
-    element?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   }, []);
+
+  // Step navigation
+  const canGoNext = useCallback(() => {
+    return validateSection(currentSection).isValid;
+  }, [currentSection, validateSection]);
+
+  const canGoPrevious = useCallback(() => {
+    return currentSection > 1;
+  }, [currentSection]);
+
+  const goToNextStep = useCallback((): boolean => {
+    const validation = validateSection(currentSection);
+    if (!validation.isValid) {
+      return false;
+    }
+    if (currentSection < 8) {
+      setCurrentSection(prev => prev + 1);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      return true;
+    }
+    return false;
+  }, [currentSection, validateSection]);
+
+  const goToPreviousStep = useCallback(() => {
+    if (currentSection > 1) {
+      setCurrentSection(prev => prev - 1);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  }, [currentSection]);
 
   // Manual save
   const manualSave = useCallback(() => {
@@ -195,13 +260,17 @@ export function useQuestionnaireForm(clientId: string): UseQuestionnaireFormRetu
         `questionnaire_completed_${clientId}`,
         JSON.stringify(Array.from(completedQuestions))
       );
+      localStorage.setItem(
+        `questionnaire_current_step_${clientId}`,
+        currentSection.toString()
+      );
       setSaveStatus('saved');
       setIsDraft(true);
     } catch (error) {
       console.error('Failed to save draft:', error);
       setSaveStatus('error');
     }
-  }, [formData, completedQuestions, clientId]);
+  }, [formData, completedQuestions, currentSection, clientId]);
 
   return {
     formData,
@@ -211,8 +280,13 @@ export function useQuestionnaireForm(clientId: string): UseQuestionnaireFormRetu
     saveStatus,
     updateQuestion,
     validateQuestion,
+    validateSection,
     markQuestionCompleted,
     goToSection,
+    goToNextStep,
+    goToPreviousStep,
+    canGoNext,
+    canGoPrevious,
     manualSave,
     isDraft,
   };
