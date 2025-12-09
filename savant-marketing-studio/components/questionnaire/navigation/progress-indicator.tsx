@@ -28,6 +28,7 @@ export default function ProgressIndicator({
 
   return (
     <div className="sticky top-0 z-30 bg-background border-b border-border py-4">
+      {/* z-30: Below help panel (z-50) and backdrop (z-40) to prevent overlap */}
       <div className="max-w-7xl mx-auto px-4">
         <div className="text-center mb-3">
           <span className="text-sm text-silver">

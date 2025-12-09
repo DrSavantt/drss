@@ -26,7 +26,7 @@ export default function HelpPanel({ isOpen, onClose, children }: HelpPanelProps)
             animate={{ x: 0 }}
             exit={{ x: 400 }}
             transition={{ type: 'spring', damping: 30, stiffness: 300 }}
-            className="fixed right-0 top-0 h-screen w-[400px] bg-surface shadow-2xl border-l border-border z-50 flex flex-col"
+            className="fixed inset-y-0 right-0 w-[400px] bg-surface shadow-2xl border-l border-border z-50 flex flex-col overflow-hidden"
           >
             <div className="flex items-center justify-between p-6 border-b border-border">
               <h2 className="text-xl font-bold text-foreground">Help Guide</h2>
