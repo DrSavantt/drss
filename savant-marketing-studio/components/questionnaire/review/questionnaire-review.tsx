@@ -1,0 +1,191 @@
+'use client';
+
+import { useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { useQuestionnaireForm } from '@/lib/questionnaire/use-questionnaire-form';
+import { REQUIRED_QUESTIONS } from '@/lib/questionnaire/types';
+import { saveQuestionnaire } from '@/app/actions/questionnaire';
+import ReviewSectionCard from './review-section-card';
+
+interface Props {
+  clientId: string;
+}
+
+export default function QuestionnaireReview({ clientId }: Props) {
+  const router = useRouter();
+  const { formData, completedQuestions, progress } = useQuestionnaireForm(clientId);
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const handleSubmit = async () => {
+    // Validate all required questions
+    if (progress < 100) {
+      setError('Please complete all required questions before submitting.');
+      return;
+    }
+
+    setSubmitting(true);
+    setError(null);
+
+    try {
+      const result = await saveQuestionnaire(clientId, formData);
+
+      if (result.success) {
+        // Clear localStorage
+        localStorage.removeItem(`questionnaire_draft_${clientId}`);
+        localStorage.removeItem(`questionnaire_completed_${clientId}`);
+
+        // Redirect to client page
+        router.push(`/dashboard/clients/${clientId}`);
+      } else {
+        setError(result.error || 'Failed to save questionnaire');
+        setSubmitting(false);
+      }
+    } catch (err) {
+      setError('An unexpected error occurred');
+      setSubmitting(false);
+    }
+  };
+
+  const handleEditSection = (sectionNumber: number) => {
+    const element = document.getElementById(`section-${sectionNumber}`);
+    element?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
+
+  return (
+    <div className="max-w-4xl mx-auto p-8">
+      <div className="mb-8">
+        <h1 className="text-3xl font-bold text-foreground mb-2">
+          Review Your Answers
+        </h1>
+        <p className="text-silver">
+          Review all your responses before submitting. You can edit any section if needed.
+        </p>
+      </div>
+
+      {/* Progress */}
+      <div className="mb-8 p-6 bg-surface rounded-lg border border-border">
+        <div className="flex justify-between items-center mb-3">
+          <span className="font-semibold text-foreground">Overall Progress</span>
+          <span className="text-2xl font-bold text-foreground">{progress}%</span>
+        </div>
+        <div className="w-full bg-surface-highlight rounded-full h-3">
+          <div
+            className="bg-red-primary h-3 rounded-full transition-all duration-300"
+            style={{ width: `${progress}%` }}
+          />
+        </div>
+        <p className="text-sm text-silver mt-2">
+          {progress === 100
+            ? '✓ All required questions completed'
+            : `${27 - Array.from(completedQuestions).filter(q => REQUIRED_QUESTIONS.includes(q)).length} required questions remaining`}
+        </p>
+      </div>
+
+      {/* All sections */}
+      <div className="space-y-4 mb-8">
+        <ReviewSectionCard
+          sectionNumber={1}
+          title="Avatar Definition"
+          questions={formData.avatar_definition}
+          questionKeys={['q1', 'q2', 'q3', 'q4', 'q5']}
+          requiredQuestions={REQUIRED_QUESTIONS}
+          completedQuestions={completedQuestions}
+          onEdit={() => handleEditSection(1)}
+        />
+
+        <ReviewSectionCard
+          sectionNumber={2}
+          title="Dream Outcome & Value Equation"
+          questions={formData.dream_outcome}
+          questionKeys={['q6', 'q7', 'q8', 'q9', 'q10']}
+          requiredQuestions={REQUIRED_QUESTIONS}
+          completedQuestions={completedQuestions}
+          onEdit={() => handleEditSection(2)}
+        />
+
+        <ReviewSectionCard
+          sectionNumber={3}
+          title="Problems & Obstacles"
+          questions={formData.problems_obstacles}
+          questionKeys={['q11', 'q12', 'q13', 'q14', 'q15']}
+          requiredQuestions={REQUIRED_QUESTIONS}
+          completedQuestions={completedQuestions}
+          onEdit={() => handleEditSection(3)}
+        />
+
+        <ReviewSectionCard
+          sectionNumber={4}
+          title="Solution & Methodology"
+          questions={formData.solution_methodology}
+          questionKeys={['q16', 'q17', 'q18', 'q19']}
+          requiredQuestions={REQUIRED_QUESTIONS}
+          completedQuestions={completedQuestions}
+          onEdit={() => handleEditSection(4)}
+        />
+
+        <ReviewSectionCard
+          sectionNumber={5}
+          title="Brand Voice & Communication"
+          questions={formData.brand_voice}
+          questionKeys={['q20', 'q21', 'q22', 'q23']}
+          requiredQuestions={REQUIRED_QUESTIONS}
+          completedQuestions={completedQuestions}
+          onEdit={() => handleEditSection(5)}
+        />
+
+        <ReviewSectionCard
+          sectionNumber={6}
+          title="Proof & Transformation"
+          questions={formData.proof_transformation}
+          questionKeys={['q24', 'q25', 'q26', 'q27']}
+          requiredQuestions={REQUIRED_QUESTIONS}
+          completedQuestions={completedQuestions}
+          onEdit={() => handleEditSection(6)}
+        />
+
+        <ReviewSectionCard
+          sectionNumber={7}
+          title="Faith Integration"
+          questions={formData.faith_integration}
+          questionKeys={['q28', 'q29', 'q30']}
+          requiredQuestions={REQUIRED_QUESTIONS}
+          completedQuestions={completedQuestions}
+          onEdit={() => handleEditSection(7)}
+        />
+
+        <ReviewSectionCard
+          sectionNumber={8}
+          title="Business Metrics"
+          questions={formData.business_metrics}
+          questionKeys={['q31', 'q32']}
+          requiredQuestions={REQUIRED_QUESTIONS}
+          completedQuestions={completedQuestions}
+          onEdit={() => handleEditSection(8)}
+        />
+      </div>
+
+      {/* Error message */}
+      {error && (
+        <div className="mb-8 p-4 bg-red-500/10 border border-red-500 rounded-lg">
+          <p className="text-red-500 font-medium">{error}</p>
+        </div>
+      )}
+
+      {/* Submit button */}
+      <button
+        onClick={handleSubmit}
+        disabled={submitting || progress < 100}
+        className="w-full bg-red-primary text-white py-4 px-6 rounded-lg font-bold text-lg hover:bg-red-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+      >
+        {submitting ? 'Submitting...' : 'Submit Questionnaire'}
+      </button>
+
+      {progress < 100 && (
+        <p className="text-center text-sm text-silver mt-4">
+          Please complete all required questions before submitting
+        </p>
+      )}
+    </div>
+  );
+}
