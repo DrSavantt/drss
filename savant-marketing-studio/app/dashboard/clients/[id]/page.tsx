@@ -5,7 +5,7 @@ import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import { DeleteClientButton } from './delete-button'
 import { ClientCaptures } from './client-captures'
-import { FolderKanban, FileText, Calendar, Building2 } from 'lucide-react'
+import { FolderKanban, FileText, Calendar, Building2, Check } from 'lucide-react'
 
 export default async function ClientDetailPage({
   params,
@@ -92,7 +92,23 @@ export default async function ClientDetailPage({
           </div>
         </div>
 
-        <div className="border-t border-mid-gray pt-6 mt-6">
+        {/* Questionnaire Status & Button */}
+        <div className="border-t border-mid-gray pt-6 mt-6 mb-6">
+          {client.questionnaire_status !== 'completed' ? (
+            <Link href={`/dashboard/clients/onboarding/${client.id}`}>
+              <button className="bg-red-primary text-white px-6 py-3 rounded-lg font-bold hover:bg-red-primary/90 transition-colors">
+                {client.questionnaire_status === 'in_progress' ? 'Resume Questionnaire' : 'Complete Questionnaire'}
+              </button>
+            </Link>
+          ) : (
+            <div className="flex items-center gap-2 text-green-500">
+              <Check className="w-5 h-5" />
+              <span className="font-semibold">Onboarding Complete</span>
+            </div>
+          )}
+        </div>
+
+        <div className="border-t border-mid-gray pt-6">
           <dl className="grid grid-cols-1 gap-x-6 gap-y-4 sm:grid-cols-2">
             <div>
               <dt className="text-sm font-medium text-silver">Created</dt>
