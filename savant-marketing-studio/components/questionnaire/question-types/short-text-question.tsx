@@ -5,6 +5,7 @@ import { useState, useEffect } from 'react';
 interface ShortTextQuestionProps {
   value: string;
   onChange: (value: string) => void;
+  onBlur?: () => void;
   placeholder?: string;
   maxLength?: number;
   error?: string;
@@ -13,6 +14,7 @@ interface ShortTextQuestionProps {
 export default function ShortTextQuestion({
   value,
   onChange,
+  onBlur,
   placeholder = 'Enter your answer...',
   maxLength = 100,
   error,
@@ -36,6 +38,7 @@ export default function ShortTextQuestion({
         type="text"
         value={value}
         onChange={handleChange}
+        onBlur={onBlur}
         placeholder={placeholder}
         maxLength={maxLength}
         className={`w-full px-4 py-3 bg-surface border rounded-lg text-base text-foreground placeholder:text-silver focus:outline-none focus:ring-1 transition-colors ${

@@ -56,10 +56,8 @@ export default function SolutionMethodologySection({ clientId }: Props) {
         >
           <LongTextQuestion
             value={formData.solution_methodology.q16_core_offer}
-            onChange={(val) => {
-              updateQuestion('q16', val);
-              if (val.length >= 50) markQuestionCompleted('q16');
-            }}
+            onChange={(val) => updateQuestion('q16', val)}
+            onBlur={() => markQuestionCompleted('q16')}
             placeholder="Done-For-You Marketing System that generates 20+ qualified leads per month..."
             minLength={50}
             maxLength={1000}
@@ -76,10 +74,8 @@ export default function SolutionMethodologySection({ clientId }: Props) {
         >
           <LongTextQuestion
             value={formData.solution_methodology.q17_unique_mechanism}
-            onChange={(val) => {
-              updateQuestion('q17', val);
-              if (val.length >= 50) markQuestionCompleted('q17');
-            }}
+            onChange={(val) => updateQuestion('q17', val)}
+            onBlur={() => markQuestionCompleted('q17')}
             placeholder="The 'Build & Release' Model - we build your entire system first, then release it..."
             minLength={50}
             maxLength={1000}
@@ -96,10 +92,8 @@ export default function SolutionMethodologySection({ clientId }: Props) {
         >
           <LongTextQuestion
             value={formData.solution_methodology.q18_differentiation}
-            onChange={(val) => {
-              updateQuestion('q18', val);
-              if (val.length >= 50) markQuestionCompleted('q18');
-            }}
+            onChange={(val) => updateQuestion('q18', val)}
+            onBlur={() => markQuestionCompleted('q18')}
             placeholder="We're the only agency that owns the implementation risk - if it doesn't work, we refund..."
             minLength={50}
             maxLength={1000}
@@ -116,10 +110,8 @@ export default function SolutionMethodologySection({ clientId }: Props) {
         >
           <LongTextQuestion
             value={formData.solution_methodology.q19_delivery_vehicle}
-            onChange={(val) => {
-              updateQuestion('q19', val);
-              if (val.length >= 30) markQuestionCompleted('q19');
-            }}
+            onChange={(val) => updateQuestion('q19', val)}
+            onBlur={() => markQuestionCompleted('q19')}
             placeholder="90-day implementation program with weekly check-ins and 24/7 Slack support..."
             minLength={30}
             maxLength={500}

@@ -246,12 +246,16 @@ export function useQuestionnaireForm(clientId: string): UseQuestionnaireFormRetu
     }
   }, [formData]);
 
-  // Mark question as completed
+  // Mark question as completed - with validation gate
   const markQuestionCompleted = useCallback((questionId: string) => {
-    setCompletedQuestions(prev => new Set(prev).add(questionId));
-  }, []);
+    // Only mark complete if question passes validation
+    const error = validateQuestion(questionId);
+    if (error === undefined) {
+      setCompletedQuestions(prev => new Set(prev).add(questionId));
+    }
+  }, [validateQuestion]);
 
-  // Validate entire section
+  // Validate entire section - actually validates content, not just Set membership
   const validateSection = useCallback((sectionNumber: number): { isValid: boolean; error?: string } => {
     const sectionQuestionMap: Record<number, string[]> = {
       1: ['q1', 'q2', 'q3', 'q4', 'q5'],
@@ -260,22 +264,27 @@ export function useQuestionnaireForm(clientId: string): UseQuestionnaireFormRetu
       4: ['q16', 'q17', 'q18', 'q19'],
       5: ['q20', 'q21', 'q22', 'q23'],
       6: ['q24', 'q25', 'q27'], // Q26 optional
-      7: [], // All optional
+      7: [], // All optional (faith section)
       8: ['q31', 'q32'],
     };
 
     const requiredQuestions = sectionQuestionMap[sectionNumber] || [];
-    const incompleteQuestions = requiredQuestions.filter(q => !completedQuestions.has(q));
+    
+    // Actually validate content, not just check Set membership
+    const invalidQuestions = requiredQuestions.filter(q => {
+      const error = validateQuestion(q);
+      return error !== undefined; // If validateQuestion returns error, question is invalid
+    });
 
-    if (incompleteQuestions.length > 0) {
+    if (invalidQuestions.length > 0) {
       return {
         isValid: false,
-        error: `Please complete ${incompleteQuestions.length} required question${incompleteQuestions.length > 1 ? 's' : ''} before continuing`,
+        error: `Please complete ${invalidQuestions.length} required question${invalidQuestions.length > 1 ? 's' : ''} with valid answers`,
       };
     }
 
     return { isValid: true };
-  }, [completedQuestions]);
+  }, [validateQuestion]);
 
   // Navigate to section
   const goToSection = useCallback((sectionNumber: number) => {

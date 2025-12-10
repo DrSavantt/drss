@@ -84,10 +84,8 @@ export default function BrandVoiceSection({ clientId }: Props) {
         >
           <ShortTextQuestion
             value={formData.brand_voice.q21_personality_words}
-            onChange={(val) => {
-              updateQuestion('q21', val);
-              if (val.length >= 20) markQuestionCompleted('q21');
-            }}
+            onChange={(val) => updateQuestion('q21', val)}
+            onBlur={() => markQuestionCompleted('q21')}
             placeholder="Bold, Trustworthy, Results-Driven"
             maxLength={300}
             error={validateQuestion('q21')}
@@ -103,10 +101,8 @@ export default function BrandVoiceSection({ clientId }: Props) {
         >
           <LongTextQuestion
             value={formData.brand_voice.q22_signature_phrases}
-            onChange={(val) => {
-              updateQuestion('q22', val);
-              if (val.length >= 20) markQuestionCompleted('q22');
-            }}
+            onChange={(val) => updateQuestion('q22', val)}
+            onBlur={() => markQuestionCompleted('q22')}
             placeholder="'Let's cut the BS.' 'Here's what actually works.' 'No fluff, just results.'"
             minLength={20}
             maxLength={500}
@@ -123,10 +119,8 @@ export default function BrandVoiceSection({ clientId }: Props) {
         >
           <LongTextQuestion
             value={formData.brand_voice.q23_avoid_topics}
-            onChange={(val) => {
-              updateQuestion('q23', val);
-              if (val.length >= 20) markQuestionCompleted('q23');
-            }}
+            onChange={(val) => updateQuestion('q23', val)}
+            onBlur={() => markQuestionCompleted('q23')}
             placeholder="Never mention specific competitor names, avoid technical jargon, no 'growth hacking'..."
             minLength={20}
             maxLength={500}
@@ -145,7 +139,7 @@ export default function BrandVoiceSection({ clientId }: Props) {
             value={formData.brand_voice.q33_brand_assets || []}
             onChange={(files) => {
               updateQuestion('q33', files);
-              markQuestionCompleted('q33');
+              if (files.length > 0) markQuestionCompleted('q33');
             }}
             label="Brand Assets"
             description="Upload logos, style guides, color palettes, or any brand materials (optional)"

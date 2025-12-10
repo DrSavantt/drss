@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import QuestionWrapper from '../question-types/question-wrapper';
 import LongTextQuestion from '../question-types/long-text-question';
 import { FileUploadQuestion } from '../question-types/file-upload-question';
@@ -57,10 +57,8 @@ export default function ProofTransformationSection({ clientId }: Props) {
         >
           <LongTextQuestion
             value={formData.proof_transformation.q24_transformation_story}
-            onChange={(val) => {
-              updateQuestion('q24', val);
-              if (val.length >= 100) markQuestionCompleted('q24');
-            }}
+            onChange={(val) => updateQuestion('q24', val)}
+            onBlur={() => markQuestionCompleted('q24')}
             placeholder="Sarah came to us $50K in debt and working 80 hours/week. After 90 days..."
             minLength={100}
             maxLength={2000}
@@ -77,10 +75,8 @@ export default function ProofTransformationSection({ clientId }: Props) {
         >
           <LongTextQuestion
             value={formData.proof_transformation.q25_measurable_results}
-            onChange={(val) => {
-              updateQuestion('q25', val);
-              if (val.length >= 50) markQuestionCompleted('q25');
-            }}
+            onChange={(val) => updateQuestion('q25', val)}
+            onBlur={() => markQuestionCompleted('q25')}
             placeholder="Average client ROI: 3.2x in 90 days. 89% achieve positive ROI within 60 days..."
             minLength={50}
             maxLength={1000}
@@ -96,10 +92,8 @@ export default function ProofTransformationSection({ clientId }: Props) {
         >
           <LongTextQuestion
             value={formData.proof_transformation.q26_credentials}
-            onChange={(val) => {
-              updateQuestion('q26', val);
-              markQuestionCompleted('q26');
-            }}
+            onChange={(val) => updateQuestion('q26', val)}
+            onBlur={() => markQuestionCompleted('q26')}
             placeholder="Featured in Forbes, Inc, Entrepreneur. Certified by..."
             maxLength={500}
             error={validateQuestion('q26')}
@@ -115,10 +109,8 @@ export default function ProofTransformationSection({ clientId }: Props) {
         >
           <LongTextQuestion
             value={formData.proof_transformation.q27_guarantees}
-            onChange={(val) => {
-              updateQuestion('q27', val);
-              if (val.length >= 30) markQuestionCompleted('q27');
-            }}
+            onChange={(val) => updateQuestion('q27', val)}
+            onBlur={() => markQuestionCompleted('q27')}
             placeholder="100% money-back guarantee if you don't see 20+ qualified leads in 90 days..."
             minLength={30}
             maxLength={500}
@@ -137,7 +129,7 @@ export default function ProofTransformationSection({ clientId }: Props) {
             value={formData.proof_transformation.q34_proof_assets || []}
             onChange={(files) => {
               updateQuestion('q34', files);
-              markQuestionCompleted('q34');
+              if (files.length > 0) markQuestionCompleted('q34');
             }}
             label="Proof Materials"
             description="Upload testimonials, case studies, screenshots, or any proof materials (optional)"

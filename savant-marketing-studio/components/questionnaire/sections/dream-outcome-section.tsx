@@ -57,10 +57,8 @@ export default function DreamOutcomeSection({ clientId }: Props) {
         >
           <LongTextQuestion
             value={formData.dream_outcome.q6_dream_outcome}
-            onChange={(val) => {
-              updateQuestion('q6', val);
-              if (val.length >= 50) markQuestionCompleted('q6');
-            }}
+            onChange={(val) => updateQuestion('q6', val)}
+            onBlur={() => markQuestionCompleted('q6')}
             placeholder="A predictable, profitable business that runs without them being there 80 hours/week..."
             minLength={50}
             maxLength={1000}
@@ -77,10 +75,8 @@ export default function DreamOutcomeSection({ clientId }: Props) {
         >
           <LongTextQuestion
             value={formData.dream_outcome.q7_status}
-            onChange={(val) => {
-              updateQuestion('q7', val);
-              if (val.length >= 30) markQuestionCompleted('q7');
-            }}
+            onChange={(val) => updateQuestion('q7', val)}
+            onBlur={() => markQuestionCompleted('q7')}
             placeholder="Their spouse sees them as successful, peers respect them, they're invited to speak..."
             minLength={30}
             maxLength={500}
@@ -97,10 +93,8 @@ export default function DreamOutcomeSection({ clientId }: Props) {
         >
           <ShortTextQuestion
             value={formData.dream_outcome.q8_time_to_result}
-            onChange={(val) => {
-              updateQuestion('q8', val);
-              if (val.length >= 20) markQuestionCompleted('q8');
-            }}
+            onChange={(val) => updateQuestion('q8', val)}
+            onBlur={() => markQuestionCompleted('q8')}
             placeholder="90 days to see significant results"
             maxLength={300}
             error={validateQuestion('q8')}
@@ -116,10 +110,8 @@ export default function DreamOutcomeSection({ clientId }: Props) {
         >
           <LongTextQuestion
             value={formData.dream_outcome.q9_effort_sacrifice}
-            onChange={(val) => {
-              updateQuestion('q9', val);
-              if (val.length >= 30) markQuestionCompleted('q9');
-            }}
+            onChange={(val) => updateQuestion('q9', val)}
+            onBlur={() => markQuestionCompleted('q9')}
             placeholder="2-3 hours per week initially, then 1 hour/week for maintenance..."
             minLength={30}
             maxLength={500}
@@ -136,10 +128,8 @@ export default function DreamOutcomeSection({ clientId }: Props) {
         >
           <LongTextQuestion
             value={formData.dream_outcome.q10_proof}
-            onChange={(val) => {
-              updateQuestion('q10', val);
-              if (val.length >= 50) markQuestionCompleted('q10');
-            }}
+            onChange={(val) => updateQuestion('q10', val)}
+            onBlur={() => markQuestionCompleted('q10')}
             placeholder="42 clients served with 89% achieving ROI within 60 days. Average return: 3.2x investment..."
             minLength={50}
             maxLength={1000}
