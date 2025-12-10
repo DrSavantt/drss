@@ -61,12 +61,25 @@ export default function LongTextQuestion({
       />
       <div className="flex items-center justify-between mt-2">
         {error && (
-          <span id="error-message" className="text-red-500 text-sm">
-            {error}
-          </span>
+          <div className="flex-1 mr-4">
+            <span id="error-message" className="text-red-500 text-sm block">
+              {error}
+            </span>
+            {/* Show current character count if it's a minimum length error */}
+            {error.includes('20 characters') && value.trim().length > 0 && (
+              <span className="text-xs text-silver block mt-1">
+                Current: {value.trim().length} characters
+              </span>
+            )}
+            {error.includes('10 characters') && value.trim().length > 0 && (
+              <span className="text-xs text-silver block mt-1">
+                Current: {value.trim().length} characters
+              </span>
+            )}
+          </div>
         )}
-        <span className={`text-silver text-sm ${error ? 'ml-auto' : 'ml-auto'}`}>
-          {charCount} / {maxLength} characters
+        <span className={`text-silver text-sm whitespace-nowrap ${error ? '' : 'ml-auto'}`}>
+          {charCount} / {maxLength}
         </span>
       </div>
     </div>

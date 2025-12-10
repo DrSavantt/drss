@@ -28,11 +28,6 @@ export default function ProblemsObstaclesSection({ clientId }: Props) {
     setHelpOpen(true);
   };
 
-  // Mark Q13 as completed on mount since it's optional
-  useEffect(() => {
-    markQuestionCompleted('q13');
-  }, [markQuestionCompleted]);
-
   // Calculate section progress
   const sectionQuestions = ['q11', 'q12', 'q13', 'q14', 'q15'];
   const answeredCount = sectionQuestions.filter(q => 

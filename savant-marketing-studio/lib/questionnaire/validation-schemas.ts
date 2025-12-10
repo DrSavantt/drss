@@ -1,19 +1,19 @@
 import { z } from 'zod';
 
-// Individual question schemas
+// Individual question schemas (reduced minimums to 20 chars for better UX)
 export const q1Schema = z.string()
-  .min(50, "Please provide at least 50 characters for a specific answer")
+  .min(20, "Please provide at least 20 characters")
   .max(1000, "Please keep under 1000 characters");
 
 export const q2Schema = z.array(z.string())
   .min(1, "Please select at least one criterion");
 
 export const q3Schema = z.string()
-  .min(30, "Please provide at least 30 characters")
+  .min(20, "Please provide at least 20 characters")
   .max(500, "Please keep under 500 characters");
 
 export const q4Schema = z.string()
-  .min(30, "Please provide at least 30 characters")
+  .min(20, "Please provide at least 20 characters")
   .max(500, "Please keep under 500 characters");
 
 export const q5Schema = z.string()
@@ -21,64 +21,64 @@ export const q5Schema = z.string()
   .max(500, "Please keep under 500 characters");
 
 export const q6Schema = z.string()
-  .min(50, "Please provide at least 50 characters")
+  .min(20, "Please provide at least 20 characters")
   .max(1000, "Please keep under 1000 characters");
 
 export const q7Schema = z.string()
-  .min(30, "Please provide at least 30 characters")
+  .min(20, "Please provide at least 20 characters")
   .max(500, "Please keep under 500 characters");
 
 export const q8Schema = z.string()
-  .min(20, "Please provide at least 20 characters")
+  .min(10, "Please provide at least 10 characters")
   .max(300, "Please keep under 300 characters");
 
 export const q9Schema = z.string()
-  .min(30, "Please provide at least 30 characters")
+  .min(20, "Please provide at least 20 characters")
   .max(500, "Please keep under 500 characters");
 
 export const q10Schema = z.string()
-  .min(50, "Please provide at least 50 characters")
+  .min(20, "Please provide at least 20 characters")
   .max(1000, "Please keep under 1000 characters");
 
 export const q11Schema = z.string()
-  .min(50, "Please provide at least 50 characters")
+  .min(20, "Please provide at least 20 characters")
   .max(1000, "Please keep under 1000 characters");
 
 export const q12Schema = z.string()
-  .min(50, "Please provide at least 50 characters")
+  .min(20, "Please provide at least 20 characters")
   .max(1000, "Please keep under 1000 characters");
 
 export const q13Schema = z.string().max(1000, "Please keep under 1000 characters");
 
 export const q14Schema = z.string()
-  .min(50, "Please provide at least 50 characters")
+  .min(20, "Please provide at least 20 characters")
   .max(1000, "Please keep under 1000 characters");
 
 export const q15Schema = z.string()
-  .min(30, "Please provide at least 30 characters")
+  .min(20, "Please provide at least 20 characters")
   .max(500, "Please keep under 500 characters");
 
 export const q16Schema = z.string()
-  .min(50, "Please provide at least 50 characters")
+  .min(20, "Please provide at least 20 characters")
   .max(1000, "Please keep under 1000 characters");
 
 export const q17Schema = z.string()
-  .min(50, "Please provide at least 50 characters")
+  .min(20, "Please provide at least 20 characters")
   .max(1000, "Please keep under 1000 characters");
 
 export const q18Schema = z.string()
-  .min(50, "Please provide at least 50 characters")
+  .min(20, "Please provide at least 20 characters")
   .max(1000, "Please keep under 1000 characters");
 
 export const q19Schema = z.string()
-  .min(30, "Please provide at least 30 characters")
+  .min(20, "Please provide at least 20 characters")
   .max(500, "Please keep under 500 characters");
 
 export const q20Schema = z.string()
   .min(1, "Please select a voice type");
 
 export const q21Schema = z.string()
-  .min(20, "Please provide at least 20 characters")
+  .min(10, "Please provide at least 10 characters")
   .max(300, "Please keep under 300 characters");
 
 export const q22Schema = z.string()
@@ -90,17 +90,17 @@ export const q23Schema = z.string()
   .max(500, "Please keep under 500 characters");
 
 export const q24Schema = z.string()
-  .min(100, "Please provide at least 100 characters for a compelling story")
+  .min(20, "Please provide at least 20 characters")
   .max(2000, "Please keep under 2000 characters");
 
 export const q25Schema = z.string()
-  .min(50, "Please provide at least 50 characters")
+  .min(20, "Please provide at least 20 characters")
   .max(1000, "Please keep under 1000 characters");
 
 export const q26Schema = z.string().max(500, "Please keep under 500 characters");
 
 export const q27Schema = z.string()
-  .min(30, "Please provide at least 30 characters")
+  .min(20, "Please provide at least 20 characters")
   .max(500, "Please keep under 500 characters");
 
 export const q28Schema = z.string();
