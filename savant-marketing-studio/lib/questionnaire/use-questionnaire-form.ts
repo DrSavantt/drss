@@ -60,21 +60,11 @@ export function useQuestionnaireForm(clientId: string): UseQuestionnaireFormRetu
     }
   }, [clientId]);
 
-  // Auto-save to localStorage with 1 second debounce
+  // Auto-save to localStorage with 1 second debounce - unconditional persistence
   useEffect(() => {
     if (!formData) return;
 
-    // Check if form has any content
-    const hasContent = Object.values(formData).some(section => 
-      Object.values(section).some(value => {
-        if (typeof value === 'string') return value.length > 0;
-        if (Array.isArray(value)) return value.length > 0;
-        return false;
-      })
-    );
-
-    if (!hasContent) return;
-
+    // Save all state unconditionally - removed hasContent check
     setSaveStatus('saving');
     
     // Debounce 1 second after last keystroke
@@ -340,12 +330,13 @@ export function useQuestionnaireForm(clientId: string): UseQuestionnaireFormRetu
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }, []);
 
-  // Step navigation
+  // Step navigation - allow free movement through sections
   const canGoNext = useCallback(() => {
-    const result = validateSection(currentSection).isValid;
-    console.log(`[canGoNext] Section ${currentSection}: ${result ? 'CAN PROCEED ✓' : 'BLOCKED ✗'}`);
-    return result;
-  }, [currentSection, validateSection]);
+    // Remove validation gate - users can navigate freely
+    const canProceed = currentSection < 8;
+    console.log(`[canGoNext] Section ${currentSection}: ${canProceed ? 'CAN PROCEED ✓' : 'BLOCKED ✗ (last section)'}`);
+    return canProceed;
+  }, [currentSection]);
 
   const canGoPrevious = useCallback(() => {
     return currentSection > 1;

@@ -117,13 +117,9 @@ export default function QuestionnairePage() {
       setShowReview(true);
       setValidationError(undefined);
     } else {
-      const validation = validateSection(currentSection);
-      if (validation.isValid) {
-        goToNextStep();
-        setValidationError(undefined);
-      } else {
-        setValidationError(validation.error);
-      }
+      // Remove validation gate - allow free navigation
+      goToNextStep();
+      setValidationError(undefined);
     }
   };
 
