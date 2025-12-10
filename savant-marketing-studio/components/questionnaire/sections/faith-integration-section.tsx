@@ -17,7 +17,7 @@ export default function FaithIntegrationSection({ clientId }: Props) {
   const {
     formData,
     updateQuestion,
-    validateQuestion,
+    getQuestionError,
     markQuestionCompleted,
     completedQuestions,
   } = useQuestionnaireForm(clientId);
@@ -74,7 +74,7 @@ export default function FaithIntegrationSection({ clientId }: Props) {
               { value: 'separate', label: 'No - Keep faith and business separate' }
             ]}
             allowMultiple={false}
-            error={validateQuestion('q28')}
+            error={getQuestionError('q28')}
           />
         </QuestionWrapper>
 
@@ -91,7 +91,7 @@ export default function FaithIntegrationSection({ clientId }: Props) {
               onBlur={() => markQuestionCompleted('q29')}
               placeholder="I believe business is ministry. My goal is to serve kingdom-minded entrepreneurs..."
               maxLength={1000}
-              error={validateQuestion('q29')}
+              error={getQuestionError('q29')}
             />
           </QuestionWrapper>
         )}
@@ -109,7 +109,7 @@ export default function FaithIntegrationSection({ clientId }: Props) {
               onBlur={() => markQuestionCompleted('q30')}
               placeholder="Servant leadership, excellence as worship, generosity, stewardship..."
               maxLength={500}
-              error={validateQuestion('q30')}
+              error={getQuestionError('q30')}
             />
           </QuestionWrapper>
         )}
