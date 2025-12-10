@@ -18,7 +18,7 @@ export default function BrandVoiceSection({ clientId }: Props) {
   const {
     formData,
     updateQuestion,
-    validateQuestion,
+    getQuestionError,
     markQuestionCompleted,
     completedQuestions,
   } = useQuestionnaireForm(clientId);
@@ -71,7 +71,7 @@ export default function BrandVoiceSection({ clientId }: Props) {
               { value: 'sophisticated_polished', label: 'Sophisticated & Polished' }
             ]}
             allowMultiple={false}
-            error={validateQuestion('q20')}
+            error={getQuestionError('q20')}
           />
         </QuestionWrapper>
 
@@ -88,7 +88,7 @@ export default function BrandVoiceSection({ clientId }: Props) {
             onBlur={() => markQuestionCompleted('q21')}
             placeholder="Bold, Trustworthy, Results-Driven"
             maxLength={300}
-            error={validateQuestion('q21')}
+            error={getQuestionError('q21')}
           />
         </QuestionWrapper>
 
@@ -106,7 +106,7 @@ export default function BrandVoiceSection({ clientId }: Props) {
             placeholder="'Let's cut the BS.' 'Here's what actually works.' 'No fluff, just results.'"
             minLength={20}
             maxLength={500}
-            error={validateQuestion('q22')}
+            error={getQuestionError('q22')}
           />
         </QuestionWrapper>
 
@@ -124,7 +124,7 @@ export default function BrandVoiceSection({ clientId }: Props) {
             placeholder="Never mention specific competitor names, avoid technical jargon, no 'growth hacking'..."
             minLength={20}
             maxLength={500}
-            error={validateQuestion('q23')}
+            error={getQuestionError('q23')}
           />
         </QuestionWrapper>
 

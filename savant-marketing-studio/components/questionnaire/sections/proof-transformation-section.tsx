@@ -16,7 +16,7 @@ export default function ProofTransformationSection({ clientId }: Props) {
   const {
     formData,
     updateQuestion,
-    validateQuestion,
+    getQuestionError,
     markQuestionCompleted,
     completedQuestions,
   } = useQuestionnaireForm(clientId);
@@ -62,7 +62,7 @@ export default function ProofTransformationSection({ clientId }: Props) {
             placeholder="Sarah came to us $50K in debt and working 80 hours/week. After 90 days..."
             minLength={100}
             maxLength={2000}
-            error={validateQuestion('q24')}
+            error={getQuestionError('q24')}
           />
         </QuestionWrapper>
 
@@ -80,7 +80,7 @@ export default function ProofTransformationSection({ clientId }: Props) {
             placeholder="Average client ROI: 3.2x in 90 days. 89% achieve positive ROI within 60 days..."
             minLength={50}
             maxLength={1000}
-            error={validateQuestion('q25')}
+            error={getQuestionError('q25')}
           />
         </QuestionWrapper>
 
@@ -96,7 +96,7 @@ export default function ProofTransformationSection({ clientId }: Props) {
             onBlur={() => markQuestionCompleted('q26')}
             placeholder="Featured in Forbes, Inc, Entrepreneur. Certified by..."
             maxLength={500}
-            error={validateQuestion('q26')}
+            error={getQuestionError('q26')}
           />
         </QuestionWrapper>
 
@@ -114,7 +114,7 @@ export default function ProofTransformationSection({ clientId }: Props) {
             placeholder="100% money-back guarantee if you don't see 20+ qualified leads in 90 days..."
             minLength={30}
             maxLength={500}
-            error={validateQuestion('q27')}
+            error={getQuestionError('q27')}
           />
         </QuestionWrapper>
 

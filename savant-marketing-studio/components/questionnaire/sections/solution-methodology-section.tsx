@@ -15,7 +15,7 @@ export default function SolutionMethodologySection({ clientId }: Props) {
   const {
     formData,
     updateQuestion,
-    validateQuestion,
+    getQuestionError,
     markQuestionCompleted,
     completedQuestions,
   } = useQuestionnaireForm(clientId);
@@ -61,7 +61,7 @@ export default function SolutionMethodologySection({ clientId }: Props) {
             placeholder="Done-For-You Marketing System that generates 20+ qualified leads per month..."
             minLength={50}
             maxLength={1000}
-            error={validateQuestion('q16')}
+            error={getQuestionError('q16')}
           />
         </QuestionWrapper>
 
@@ -79,7 +79,7 @@ export default function SolutionMethodologySection({ clientId }: Props) {
             placeholder="The 'Build & Release' Model - we build your entire system first, then release it..."
             minLength={50}
             maxLength={1000}
-            error={validateQuestion('q17')}
+            error={getQuestionError('q17')}
           />
         </QuestionWrapper>
 
@@ -97,7 +97,7 @@ export default function SolutionMethodologySection({ clientId }: Props) {
             placeholder="We're the only agency that owns the implementation risk - if it doesn't work, we refund..."
             minLength={50}
             maxLength={1000}
-            error={validateQuestion('q18')}
+            error={getQuestionError('q18')}
           />
         </QuestionWrapper>
 
@@ -115,7 +115,7 @@ export default function SolutionMethodologySection({ clientId }: Props) {
             placeholder="90-day implementation program with weekly check-ins and 24/7 Slack support..."
             minLength={30}
             maxLength={500}
-            error={validateQuestion('q19')}
+            error={getQuestionError('q19')}
           />
         </QuestionWrapper>
       </SectionContainer>

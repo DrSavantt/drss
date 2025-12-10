@@ -13,8 +13,10 @@ interface UseQuestionnaireFormReturn {
   saveStatus: FormStatus;
   updateQuestion: (questionId: string, value: string | string[] | UploadedFile[]) => void;
   validateQuestion: (questionId: string) => string | undefined;
+  getQuestionError: (questionId: string) => string | undefined;
   validateSection: (sectionNumber: number) => { isValid: boolean; error?: string };
   markQuestionCompleted: (questionId: string) => void;
+  markQuestionTouched: (questionId: string) => void;
   goToSection: (sectionNumber: number) => void;
   goToNextStep: () => boolean;
   goToPreviousStep: () => void;
@@ -28,6 +30,7 @@ export function useQuestionnaireForm(clientId: string): UseQuestionnaireFormRetu
   const [formData, setFormData] = useState<QuestionnaireData>(EMPTY_QUESTIONNAIRE_DATA);
   const [currentSection, setCurrentSection] = useState(1);
   const [completedQuestions, setCompletedQuestions] = useState<Set<string>>(new Set());
+  const [touchedQuestions, setTouchedQuestions] = useState<Set<string>>(new Set());
   const [saveStatus, setSaveStatus] = useState<FormStatus>('saved');
   const [isDraft, setIsDraft] = useState(false);
 
@@ -157,6 +160,7 @@ export function useQuestionnaireForm(clientId: string): UseQuestionnaireFormRetu
 
   // Update question value
   const updateQuestion = useCallback((questionId: string, value: string | string[] | UploadedFile[]) => {
+    console.log(`[updateQuestion] ${questionId}:`, { value, type: typeof value });
     setFormData(prev => {
       const updated = { ...prev };
       
@@ -222,6 +226,7 @@ export function useQuestionnaireForm(clientId: string): UseQuestionnaireFormRetu
         };
       }
 
+      console.log(`[updateQuestion] Updated formData for ${questionId}:`, updated);
       return updated;
     });
   }, []);
@@ -229,34 +234,71 @@ export function useQuestionnaireForm(clientId: string): UseQuestionnaireFormRetu
   // Validate question
   const validateQuestion = useCallback((questionId: string): string | undefined => {
     const schema = questionSchemas[questionId];
-    if (!schema) return undefined;
+    if (!schema) {
+      console.log(`[validateQuestion] No schema found for ${questionId}`);
+      return undefined;
+    }
 
     // Get the value from formData
     const value = getQuestionValue(questionId, formData);
+    const valueStr = Array.isArray(value) ? `Array[${value.length}]` : `"${value}"`;
+    const valueLen = typeof value === 'string' ? value.length : Array.isArray(value) ? value.length : 'N/A';
+    console.log(`[validateQuestion] ${questionId}: value=${valueStr}, length=${valueLen}`);
 
     try {
       schema.parse(value);
+      console.log(`[validateQuestion] ${questionId}: VALID ✓`);
       return undefined;
     } catch (error: unknown) {
       if (error && typeof error === 'object' && 'errors' in error) {
         const zodError = error as { errors: Array<{ message: string }> };
-        return zodError.errors?.[0]?.message || 'Invalid input';
+        const errorMsg = zodError.errors?.[0]?.message || 'Invalid input';
+        console.log(`[validateQuestion] ${questionId}: INVALID ✗ - ${errorMsg}`);
+        console.error('Full Zod error:', error);
+        return errorMsg;
       }
+      console.log(`[validateQuestion] ${questionId}: INVALID ✗ (unknown error)`);
+      console.error('Unknown validation error:', error);
       return 'Invalid input';
     }
   }, [formData]);
 
+  // Get question error (only shows errors for touched questions)
+  const getQuestionError = useCallback((questionId: string): string | undefined => {
+    // Don't show errors for untouched questions
+    if (!touchedQuestions.has(questionId)) {
+      return undefined;
+    }
+    return validateQuestion(questionId);
+  }, [touchedQuestions, validateQuestion]);
+
+  // Mark question as touched (when user interacts)
+  const markQuestionTouched = useCallback((questionId: string) => {
+    setTouchedQuestions(prev => new Set(prev).add(questionId));
+  }, []);
+
   // Mark question as completed - with validation gate
   const markQuestionCompleted = useCallback((questionId: string) => {
+    console.log(`[markQuestionCompleted] Called for ${questionId}`);
+    // Mark as touched when trying to complete
+    markQuestionTouched(questionId);
     // Only mark complete if question passes validation
     const error = validateQuestion(questionId);
+    console.log(`[markQuestionCompleted] ${questionId} validation result:`, error === undefined ? 'PASS ✓' : `FAIL: ${error}`);
     if (error === undefined) {
-      setCompletedQuestions(prev => new Set(prev).add(questionId));
+      setCompletedQuestions(prev => {
+        const newSet = new Set(prev).add(questionId);
+        console.log(`[markQuestionCompleted] ${questionId} marked complete. Total completed:`, Array.from(newSet));
+        return newSet;
+      });
+    } else {
+      console.log(`[markQuestionCompleted] ${questionId} NOT marked complete (validation failed)`);
     }
-  }, [validateQuestion]);
+  }, [validateQuestion, markQuestionTouched]);
 
   // Validate entire section - actually validates content, not just Set membership
   const validateSection = useCallback((sectionNumber: number): { isValid: boolean; error?: string } => {
+    console.log(`[validateSection] Validating section ${sectionNumber}`);
     const sectionQuestionMap: Record<number, string[]> = {
       1: ['q1', 'q2', 'q3', 'q4', 'q5'],
       2: ['q6', 'q7', 'q8', 'q9', 'q10'],
@@ -269,13 +311,18 @@ export function useQuestionnaireForm(clientId: string): UseQuestionnaireFormRetu
     };
 
     const requiredQuestions = sectionQuestionMap[sectionNumber] || [];
+    console.log(`[validateSection] Required questions for section ${sectionNumber}:`, requiredQuestions);
     
     // Actually validate content, not just check Set membership
     const invalidQuestions = requiredQuestions.filter(q => {
       const error = validateQuestion(q);
-      return error !== undefined; // If validateQuestion returns error, question is invalid
+      const isInvalid = error !== undefined;
+      console.log(`[validateSection]   ${q}: ${isInvalid ? 'INVALID ✗' : 'VALID ✓'}`);
+      return isInvalid;
     });
 
+    console.log(`[validateSection] Section ${sectionNumber} invalid questions:`, invalidQuestions);
+    
     if (invalidQuestions.length > 0) {
       return {
         isValid: false,
@@ -283,6 +330,7 @@ export function useQuestionnaireForm(clientId: string): UseQuestionnaireFormRetu
       };
     }
 
+    console.log(`[validateSection] Section ${sectionNumber}: VALID ✓`);
     return { isValid: true };
   }, [validateQuestion]);
 
@@ -294,7 +342,9 @@ export function useQuestionnaireForm(clientId: string): UseQuestionnaireFormRetu
 
   // Step navigation
   const canGoNext = useCallback(() => {
-    return validateSection(currentSection).isValid;
+    const result = validateSection(currentSection).isValid;
+    console.log(`[canGoNext] Section ${currentSection}: ${result ? 'CAN PROCEED ✓' : 'BLOCKED ✗'}`);
+    return result;
   }, [currentSection, validateSection]);
 
   const canGoPrevious = useCallback(() => {
@@ -352,8 +402,10 @@ export function useQuestionnaireForm(clientId: string): UseQuestionnaireFormRetu
     saveStatus,
     updateQuestion,
     validateQuestion,
+    getQuestionError,
     validateSection,
     markQuestionCompleted,
+    markQuestionTouched,
     goToSection,
     goToNextStep,
     goToPreviousStep,
@@ -408,6 +460,7 @@ function getQuestionKey(questionId: string): string {
 // Helper function to get question value from formData
 function getQuestionValue(questionId: string, formData: QuestionnaireData): string | string[] {
   const key = `${questionId}_${getQuestionKey(questionId)}`;
+  console.log(`[getQuestionValue] ${questionId} → key: ${key}`);
   
   // Skip file upload questions - they don't need validation
   if (questionId === 'q33' || questionId === 'q34') return '';
@@ -415,7 +468,9 @@ function getQuestionValue(questionId: string, formData: QuestionnaireData): stri
   if (questionId.startsWith('q1') || questionId.startsWith('q2') || 
       questionId.startsWith('q3') || questionId.startsWith('q4') || 
       questionId.startsWith('q5')) {
-    return (formData.avatar_definition as Record<string, string | string[]>)[key] || '';
+    const value = (formData.avatar_definition as Record<string, string | string[]>)[key] || '';
+    console.log(`[getQuestionValue] ${questionId} found in avatar_definition[${key}]:`, value);
+    return value;
   } else if (questionId.startsWith('q6') || questionId.startsWith('q7') || 
              questionId.startsWith('q8') || questionId.startsWith('q9') || 
              questionId.startsWith('q10')) {
@@ -439,8 +494,11 @@ function getQuestionValue(questionId: string, formData: QuestionnaireData): stri
              questionId.startsWith('q30')) {
     return (formData.faith_integration as Record<string, string>)[key] || '';
   } else if (questionId.startsWith('q31') || questionId.startsWith('q32')) {
-    return (formData.business_metrics as Record<string, string>)[key] || '';
+    const value = (formData.business_metrics as Record<string, string>)[key] || '';
+    console.log(`[getQuestionValue] ${questionId} found in business_metrics:`, value);
+    return value;
   }
   
+  console.log(`[getQuestionValue] ${questionId}: NO MATCH, returning empty string`);
   return '';
 }
