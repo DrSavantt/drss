@@ -29,11 +29,6 @@ export default function ProofTransformationSection({ clientId }: Props) {
     setHelpOpen(true);
   };
 
-  // Mark Q26 as completed on mount since it's optional
-  useEffect(() => {
-    markQuestionCompleted('q26');
-  }, [markQuestionCompleted]);
-
   // Calculate section progress
   const sectionQuestions = ['q24', 'q25', 'q26', 'q27'];
   const answeredCount = sectionQuestions.filter(q => 

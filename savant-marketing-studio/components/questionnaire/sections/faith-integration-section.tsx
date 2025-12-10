@@ -34,13 +34,6 @@ export default function FaithIntegrationSection({ clientId }: Props) {
   const showQ29 = shouldShowQuestion('q29', formData);
   const showQ30 = shouldShowQuestion('q30', formData);
 
-  // Mark all questions as completed on mount since they're all optional
-  useEffect(() => {
-    markQuestionCompleted('q28');
-    markQuestionCompleted('q29');
-    markQuestionCompleted('q30');
-  }, [markQuestionCompleted]);
-
   // Calculate section progress (only count visible questions)
   const sectionQuestions = ['q28'];
   if (showQ29) sectionQuestions.push('q29');

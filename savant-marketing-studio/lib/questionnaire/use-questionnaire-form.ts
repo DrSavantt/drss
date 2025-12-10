@@ -57,11 +57,24 @@ export function useQuestionnaireForm(clientId: string): UseQuestionnaireFormRetu
     }
   }, [clientId]);
 
-  // Auto-save to localStorage every 30 seconds
+  // Auto-save to localStorage with 1 second debounce
   useEffect(() => {
     if (!formData) return;
 
+    // Check if form has any content
+    const hasContent = Object.values(formData).some(section => 
+      Object.values(section).some(value => {
+        if (typeof value === 'string') return value.length > 0;
+        if (Array.isArray(value)) return value.length > 0;
+        return false;
+      })
+    );
+
+    if (!hasContent) return;
+
     setSaveStatus('saving');
+    
+    // Debounce 1 second after last keystroke
     const timer = setTimeout(() => {
       try {
         localStorage.setItem(
@@ -78,10 +91,58 @@ export function useQuestionnaireForm(clientId: string): UseQuestionnaireFormRetu
         console.error('Failed to save draft:', error);
         setSaveStatus('error');
       }
-    }, 30000); // 30 seconds
+    }, 1000); // 1 second debounce
 
     return () => clearTimeout(timer);
   }, [formData, completedQuestions, clientId]);
+
+  // Save when component unmounts or user navigates away
+  useEffect(() => {
+    const handleBeforeUnload = () => {
+      // Save immediately before page closes/navigates
+      try {
+        localStorage.setItem(
+          `questionnaire_draft_${clientId}`,
+          JSON.stringify(formData)
+        );
+        localStorage.setItem(
+          `questionnaire_completed_${clientId}`,
+          JSON.stringify(Array.from(completedQuestions))
+        );
+        localStorage.setItem(
+          `questionnaire_current_step_${clientId}`,
+          currentSection.toString()
+        );
+      } catch (error) {
+        console.error('Failed to save on navigation:', error);
+      }
+    };
+
+    // Browser navigation (closing tab, clicking back, etc)
+    window.addEventListener('beforeunload', handleBeforeUnload);
+
+    // Cleanup: save on unmount (navigating to different route)
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+      // Final save on unmount
+      try {
+        localStorage.setItem(
+          `questionnaire_draft_${clientId}`,
+          JSON.stringify(formData)
+        );
+        localStorage.setItem(
+          `questionnaire_completed_${clientId}`,
+          JSON.stringify(Array.from(completedQuestions))
+        );
+        localStorage.setItem(
+          `questionnaire_current_step_${clientId}`,
+          currentSection.toString()
+        );
+      } catch (error) {
+        console.error('Failed to save on unmount:', error);
+      }
+    };
+  }, [formData, completedQuestions, currentSection, clientId]);
 
   // Calculate progress
   const progress = useCallback(() => {
