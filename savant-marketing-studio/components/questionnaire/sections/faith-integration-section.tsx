@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import QuestionWrapper from '../question-types/question-wrapper';
 import LongTextQuestion from '../question-types/long-text-question';
 import MultipleChoiceQuestion from '../question-types/multiple-choice-question';
@@ -87,10 +87,8 @@ export default function FaithIntegrationSection({ clientId }: Props) {
           >
             <LongTextQuestion
               value={formData.faith_integration.q29_faith_mission}
-              onChange={(val) => {
-                updateQuestion('q29', val);
-                markQuestionCompleted('q29');
-              }}
+              onChange={(val) => updateQuestion('q29', val)}
+              onBlur={() => markQuestionCompleted('q29')}
               placeholder="I believe business is ministry. My goal is to serve kingdom-minded entrepreneurs..."
               maxLength={1000}
               error={validateQuestion('q29')}
@@ -107,10 +105,8 @@ export default function FaithIntegrationSection({ clientId }: Props) {
           >
             <LongTextQuestion
               value={formData.faith_integration.q30_biblical_principles}
-              onChange={(val) => {
-                updateQuestion('q30', val);
-                markQuestionCompleted('q30');
-              }}
+              onChange={(val) => updateQuestion('q30', val)}
+              onBlur={() => markQuestionCompleted('q30')}
               placeholder="Servant leadership, excellence as worship, generosity, stewardship..."
               maxLength={500}
               error={validateQuestion('q30')}

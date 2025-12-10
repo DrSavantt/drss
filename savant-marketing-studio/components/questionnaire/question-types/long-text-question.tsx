@@ -5,6 +5,7 @@ import { useState, useEffect, useRef } from 'react';
 interface LongTextQuestionProps {
   value: string;
   onChange: (value: string) => void;
+  onBlur?: () => void;
   placeholder?: string;
   maxLength?: number;
   error?: string;
@@ -14,6 +15,7 @@ interface LongTextQuestionProps {
 export default function LongTextQuestion({
   value,
   onChange,
+  onBlur,
   placeholder = 'Enter your answer...',
   minLength,
   maxLength = 1000,
@@ -48,6 +50,7 @@ export default function LongTextQuestion({
         ref={textareaRef}
         value={value}
         onChange={handleChange}
+        onBlur={onBlur}
         placeholder={placeholder}
         maxLength={maxLength}
         className={`w-full px-4 py-3 bg-surface border rounded-lg text-base text-foreground placeholder:text-silver focus:outline-none focus:ring-1 transition-colors resize-y ${

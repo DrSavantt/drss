@@ -183,7 +183,7 @@ export default function QuestionnairePage() {
                 Client Onboarding Questionnaire
               </h1>
               <p className="text-silver">
-                Complete all sections to help us understand your business. Your progress is auto-saved every 30 seconds.
+                Complete all sections to help us understand your business. Your progress is auto-saved as you type.
               </p>
             </div>
 

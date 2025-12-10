@@ -57,10 +57,8 @@ export default function BusinessMetricsSection({ clientId }: Props) {
         >
           <ShortTextQuestion
             value={formData.business_metrics.q31_annual_revenue}
-            onChange={(val) => {
-              updateQuestion('q31', val);
-              if (val.length >= 1) markQuestionCompleted('q31');
-            }}
+            onChange={(val) => updateQuestion('q31', val)}
+            onBlur={() => markQuestionCompleted('q31')}
             placeholder="$500K ARR"
             maxLength={100}
             error={validateQuestion('q31')}
@@ -76,10 +74,8 @@ export default function BusinessMetricsSection({ clientId }: Props) {
         >
           <LongTextQuestion
             value={formData.business_metrics.q32_primary_goal}
-            onChange={(val) => {
-              updateQuestion('q32', val);
-              if (val.length >= 1) markQuestionCompleted('q32');
-            }}
+            onChange={(val) => updateQuestion('q32', val)}
+            onBlur={() => markQuestionCompleted('q32')}
             placeholder="Scale from $500K to $1.5M while working 30 hours/week instead of 60..."
             minLength={1}
             maxLength={1000}

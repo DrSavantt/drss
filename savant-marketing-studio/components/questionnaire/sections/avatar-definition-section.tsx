@@ -57,10 +57,8 @@ export default function AvatarDefinitionSection({ clientId }: Props) {
         >
           <LongTextQuestion
             value={formData.avatar_definition.q1_ideal_customer}
-            onChange={(val) => {
-              updateQuestion('q1', val);
-              if (val.length >= 50) markQuestionCompleted('q1');
-            }}
+            onChange={(val) => updateQuestion('q1', val)}
+            onBlur={() => markQuestionCompleted('q1')}
             placeholder="Business owners making $1M-$10M annually who struggle with..."
             minLength={50}
             maxLength={1000}
@@ -102,10 +100,8 @@ export default function AvatarDefinitionSection({ clientId }: Props) {
         >
           <LongTextQuestion
             value={formData.avatar_definition.q3_demographics}
-            onChange={(val) => {
-              updateQuestion('q3', val);
-              if (val.length >= 30) markQuestionCompleted('q3');
-            }}
+            onChange={(val) => updateQuestion('q3', val)}
+            onBlur={() => markQuestionCompleted('q3')}
             placeholder="Male, 38-52 years old, suburban US, household income $150K-$300K..."
             minLength={30}
             maxLength={500}
@@ -122,10 +118,8 @@ export default function AvatarDefinitionSection({ clientId }: Props) {
         >
           <LongTextQuestion
             value={formData.avatar_definition.q4_psychographics}
-            onChange={(val) => {
-              updateQuestion('q4', val);
-              if (val.length >= 30) markQuestionCompleted('q4');
-            }}
+            onChange={(val) => updateQuestion('q4', val)}
+            onBlur={() => markQuestionCompleted('q4')}
             placeholder="Values control and freedom, fears failure and looking incompetent..."
             minLength={30}
             maxLength={500}
@@ -142,10 +136,8 @@ export default function AvatarDefinitionSection({ clientId }: Props) {
         >
           <LongTextQuestion
             value={formData.avatar_definition.q5_platforms}
-            onChange={(val) => {
-              updateQuestion('q5', val);
-              if (val.length >= 20) markQuestionCompleted('q5');
-            }}
+            onChange={(val) => updateQuestion('q5', val)}
+            onBlur={() => markQuestionCompleted('q5')}
             placeholder="LinkedIn daily, listens to 'My First Million' podcast, attends local BNI meetings..."
             minLength={20}
             maxLength={500}

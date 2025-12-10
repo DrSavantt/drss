@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import QuestionWrapper from '../question-types/question-wrapper';
 import LongTextQuestion from '../question-types/long-text-question';
 import SectionContainer from './section-container';
@@ -56,10 +56,8 @@ export default function ProblemsObstaclesSection({ clientId }: Props) {
         >
           <LongTextQuestion
             value={formData.problems_obstacles.q11_external_problems}
-            onChange={(val) => {
-              updateQuestion('q11', val);
-              if (val.length >= 50) markQuestionCompleted('q11');
-            }}
+            onChange={(val) => updateQuestion('q11', val)}
+            onBlur={() => markQuestionCompleted('q11')}
             placeholder="Inconsistent lead flow, can't keep good employees, too many tasks..."
             minLength={50}
             maxLength={1000}
@@ -76,10 +74,8 @@ export default function ProblemsObstaclesSection({ clientId }: Props) {
         >
           <LongTextQuestion
             value={formData.problems_obstacles.q12_internal_problems}
-            onChange={(val) => {
-              updateQuestion('q12', val);
-              if (val.length >= 50) markQuestionCompleted('q12');
-            }}
+            onChange={(val) => updateQuestion('q12', val)}
+            onBlur={() => markQuestionCompleted('q12')}
             placeholder="Feels like a fraud, worried about making payroll, stressed about competition..."
             minLength={50}
             maxLength={1000}
@@ -95,10 +91,8 @@ export default function ProblemsObstaclesSection({ clientId }: Props) {
         >
           <LongTextQuestion
             value={formData.problems_obstacles.q13_philosophical_problems}
-            onChange={(val) => {
-              updateQuestion('q13', val);
-              markQuestionCompleted('q13');
-            }}
+            onChange={(val) => updateQuestion('q13', val)}
+            onBlur={() => markQuestionCompleted('q13')}
             placeholder="Business owners shouldn't have to work 80 hour weeks to succeed..."
             maxLength={1000}
             error={validateQuestion('q13')}
@@ -114,10 +108,8 @@ export default function ProblemsObstaclesSection({ clientId }: Props) {
         >
           <LongTextQuestion
             value={formData.problems_obstacles.q14_past_failures}
-            onChange={(val) => {
-              updateQuestion('q14', val);
-              if (val.length >= 50) markQuestionCompleted('q14');
-            }}
+            onChange={(val) => updateQuestion('q14', val)}
+            onBlur={() => markQuestionCompleted('q14')}
             placeholder="Hired 2-3 agencies that promised results but delivered nothing..."
             minLength={50}
             maxLength={1000}
@@ -134,10 +126,8 @@ export default function ProblemsObstaclesSection({ clientId }: Props) {
         >
           <LongTextQuestion
             value={formData.problems_obstacles.q15_limiting_beliefs}
-            onChange={(val) => {
-              updateQuestion('q15', val);
-              if (val.length >= 30) markQuestionCompleted('q15');
-            }}
+            onChange={(val) => updateQuestion('q15', val)}
+            onBlur={() => markQuestionCompleted('q15')}
             placeholder="'Marketing doesn't work for my industry', 'I'm not good at sales'..."
             minLength={30}
             maxLength={500}
