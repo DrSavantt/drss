@@ -13,10 +13,8 @@ interface UseQuestionnaireFormReturn {
   saveStatus: FormStatus;
   updateQuestion: (questionId: string, value: string | string[] | UploadedFile[]) => void;
   validateQuestion: (questionId: string) => string | undefined;
-  getQuestionError: (questionId: string) => string | undefined;
   validateSection: (sectionNumber: number) => { isValid: boolean; error?: string };
   markQuestionCompleted: (questionId: string) => void;
-  markQuestionTouched: (questionId: string) => void;
   goToSection: (sectionNumber: number) => void;
   goToNextStep: () => boolean;
   goToPreviousStep: () => void;
@@ -30,7 +28,6 @@ export function useQuestionnaireForm(clientId: string): UseQuestionnaireFormRetu
   const [formData, setFormData] = useState<QuestionnaireData>(EMPTY_QUESTIONNAIRE_DATA);
   const [currentSection, setCurrentSection] = useState(1);
   const [completedQuestions, setCompletedQuestions] = useState<Set<string>>(new Set());
-  const [touchedQuestions, setTouchedQuestions] = useState<Set<string>>(new Set());
   const [saveStatus, setSaveStatus] = useState<FormStatus>('saved');
   const [isDraft, setIsDraft] = useState(false);
 
@@ -60,33 +57,25 @@ export function useQuestionnaireForm(clientId: string): UseQuestionnaireFormRetu
     }
   }, [clientId]);
 
-  // Auto-save to localStorage with 1 second debounce - unconditional persistence
+  // Save to localStorage instantly on every change
   useEffect(() => {
     if (!formData) return;
 
-    // Save all state unconditionally - removed hasContent check
-    setSaveStatus('saving');
-    
-    // Debounce 1 second after last keystroke
-    const timer = setTimeout(() => {
-      try {
-        localStorage.setItem(
-          `questionnaire_draft_${clientId}`,
-          JSON.stringify(formData)
-        );
-        localStorage.setItem(
-          `questionnaire_completed_${clientId}`,
-          JSON.stringify(Array.from(completedQuestions))
-        );
-        setSaveStatus('saved');
-        setIsDraft(true);
-      } catch (error) {
-        console.error('Failed to save draft:', error);
-        setSaveStatus('error');
-      }
-    }, 1000); // 1 second debounce
-
-    return () => clearTimeout(timer);
+    try {
+      localStorage.setItem(
+        `questionnaire_draft_${clientId}`,
+        JSON.stringify(formData)
+      );
+      localStorage.setItem(
+        `questionnaire_completed_${clientId}`,
+        JSON.stringify(Array.from(completedQuestions))
+      );
+      setSaveStatus('saved');
+      setIsDraft(true);
+    } catch (error) {
+      console.error('Failed to save draft:', error);
+      setSaveStatus('error');
+    }
   }, [formData, completedQuestions, clientId]);
 
   // Save when component unmounts or user navigates away
@@ -253,38 +242,11 @@ export function useQuestionnaireForm(clientId: string): UseQuestionnaireFormRetu
     }
   }, [formData]);
 
-  // Get question error (only shows errors for touched questions)
-  const getQuestionError = useCallback((questionId: string): string | undefined => {
-    // Don't show errors for untouched questions
-    if (!touchedQuestions.has(questionId)) {
-      return undefined;
-    }
-    return validateQuestion(questionId);
-  }, [touchedQuestions, validateQuestion]);
-
-  // Mark question as touched (when user interacts)
-  const markQuestionTouched = useCallback((questionId: string) => {
-    setTouchedQuestions(prev => new Set(prev).add(questionId));
-  }, []);
-
-  // Mark question as completed - with validation gate
+  // Mark question as completed - no validation gate
   const markQuestionCompleted = useCallback((questionId: string) => {
-    console.log(`[markQuestionCompleted] Called for ${questionId}`);
-    // Mark as touched when trying to complete
-    markQuestionTouched(questionId);
-    // Only mark complete if question passes validation
-    const error = validateQuestion(questionId);
-    console.log(`[markQuestionCompleted] ${questionId} validation result:`, error === undefined ? 'PASS ✓' : `FAIL: ${error}`);
-    if (error === undefined) {
-      setCompletedQuestions(prev => {
-        const newSet = new Set(prev).add(questionId);
-        console.log(`[markQuestionCompleted] ${questionId} marked complete. Total completed:`, Array.from(newSet));
-        return newSet;
-      });
-    } else {
-      console.log(`[markQuestionCompleted] ${questionId} NOT marked complete (validation failed)`);
-    }
-  }, [validateQuestion, markQuestionTouched]);
+    console.log(`[markQuestionCompleted] Marking ${questionId} as complete (no validation)`);
+    setCompletedQuestions(prev => new Set(prev).add(questionId));
+  }, []);
 
   // Validate entire section - actually validates content, not just Set membership
   const validateSection = useCallback((sectionNumber: number): { isValid: boolean; error?: string } => {
@@ -339,6 +301,7 @@ export function useQuestionnaireForm(clientId: string): UseQuestionnaireFormRetu
   }, [currentSection]);
 
   const canGoPrevious = useCallback(() => {
+    // Always allow going back
     return currentSection > 1;
   }, [currentSection]);
 
@@ -393,10 +356,8 @@ export function useQuestionnaireForm(clientId: string): UseQuestionnaireFormRetu
     saveStatus,
     updateQuestion,
     validateQuestion,
-    getQuestionError,
     validateSection,
     markQuestionCompleted,
-    markQuestionTouched,
     goToSection,
     goToNextStep,
     goToPreviousStep,

@@ -16,7 +16,7 @@ export default function DreamOutcomeSection({ clientId }: Props) {
   const {
     formData,
     updateQuestion,
-    getQuestionError,
+    
     markQuestionCompleted,
     completedQuestions,
   } = useQuestionnaireForm(clientId);
@@ -62,7 +62,6 @@ export default function DreamOutcomeSection({ clientId }: Props) {
             placeholder="A predictable, profitable business that runs without them being there 80 hours/week..."
             minLength={50}
             maxLength={1000}
-            error={getQuestionError('q6')}
           />
         </QuestionWrapper>
 
@@ -80,7 +79,6 @@ export default function DreamOutcomeSection({ clientId }: Props) {
             placeholder="Their spouse sees them as successful, peers respect them, they're invited to speak..."
             minLength={30}
             maxLength={500}
-            error={getQuestionError('q7')}
           />
         </QuestionWrapper>
 
@@ -97,7 +95,6 @@ export default function DreamOutcomeSection({ clientId }: Props) {
             onBlur={() => markQuestionCompleted('q8')}
             placeholder="90 days to see significant results"
             maxLength={300}
-            error={getQuestionError('q8')}
           />
         </QuestionWrapper>
 
@@ -115,7 +112,6 @@ export default function DreamOutcomeSection({ clientId }: Props) {
             placeholder="2-3 hours per week initially, then 1 hour/week for maintenance..."
             minLength={30}
             maxLength={500}
-            error={getQuestionError('q9')}
           />
         </QuestionWrapper>
 
@@ -133,7 +129,6 @@ export default function DreamOutcomeSection({ clientId }: Props) {
             placeholder="42 clients served with 89% achieving ROI within 60 days. Average return: 3.2x investment..."
             minLength={50}
             maxLength={1000}
-            error={getQuestionError('q10')}
           />
         </QuestionWrapper>
       </SectionContainer>
