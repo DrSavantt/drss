@@ -80,20 +80,11 @@ export default function StepFooter({
             onClick={onNext}
             disabled={!canGoNext}
             className="flex items-center gap-2 px-6 py-2 rounded-lg bg-red-primary text-white hover:bg-red-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-semibold"
-            title={validationError || ''}
           >
             <span>{currentStep === totalSteps ? 'Review' : 'Next'}</span>
             <ArrowRight className="w-4 h-4" />
           </button>
         </div>
-
-        {/* Validation Error Message */}
-        {validationError && !canGoNext && (
-          <div className="mt-3 text-center text-sm text-red-500 flex items-center justify-center gap-2">
-            <AlertCircle className="w-4 h-4" />
-            {validationError}
-          </div>
-        )}
       </div>
     </div>
   );
