@@ -11,7 +11,6 @@ interface StepFooterProps {
   onPrevious: () => void;
   onSave: () => void;
   saveStatus: 'saved' | 'saving' | 'error';
-  validationError?: string;
 }
 
 export default function StepFooter({
@@ -23,7 +22,6 @@ export default function StepFooter({
   onPrevious,
   onSave,
   saveStatus,
-  validationError,
 }: StepFooterProps) {
   return (
     <div className="fixed bottom-0 left-0 right-0 bg-surface border-t border-border z-40">

@@ -37,7 +37,6 @@ export default function QuestionnairePage() {
   } = useQuestionnaireForm(clientId);
 
   const [showReview, setShowReview] = useState(false);
-  const [validationError, setValidationError] = useState<string | undefined>();
 
   // Read step from URL on mount
   useEffect(() => {
@@ -113,13 +112,11 @@ export default function QuestionnairePage() {
 
   const handleNext = () => {
     if (currentSection === 8) {
-      // Go to review
+      // Last section - go to review
       setShowReview(true);
-      setValidationError(undefined);
     } else {
-      // Remove validation gate - allow free navigation
+      // Just go to next section, no validation
       goToNextStep();
-      setValidationError(undefined);
     }
   };
 
@@ -127,15 +124,14 @@ export default function QuestionnairePage() {
     if (showReview) {
       setShowReview(false);
     } else {
+      // Just go back, no checks needed
       goToPreviousStep();
-      setValidationError(undefined);
     }
   };
 
   const handleStepClick = (step: number) => {
     goToSection(step);
     setShowReview(false);
-    setValidationError(undefined);
   };
 
   const renderCurrentSection = () => {
@@ -210,7 +206,6 @@ export default function QuestionnairePage() {
           onPrevious={handlePrevious}
           onSave={manualSave}
           saveStatus={saveStatus}
-          validationError={validationError}
         />
       )}
     </div>

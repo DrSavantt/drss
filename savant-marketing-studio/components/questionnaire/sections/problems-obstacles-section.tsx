@@ -15,7 +15,7 @@ export default function ProblemsObstaclesSection({ clientId }: Props) {
   const {
     formData,
     updateQuestion,
-    getQuestionError,
+    
     markQuestionCompleted,
     completedQuestions,
   } = useQuestionnaireForm(clientId);
@@ -61,7 +61,6 @@ export default function ProblemsObstaclesSection({ clientId }: Props) {
             placeholder="Inconsistent lead flow, can't keep good employees, too many tasks..."
             minLength={50}
             maxLength={1000}
-            error={getQuestionError('q11')}
           />
         </QuestionWrapper>
 
@@ -79,7 +78,6 @@ export default function ProblemsObstaclesSection({ clientId }: Props) {
             placeholder="Feels like a fraud, worried about making payroll, stressed about competition..."
             minLength={50}
             maxLength={1000}
-            error={getQuestionError('q12')}
           />
         </QuestionWrapper>
 
@@ -95,7 +93,6 @@ export default function ProblemsObstaclesSection({ clientId }: Props) {
             onBlur={() => markQuestionCompleted('q13')}
             placeholder="Business owners shouldn't have to work 80 hour weeks to succeed..."
             maxLength={1000}
-            error={getQuestionError('q13')}
           />
         </QuestionWrapper>
 
@@ -113,7 +110,6 @@ export default function ProblemsObstaclesSection({ clientId }: Props) {
             placeholder="Hired 2-3 agencies that promised results but delivered nothing..."
             minLength={50}
             maxLength={1000}
-            error={getQuestionError('q14')}
           />
         </QuestionWrapper>
 
@@ -131,7 +127,6 @@ export default function ProblemsObstaclesSection({ clientId }: Props) {
             placeholder="'Marketing doesn't work for my industry', 'I'm not good at sales'..."
             minLength={30}
             maxLength={500}
-            error={getQuestionError('q15')}
           />
         </QuestionWrapper>
       </SectionContainer>

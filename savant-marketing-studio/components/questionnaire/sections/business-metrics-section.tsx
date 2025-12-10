@@ -16,7 +16,7 @@ export default function BusinessMetricsSection({ clientId }: Props) {
   const {
     formData,
     updateQuestion,
-    getQuestionError,
+    
     markQuestionCompleted,
     completedQuestions,
   } = useQuestionnaireForm(clientId);
@@ -61,7 +61,6 @@ export default function BusinessMetricsSection({ clientId }: Props) {
             onBlur={() => markQuestionCompleted('q31')}
             placeholder="$500K ARR"
             maxLength={100}
-            error={getQuestionError('q31')}
           />
         </QuestionWrapper>
 
@@ -79,7 +78,6 @@ export default function BusinessMetricsSection({ clientId }: Props) {
             placeholder="Scale from $500K to $1.5M while working 30 hours/week instead of 60..."
             minLength={1}
             maxLength={1000}
-            error={getQuestionError('q32')}
           />
         </QuestionWrapper>
       </SectionContainer>

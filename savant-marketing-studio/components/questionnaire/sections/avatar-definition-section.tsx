@@ -16,7 +16,7 @@ export default function AvatarDefinitionSection({ clientId }: Props) {
   const {
     formData,
     updateQuestion,
-    getQuestionError,
+    
     markQuestionCompleted,
     completedQuestions,
   } = useQuestionnaireForm(clientId);
@@ -62,7 +62,6 @@ export default function AvatarDefinitionSection({ clientId }: Props) {
             placeholder="Business owners making $1M-$10M annually who struggle with..."
             minLength={50}
             maxLength={1000}
-            error={getQuestionError('q1')}
           />
         </QuestionWrapper>
 
@@ -87,7 +86,6 @@ export default function AvatarDefinitionSection({ clientId }: Props) {
               { value: 'all_four', label: 'All four of the above' },
             ]}
             allowMultiple={true}
-            error={getQuestionError('q2')}
           />
         </QuestionWrapper>
 
@@ -105,7 +103,6 @@ export default function AvatarDefinitionSection({ clientId }: Props) {
             placeholder="Male, 38-52 years old, suburban US, household income $150K-$300K..."
             minLength={30}
             maxLength={500}
-            error={getQuestionError('q3')}
           />
         </QuestionWrapper>
 
@@ -123,7 +120,6 @@ export default function AvatarDefinitionSection({ clientId }: Props) {
             placeholder="Values control and freedom, fears failure and looking incompetent..."
             minLength={30}
             maxLength={500}
-            error={getQuestionError('q4')}
           />
         </QuestionWrapper>
 
@@ -141,7 +137,6 @@ export default function AvatarDefinitionSection({ clientId }: Props) {
             placeholder="LinkedIn daily, listens to 'My First Million' podcast, attends local BNI meetings..."
             minLength={20}
             maxLength={500}
-            error={getQuestionError('q5')}
           />
         </QuestionWrapper>
       </SectionContainer>
