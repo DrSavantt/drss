@@ -39,7 +39,6 @@ export default function QuestionnairePage() {
   } = questionnaireForm;
 
   const [showReview, setShowReview] = useState(false);
-  const [footerSaveStatus, setFooterSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
 
   // Read step from URL on mount
   useEffect(() => {
