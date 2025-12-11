@@ -1,11 +1,11 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { QuestionnaireData, FormStatus, REQUIRED_QUESTIONS, EMPTY_QUESTIONNAIRE_DATA, UploadedFile } from './types';
 import { questionSchemas } from './validation-schemas';
 import { shouldShowQuestion } from './conditional-logic';
 
-interface UseQuestionnaireFormReturn {
+export interface UseQuestionnaireFormReturn {
   formData: QuestionnaireData;
   currentSection: number;
   completedQuestions: Set<string>;
@@ -30,53 +30,97 @@ export function useQuestionnaireForm(clientId: string): UseQuestionnaireFormRetu
   const [completedQuestions, setCompletedQuestions] = useState<Set<string>>(new Set());
   const [saveStatus, setSaveStatus] = useState<FormStatus>('saved');
   const [isDraft, setIsDraft] = useState(false);
+  
+  // Track if we've already restored from localStorage to prevent multiple restorations
+  const hasRestoredRef = useRef(false);
 
   // Restore from localStorage on mount
   useEffect(() => {
-    const draft = localStorage.getItem(`questionnaire_draft_${clientId}`);
-    if (draft) {
-      try {
-        const parsed = JSON.parse(draft);
+    // Only restore once on true initial mount
+    if (hasRestoredRef.current) {
+      console.log('[RESTORE] Skipping - already restored');
+      return;
+    }
+
+    console.log('[RESTORE] First mount - checking localStorage for draft, clientId:', clientId);
+    
+    try {
+      const draftKey = `questionnaire_draft_${clientId}`;
+      const completedKey = `questionnaire_completed_${clientId}`;
+      const sectionKey = `questionnaire_section_${clientId}`;
+      
+      // Restore formData
+      const savedDraft = localStorage.getItem(draftKey);
+      if (savedDraft) {
+        const parsed = JSON.parse(savedDraft);
+        console.log('[RESTORE] ✓ Found draft, restoring formData:', Object.keys(parsed));
         setFormData(parsed);
         setIsDraft(true);
-        
-        // Restore completed questions
-        const completed = localStorage.getItem(`questionnaire_completed_${clientId}`);
-        if (completed) {
-          setCompletedQuestions(new Set(JSON.parse(completed)));
-        }
-
-        // Restore current step
-        const savedStep = localStorage.getItem(`questionnaire_current_step_${clientId}`);
-        if (savedStep) {
-          setCurrentSection(parseInt(savedStep, 10));
-        }
-      } catch (error) {
-        console.error('Failed to restore draft:', error);
+      } else {
+        console.log('[RESTORE] No draft found');
       }
-    }
-  }, [clientId]);
+        
+      // Restore completedQuestions
+      const savedCompleted = localStorage.getItem(completedKey);
+      if (savedCompleted) {
+        const parsed = JSON.parse(savedCompleted);
+        console.log('[RESTORE] ✓ Found completedQuestions:', parsed);
+        setCompletedQuestions(new Set(parsed));
+        }
 
-  // Save to localStorage instantly on every change
+      // Restore current section
+      const savedSection = localStorage.getItem(sectionKey);
+      if (savedSection) {
+        const sectionNum = parseInt(savedSection, 10);
+        console.log('[RESTORE] ✓ Found saved section:', sectionNum);
+        setCurrentSection(sectionNum);
+      }
+      
+      // Mark as restored so this never runs again
+      hasRestoredRef.current = true;
+      console.log('[RESTORE] ✓ Restoration complete, will not run again');
+      
+      } catch (error) {
+      console.error('[RESTORE] ❌ FAILED:', error);
+    }
+  }, [clientId]); // Still depends on clientId, but ref prevents multiple runs
+
+  // Auto-save to localStorage - immediate, no debounce
   useEffect(() => {
-    if (!formData) return;
+    if (!formData) {
+      console.log('[AUTO-SAVE] Skipping - no formData');
+      return;
+    }
+
+    console.log('[AUTO-SAVE] Saving formData to localStorage:', {
+      clientId,
+      formDataKeys: Object.keys(formData),
+      timestamp: new Date().toISOString()
+    });
 
     try {
-      localStorage.setItem(
-        `questionnaire_draft_${clientId}`,
-        JSON.stringify(formData)
-      );
-      localStorage.setItem(
-        `questionnaire_completed_${clientId}`,
-        JSON.stringify(Array.from(completedQuestions))
-      );
+      const draftKey = `questionnaire_draft_${clientId}`;
+      const completedKey = `questionnaire_completed_${clientId}`;
+      
+      // Save formData
+      localStorage.setItem(draftKey, JSON.stringify(formData));
+      console.log('[AUTO-SAVE] ✓ FormData saved to', draftKey);
+      
+      // Save completedQuestions
+      localStorage.setItem(completedKey, JSON.stringify(Array.from(completedQuestions)));
+      console.log('[AUTO-SAVE] ✓ CompletedQuestions saved to', completedKey);
+      
+      // Save current section
+      localStorage.setItem(`questionnaire_section_${clientId}`, String(currentSection));
+      console.log('[AUTO-SAVE] ✓ Current section saved:', currentSection);
+      
       setSaveStatus('saved');
       setIsDraft(true);
     } catch (error) {
-      console.error('Failed to save draft:', error);
+      console.error('[AUTO-SAVE] ❌ FAILED:', error);
       setSaveStatus('error');
     }
-  }, [formData, completedQuestions, clientId]);
+  }, [formData, completedQuestions, currentSection, clientId]);
 
   // Save when component unmounts or user navigates away
   useEffect(() => {
@@ -92,7 +136,7 @@ export function useQuestionnaireForm(clientId: string): UseQuestionnaireFormRetu
           JSON.stringify(Array.from(completedQuestions))
         );
         localStorage.setItem(
-          `questionnaire_current_step_${clientId}`,
+          `questionnaire_section_${clientId}`,
           currentSection.toString()
         );
       } catch (error) {
@@ -117,7 +161,7 @@ export function useQuestionnaireForm(clientId: string): UseQuestionnaireFormRetu
           JSON.stringify(Array.from(completedQuestions))
         );
         localStorage.setItem(
-          `questionnaire_current_step_${clientId}`,
+          `questionnaire_section_${clientId}`,
           currentSection.toString()
         );
       } catch (error) {
@@ -144,60 +188,61 @@ export function useQuestionnaireForm(clientId: string): UseQuestionnaireFormRetu
       const updated = { ...prev };
       
       // Determine which section this question belongs to
-      if (questionId.startsWith('q1') || questionId.startsWith('q2') || 
-          questionId.startsWith('q3') || questionId.startsWith('q4') || 
-          questionId.startsWith('q5')) {
+      // Use exact matching to avoid q10 matching q1, q11 matching q1, etc.
+      if (questionId === 'q1' || questionId === 'q2' || 
+          questionId === 'q3' || questionId === 'q4' || 
+          questionId === 'q5') {
         updated.avatar_definition = {
           ...updated.avatar_definition,
           [`${questionId}_${getQuestionKey(questionId)}`]: value
         };
-      } else if (questionId.startsWith('q6') || questionId.startsWith('q7') || 
-                 questionId.startsWith('q8') || questionId.startsWith('q9') || 
-                 questionId.startsWith('q10')) {
+      } else if (questionId === 'q6' || questionId === 'q7' || 
+                 questionId === 'q8' || questionId === 'q9' || 
+                 questionId === 'q10') {
         const key = getQuestionKey(questionId);
         updated.dream_outcome = {
           ...updated.dream_outcome,
           [`${questionId}_${key}`]: value as string
         };
-      } else if (questionId.startsWith('q11') || questionId.startsWith('q12') || 
-                 questionId.startsWith('q13') || questionId.startsWith('q14') || 
-                 questionId.startsWith('q15')) {
+      } else if (questionId === 'q11' || questionId === 'q12' || 
+                 questionId === 'q13' || questionId === 'q14' || 
+                 questionId === 'q15') {
         const key = getQuestionKey(questionId);
         updated.problems_obstacles = {
           ...updated.problems_obstacles,
           [`${questionId}_${key}`]: value as string
         };
-      } else if (questionId.startsWith('q16') || questionId.startsWith('q17') || 
-                 questionId.startsWith('q18') || questionId.startsWith('q19')) {
+      } else if (questionId === 'q16' || questionId === 'q17' || 
+                 questionId === 'q18' || questionId === 'q19') {
         const key = getQuestionKey(questionId);
         updated.solution_methodology = {
           ...updated.solution_methodology,
           [`${questionId}_${key}`]: value as string
         };
-      } else if (questionId.startsWith('q20') || questionId.startsWith('q21') || 
-                 questionId.startsWith('q22') || questionId.startsWith('q23') ||
+      } else if (questionId === 'q20' || questionId === 'q21' || 
+                 questionId === 'q22' || questionId === 'q23' ||
                  questionId === 'q33') {
         const key = getQuestionKey(questionId);
         updated.brand_voice = {
           ...updated.brand_voice,
           [`${questionId}_${key}`]: value as string | UploadedFile[]
         };
-      } else if (questionId.startsWith('q24') || questionId.startsWith('q25') || 
-                 questionId.startsWith('q26') || questionId.startsWith('q27') ||
+      } else if (questionId === 'q24' || questionId === 'q25' || 
+                 questionId === 'q26' || questionId === 'q27' ||
                  questionId === 'q34') {
         const key = getQuestionKey(questionId);
         updated.proof_transformation = {
           ...updated.proof_transformation,
           [`${questionId}_${key}`]: value as string | UploadedFile[]
         };
-      } else if (questionId.startsWith('q28') || questionId.startsWith('q29') || 
-                 questionId.startsWith('q30')) {
+      } else if (questionId === 'q28' || questionId === 'q29' || 
+                 questionId === 'q30') {
         const key = getQuestionKey(questionId);
         updated.faith_integration = {
           ...updated.faith_integration,
           [`${questionId}_${key}`]: value as string
         };
-      } else if (questionId.startsWith('q31') || questionId.startsWith('q32')) {
+      } else if (questionId === 'q31' || questionId === 'q32') {
         const key = getQuestionKey(questionId);
         updated.business_metrics = {
           ...updated.business_metrics,
@@ -286,47 +331,52 @@ export function useQuestionnaireForm(clientId: string): UseQuestionnaireFormRetu
     return { isValid: true };
   }, [validateQuestion]);
 
-  // Navigate to section
+  // Navigate to section - no validation
   const goToSection = useCallback((sectionNumber: number) => {
+    console.log('[goToSection] Navigating to section:', sectionNumber);
+    if (sectionNumber >= 1 && sectionNumber <= 8) {
     setCurrentSection(sectionNumber);
     window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
   }, []);
 
-  // Step navigation - allow free movement through sections
+  // Step navigation - simple boundary checks, no validation
   const canGoNext = useCallback(() => {
-    // Remove validation gate - users can navigate freely
-    const canProceed = currentSection < 8;
-    console.log(`[canGoNext] Section ${currentSection}: ${canProceed ? 'CAN PROCEED ✓' : 'BLOCKED ✗ (last section)'}`);
-    return canProceed;
+    return currentSection < 8;
   }, [currentSection]);
 
   const canGoPrevious = useCallback(() => {
-    // Always allow going back
     return currentSection > 1;
   }, [currentSection]);
 
   const goToNextStep = useCallback((): boolean => {
-    const validation = validateSection(currentSection);
-    if (!validation.isValid) {
-      return false;
-    }
+    console.log('[goToNextStep] Called, current section:', currentSection);
+    
     if (currentSection < 8) {
+      console.log('[goToNextStep] Moving to section:', currentSection + 1);
       setCurrentSection(prev => prev + 1);
       window.scrollTo({ top: 0, behavior: 'smooth' });
       return true;
     }
+    
+    console.log('[goToNextStep] Already on last section');
     return false;
-  }, [currentSection, validateSection]);
+  }, [currentSection]);
 
   const goToPreviousStep = useCallback(() => {
+    console.log('[goToPreviousStep] Called, current section:', currentSection);
     if (currentSection > 1) {
+      console.log('[goToPreviousStep] Moving to section:', currentSection - 1);
       setCurrentSection(prev => prev - 1);
       window.scrollTo({ top: 0, behavior: 'smooth' });
+    } else {
+      console.log('[goToPreviousStep] Already on first section');
     }
   }, [currentSection]);
 
   // Manual save
   const manualSave = useCallback(() => {
+    console.log('[MANUAL-SAVE] User clicked Save Draft button');
     try {
       localStorage.setItem(
         `questionnaire_draft_${clientId}`,
@@ -337,13 +387,14 @@ export function useQuestionnaireForm(clientId: string): UseQuestionnaireFormRetu
         JSON.stringify(Array.from(completedQuestions))
       );
       localStorage.setItem(
-        `questionnaire_current_step_${clientId}`,
+        `questionnaire_section_${clientId}`,
         currentSection.toString()
       );
+      console.log('[MANUAL-SAVE] ✓ Manual save completed successfully');
       setSaveStatus('saved');
       setIsDraft(true);
     } catch (error) {
-      console.error('Failed to save draft:', error);
+      console.error('[MANUAL-SAVE] ❌ Failed to save draft:', error);
       setSaveStatus('error');
     }
   }, [formData, completedQuestions, currentSection, clientId]);
@@ -417,35 +468,36 @@ function getQuestionValue(questionId: string, formData: QuestionnaireData): stri
   // Skip file upload questions - they don't need validation
   if (questionId === 'q33' || questionId === 'q34') return '';
   
-  if (questionId.startsWith('q1') || questionId.startsWith('q2') || 
-      questionId.startsWith('q3') || questionId.startsWith('q4') || 
-      questionId.startsWith('q5')) {
+  // Use exact matching to avoid q10 matching q1, q11 matching q1, etc.
+  if (questionId === 'q1' || questionId === 'q2' || 
+      questionId === 'q3' || questionId === 'q4' || 
+      questionId === 'q5') {
     const value = (formData.avatar_definition as Record<string, string | string[]>)[key] || '';
     console.log(`[getQuestionValue] ${questionId} found in avatar_definition[${key}]:`, value);
     return value;
-  } else if (questionId.startsWith('q6') || questionId.startsWith('q7') || 
-             questionId.startsWith('q8') || questionId.startsWith('q9') || 
-             questionId.startsWith('q10')) {
+  } else if (questionId === 'q6' || questionId === 'q7' || 
+             questionId === 'q8' || questionId === 'q9' || 
+             questionId === 'q10') {
     return (formData.dream_outcome as Record<string, string>)[key] || '';
-  } else if (questionId.startsWith('q11') || questionId.startsWith('q12') || 
-             questionId.startsWith('q13') || questionId.startsWith('q14') || 
-             questionId.startsWith('q15')) {
+  } else if (questionId === 'q11' || questionId === 'q12' || 
+             questionId === 'q13' || questionId === 'q14' || 
+             questionId === 'q15') {
     return (formData.problems_obstacles as Record<string, string>)[key] || '';
-  } else if (questionId.startsWith('q16') || questionId.startsWith('q17') || 
-             questionId.startsWith('q18') || questionId.startsWith('q19')) {
+  } else if (questionId === 'q16' || questionId === 'q17' || 
+             questionId === 'q18' || questionId === 'q19') {
     return (formData.solution_methodology as Record<string, string>)[key] || '';
-  } else if (questionId.startsWith('q20') || questionId.startsWith('q21') || 
-             questionId.startsWith('q22') || questionId.startsWith('q23')) {
+  } else if (questionId === 'q20' || questionId === 'q21' || 
+             questionId === 'q22' || questionId === 'q23') {
     const value = (formData.brand_voice as Record<string, unknown>)[key];
     return typeof value === 'string' ? value : '';
-  } else if (questionId.startsWith('q24') || questionId.startsWith('q25') || 
-             questionId.startsWith('q26') || questionId.startsWith('q27')) {
+  } else if (questionId === 'q24' || questionId === 'q25' || 
+             questionId === 'q26' || questionId === 'q27') {
     const value = (formData.proof_transformation as Record<string, unknown>)[key];
     return typeof value === 'string' ? value : '';
-  } else if (questionId.startsWith('q28') || questionId.startsWith('q29') || 
-             questionId.startsWith('q30')) {
+  } else if (questionId === 'q28' || questionId === 'q29' || 
+             questionId === 'q30') {
     return (formData.faith_integration as Record<string, string>)[key] || '';
-  } else if (questionId.startsWith('q31') || questionId.startsWith('q32')) {
+  } else if (questionId === 'q31' || questionId === 'q32') {
     const value = (formData.business_metrics as Record<string, string>)[key] || '';
     console.log(`[getQuestionValue] ${questionId} found in business_metrics:`, value);
     return value;

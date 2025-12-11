@@ -23,6 +23,8 @@ export default function QuestionnairePage() {
   const router = useRouter();
   const clientId = params.id as string;
   
+  const questionnaireForm = useQuestionnaireForm(clientId);
+  
   const {
     currentSection,
     completedQuestions,
@@ -34,7 +36,7 @@ export default function QuestionnairePage() {
     validateSection,
     manualSave,
     saveStatus,
-  } = useQuestionnaireForm(clientId);
+  } = questionnaireForm;
 
   const [showReview, setShowReview] = useState(false);
 
@@ -137,21 +139,21 @@ export default function QuestionnairePage() {
   const renderCurrentSection = () => {
     switch (currentSection) {
       case 1:
-        return <AvatarDefinitionSection clientId={clientId} />;
+        return <AvatarDefinitionSection clientId={clientId} questionnaireForm={questionnaireForm} />;
       case 2:
-        return <DreamOutcomeSection clientId={clientId} />;
+        return <DreamOutcomeSection clientId={clientId} questionnaireForm={questionnaireForm} />;
       case 3:
-        return <ProblemsObstaclesSection clientId={clientId} />;
+        return <ProblemsObstaclesSection clientId={clientId} questionnaireForm={questionnaireForm} />;
       case 4:
-        return <SolutionMethodologySection clientId={clientId} />;
+        return <SolutionMethodologySection clientId={clientId} questionnaireForm={questionnaireForm} />;
       case 5:
-        return <BrandVoiceSection clientId={clientId} />;
+        return <BrandVoiceSection clientId={clientId} questionnaireForm={questionnaireForm} />;
       case 6:
-        return <ProofTransformationSection clientId={clientId} />;
+        return <ProofTransformationSection clientId={clientId} questionnaireForm={questionnaireForm} />;
       case 7:
-        return <FaithIntegrationSection clientId={clientId} />;
+        return <FaithIntegrationSection clientId={clientId} questionnaireForm={questionnaireForm} />;
       case 8:
-        return <BusinessMetricsSection clientId={clientId} />;
+        return <BusinessMetricsSection clientId={clientId} questionnaireForm={questionnaireForm} />;
       default:
         return null;
     }
@@ -207,6 +209,23 @@ export default function QuestionnairePage() {
           onSave={manualSave}
           saveStatus={saveStatus}
         />
+      )}
+
+      {/* Dev-only Reset Button */}
+      {process.env.NODE_ENV === 'development' && (
+        <button
+          onClick={() => {
+            if (confirm('Clear ALL questionnaire data and start fresh?')) {
+              localStorage.removeItem(`questionnaire_draft_${clientId}`);
+              localStorage.removeItem(`questionnaire_completed_${clientId}`);
+              localStorage.removeItem(`questionnaire_section_${clientId}`);
+              window.location.reload();
+            }
+          }}
+          className="fixed bottom-4 left-4 z-50 bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg shadow-lg text-sm font-medium"
+        >
+          🗑️ Reset
+        </button>
       )}
     </div>
   );
