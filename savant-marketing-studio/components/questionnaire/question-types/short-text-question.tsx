@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { AlertCircle } from 'lucide-react';
 
 interface ShortTextQuestionProps {
   value: string;
@@ -16,49 +17,60 @@ export default function ShortTextQuestion({
   onChange,
   onBlur,
   placeholder = 'Enter your answer...',
-  maxLength = 100,
+  maxLength = 200,
   error,
 }: ShortTextQuestionProps) {
-  const [charCount, setCharCount] = useState(value.length);
-
-  useEffect(() => {
-    setCharCount(value.length);
-  }, [value]);
-
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const newValue = e.target.value;
-    if (maxLength && newValue.length > maxLength) return;
-    onChange(newValue);
-    setCharCount(newValue.length);
-  };
+  const [isFocused, setIsFocused] = useState(false);
+  const charCount = value?.length || 0;
+  const isNearMax = charCount > maxLength * 0.85;
+  const isOverMax = charCount > maxLength;
 
   return (
-    <div className="w-full">
+    <div className="space-y-2">
       <input
         type="text"
         value={value || ''}
-        onChange={handleChange}
-        onBlur={onBlur}
+        onChange={(e) => onChange(e.target.value)}
+        onFocus={() => setIsFocused(true)}
+        onBlur={() => {
+          setIsFocused(false);
+          onBlur?.();
+        }}
         placeholder={placeholder}
-        maxLength={maxLength}
-        className="w-full px-4 py-3 bg-black border border-[#333333] rounded-lg text-base text-white placeholder:text-gray-600 focus:border-red-500 focus:outline-none focus:ring-1 focus:ring-red-500 transition-colors"
-        aria-invalid={error ? 'true' : 'false'}
-        aria-describedby={error ? 'error-message' : undefined}
+        className={`
+          w-full
+          bg-black/50 
+          border rounded-lg 
+          px-4 py-3
+          text-white text-base
+          placeholder:text-gray-600
+          transition-all duration-200
+          ${error 
+            ? 'border-red-500 focus:border-red-500 focus:ring-1 focus:ring-red-500' 
+            : isFocused 
+              ? 'border-red-500 ring-1 ring-red-500/50' 
+              : 'border-[#333333] hover:border-[#444444]'
+          }
+          focus:outline-none
+        `}
       />
       
-      {/* Error Message */}
-      {error && (
-        <div className="mt-2">
-          <span id="error-message" className="text-red-500 text-sm">
-            {error}
-          </span>
-        </div>
-      )}
-
-      {/* Character Counter - Only show when approaching limit */}
-      {value.length > maxLength * 0.9 && (
-        <div className="mt-2 text-xs text-yellow-500">
-          Approaching limit: {value.length}/{maxLength}
+      {/* Conditional Counter/Error */}
+      {(error || isNearMax) && (
+        <div className="flex items-center justify-between text-xs">
+          {error && (
+            <span className="flex items-center gap-1 text-red-500">
+              <AlertCircle className="w-3 h-3" />
+              {error}
+            </span>
+          )}
+          {!error && <span />}
+          
+          {isNearMax && (
+            <span className={isOverMax ? 'text-red-500' : 'text-yellow-500'}>
+              {charCount}/{maxLength}
+            </span>
+          )}
         </div>
       )}
     </div>

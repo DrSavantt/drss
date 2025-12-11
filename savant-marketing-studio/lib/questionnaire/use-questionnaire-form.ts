@@ -31,14 +31,14 @@ export function useQuestionnaireForm(clientId: string): UseQuestionnaireFormRetu
   const [saveStatus, setSaveStatus] = useState<FormStatus>('saved');
   const [isDraft, setIsDraft] = useState(false);
   
-  // Track if we've already restored from localStorage per clientId to prevent multiple restorations
-  const hasRestoredRef = useRef<string | null>(null);
+  // Track if we've already restored from localStorage to prevent multiple restorations
+  const hasRestoredRef = useRef(false);
 
   // Restore from localStorage on mount
   useEffect(() => {
-    // Only restore once per clientId
-    if (hasRestoredRef.current === clientId) {
-      console.log('[RESTORE] Skipping - already restored for clientId:', clientId);
+    // Only restore once on true initial mount
+    if (hasRestoredRef.current) {
+      console.log('[RESTORE] Skipping - already restored');
       return;
     }
 
@@ -48,7 +48,6 @@ export function useQuestionnaireForm(clientId: string): UseQuestionnaireFormRetu
       const draftKey = `questionnaire_draft_${clientId}`;
       const completedKey = `questionnaire_completed_${clientId}`;
       const sectionKey = `questionnaire_section_${clientId}`;
-      const legacySectionKey = `questionnaire_current_step_${clientId}`;
       
       // Restore formData
       const savedDraft = localStorage.getItem(draftKey);
@@ -67,33 +66,24 @@ export function useQuestionnaireForm(clientId: string): UseQuestionnaireFormRetu
         const parsed = JSON.parse(savedCompleted);
         console.log('[RESTORE] ✓ Found completedQuestions:', parsed);
         setCompletedQuestions(new Set(parsed));
-      }
+        }
 
-      // Restore current section - check both new and legacy keys for backward compatibility
-      const savedSection = localStorage.getItem(sectionKey) || localStorage.getItem(legacySectionKey);
+      // Restore current section
+      const savedSection = localStorage.getItem(sectionKey);
       if (savedSection) {
         const sectionNum = parseInt(savedSection, 10);
-        if (!isNaN(sectionNum) && sectionNum >= 1 && sectionNum <= 8) {
-          console.log('[RESTORE] ✓ Found saved section:', sectionNum);
-          setCurrentSection(sectionNum);
-          
-          // Migrate legacy key to new key if found
-          if (localStorage.getItem(legacySectionKey)) {
-            localStorage.setItem(sectionKey, savedSection);
-            localStorage.removeItem(legacySectionKey);
-            console.log('[RESTORE] ✓ Migrated legacy section key to new key');
-          }
-        }
+        console.log('[RESTORE] ✓ Found saved section:', sectionNum);
+        setCurrentSection(sectionNum);
       }
       
-      // Mark as restored for this clientId
-      hasRestoredRef.current = clientId;
-      console.log('[RESTORE] ✓ Restoration complete for clientId:', clientId);
+      // Mark as restored so this never runs again
+      hasRestoredRef.current = true;
+      console.log('[RESTORE] ✓ Restoration complete, will not run again');
       
-    } catch (error) {
+      } catch (error) {
       console.error('[RESTORE] ❌ FAILED:', error);
     }
-  }, [clientId]); // Reset restoration when clientId changes
+  }, [clientId]); // Still depends on clientId, but ref prevents multiple runs
 
   // Auto-save to localStorage - immediate, no debounce
   useEffect(() => {
