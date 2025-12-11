@@ -36,29 +36,31 @@ export default function ShortTextQuestion({
     <div className="w-full">
       <input
         type="text"
-        value={value}
+        value={value || ''}
         onChange={handleChange}
         onBlur={onBlur}
         placeholder={placeholder}
         maxLength={maxLength}
-        className={`w-full px-4 py-3 bg-surface border rounded-lg text-base text-foreground placeholder:text-silver focus:outline-none focus:ring-1 transition-colors ${
-          error
-            ? 'border-red-500 focus:border-red-500 focus:ring-red-500'
-            : 'border-border focus:border-red-primary focus:ring-red-primary'
-        }`}
+        className="w-full px-4 py-3 bg-black border border-[#333333] rounded-lg text-base text-white placeholder:text-gray-600 focus:border-red-500 focus:outline-none focus:ring-1 focus:ring-red-500 transition-colors"
         aria-invalid={error ? 'true' : 'false'}
         aria-describedby={error ? 'error-message' : undefined}
       />
-      <div className="flex items-center justify-between mt-2">
-        {error && (
+      
+      {/* Error Message */}
+      {error && (
+        <div className="mt-2">
           <span id="error-message" className="text-red-500 text-sm">
             {error}
           </span>
-        )}
-        <span className={`text-silver text-sm ${error ? 'ml-auto' : 'ml-auto'}`}>
-          {charCount} / {maxLength} characters
-        </span>
-      </div>
+        </div>
+      )}
+
+      {/* Character Counter - Only show when approaching limit */}
+      {value.length > maxLength * 0.9 && (
+        <div className="mt-2 text-xs text-yellow-500">
+          Approaching limit: {value.length}/{maxLength}
+        </div>
+      )}
     </div>
   );
 }

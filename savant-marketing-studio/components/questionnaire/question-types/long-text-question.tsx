@@ -48,43 +48,37 @@ export default function LongTextQuestion({
     <div className="w-full">
       <textarea
         ref={textareaRef}
-        value={value}
+        value={value || ''}
         onChange={handleChange}
         onBlur={onBlur}
         placeholder={placeholder}
         maxLength={maxLength}
-        className={`w-full px-4 py-3 bg-surface border rounded-lg text-base text-foreground placeholder:text-silver focus:outline-none focus:ring-1 transition-colors resize-y ${
-          error
-            ? 'border-red-500 focus:border-red-500 focus:ring-red-500'
-            : 'border-border focus:border-red-primary focus:ring-red-primary'
-        }`}
-        style={{ minHeight: '150px', lineHeight: '1.6' }}
+        className="w-full min-h-[150px] bg-black border border-[#333333] rounded-lg p-4 text-white placeholder:text-gray-600 focus:border-red-500 focus:outline-none focus:ring-1 focus:ring-red-500 resize-y transition-colors"
+        style={{ lineHeight: '1.6' }}
         aria-invalid={error ? 'true' : 'false'}
         aria-describedby={error ? 'error-message' : undefined}
       />
-      <div className="flex items-center justify-between mt-2">
-        {error && (
-          <div className="flex-1 mr-4">
-            <span id="error-message" className="text-red-500 text-sm block">
-              {error}
-            </span>
-            {/* Show current character count if it's a minimum length error */}
-            {error.includes('20 characters') && value.trim().length > 0 && (
-              <span className="text-xs text-silver block mt-1">
-                Current: {value.trim().length} characters
-              </span>
-            )}
-            {error.includes('10 characters') && value.trim().length > 0 && (
-              <span className="text-xs text-silver block mt-1">
-                Current: {value.trim().length} characters
-              </span>
-            )}
-          </div>
-        )}
-        <span className={`text-silver text-sm whitespace-nowrap ${error ? '' : 'ml-auto'}`}>
-          {charCount} / {maxLength}
-        </span>
-      </div>
+      
+      {/* Error Message */}
+      {error && (
+        <div className="mt-2">
+          <span id="error-message" className="text-red-500 text-sm block">
+            {error}
+          </span>
+        </div>
+      )}
+
+      {/* Character Counter - Only show when needed */}
+      {(value.length > 900 || (minLength && value.length < minLength && value.length > 0)) && (
+        <div className="mt-2 text-xs">
+          {value.length < minLength && value.length > 0 && (
+            <span className="text-yellow-500">Please add more detail ({value.length}/{minLength} min)</span>
+          )}
+          {value.length > 900 && (
+            <span className="text-yellow-500">Approaching limit: {value.length}/{maxLength}</span>
+          )}
+        </div>
+      )}
     </div>
   );
 }
