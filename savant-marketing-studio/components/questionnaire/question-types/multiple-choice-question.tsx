@@ -1,5 +1,7 @@
 'use client';
 
+import { Check, AlertCircle } from 'lucide-react';
+
 interface MultipleChoiceQuestionProps {
   value: string | string[];
   onChange: (value: string | string[]) => void;
@@ -15,72 +17,67 @@ export default function MultipleChoiceQuestion({
   allowMultiple = false,
   error,
 }: MultipleChoiceQuestionProps) {
-  const isSelected = (optionValue: string): boolean => {
-    if (Array.isArray(value)) {
-      return value.includes(optionValue);
-    }
-    return value === optionValue;
-  };
+  const selectedValues = Array.isArray(value) ? value : value ? [value] : [];
 
-  const handleSingleSelect = (optionValue: string) => {
-    onChange(optionValue);
-  };
-
-  const handleMultiSelect = (optionValue: string) => {
-    const currentValues = Array.isArray(value) ? value : [];
-    if (currentValues.includes(optionValue)) {
-      onChange(currentValues.filter((v) => v !== optionValue));
-    } else {
-      onChange([...currentValues, optionValue]);
-    }
-  };
-
-  const handleChange = (optionValue: string) => {
+  const handleSelect = (optionValue: string) => {
     if (allowMultiple) {
-      handleMultiSelect(optionValue);
+      const newValues = selectedValues.includes(optionValue)
+        ? selectedValues.filter(v => v !== optionValue)
+        : [...selectedValues, optionValue];
+      onChange(newValues);
     } else {
-      handleSingleSelect(optionValue);
+      onChange(optionValue);
     }
   };
+
+  const isSelected = (optionValue: string) => selectedValues.includes(optionValue);
 
   return (
-    <div className="w-full">
-      <div className="space-y-3" role={allowMultiple ? 'group' : 'radiogroup'}>
-        {options.map((option) => {
-          const selected = isSelected(option.value);
-          return (
-            <label
-              key={option.value}
-              className={`flex items-center gap-3 p-4 rounded-lg border cursor-pointer transition-all ${
-                selected
-                  ? 'border-red-primary bg-red-primary/5'
-                  : 'border-border bg-surface hover:bg-surface-highlight'
-              }`}
-            >
-              <input
-                type={allowMultiple ? 'checkbox' : 'radio'}
-                name={allowMultiple ? undefined : 'choice'}
-                value={option.value}
-                checked={selected}
-                onChange={() => handleChange(option.value)}
-                className="w-5 h-5 text-red-primary border-border focus:ring-red-primary focus:ring-2"
-                aria-invalid={error ? 'true' : 'false'}
-              />
-              <span
-                className={`text-base ${
-                  selected ? 'text-red-primary font-medium' : 'text-foreground'
-                }`}
-              >
-                {option.label}
-              </span>
-            </label>
-          );
-        })}
-      </div>
+    <div className="space-y-3">
+      {options.map((option) => (
+        <button
+          key={option.value}
+          type="button"
+          onClick={() => handleSelect(option.value)}
+          className={`
+            w-full flex items-center gap-4 
+            p-4 rounded-lg 
+            border transition-all duration-200
+            text-left
+            ${isSelected(option.value)
+              ? 'bg-red-500/10 border-red-500 text-white'
+              : 'bg-black/30 border-[#333333] text-gray-300 hover:border-[#444444] hover:bg-white/5'
+            }
+          `}
+        >
+          {/* Checkbox/Radio indicator */}
+          <div 
+            className={`
+              flex-shrink-0 w-5 h-5 rounded-${allowMultiple ? 'md' : 'full'} 
+              border-2 flex items-center justify-center
+              transition-all duration-200
+              ${isSelected(option.value)
+                ? 'bg-red-500 border-red-500'
+                : 'border-[#555555]'
+              }
+            `}
+          >
+            {isSelected(option.value) && (
+              <Check className="w-3 h-3 text-white" strokeWidth={3} />
+            )}
+          </div>
+          
+          {/* Option label */}
+          <span className="flex-1 text-base">{option.label}</span>
+        </button>
+      ))}
+      
+      {/* Error message */}
       {error && (
-        <span className="text-red-500 text-sm mt-2 block" role="alert">
+        <div className="flex items-center gap-2 text-xs text-red-500 mt-2">
+          <AlertCircle className="w-3 h-3" />
           {error}
-        </span>
+        </div>
       )}
     </div>
   );

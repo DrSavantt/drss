@@ -1,81 +1,88 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
+import { AlertCircle } from 'lucide-react';
 
 interface LongTextQuestionProps {
   value: string;
   onChange: (value: string) => void;
   onBlur?: () => void;
   placeholder?: string;
+  minLength?: number;
   maxLength?: number;
   error?: string;
-  minLength?: number;
 }
 
 export default function LongTextQuestion({
   value,
   onChange,
   onBlur,
-  placeholder = 'Enter your answer...',
-  minLength,
+  placeholder = 'Type your answer here...',
+  minLength = 50,
   maxLength = 1000,
   error,
 }: LongTextQuestionProps) {
-  const [charCount, setCharCount] = useState(value.length);
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
-
-  useEffect(() => {
-    setCharCount(value.length);
-    adjustHeight();
-  }, [value]);
-
-  const adjustHeight = () => {
-    const textarea = textareaRef.current;
-    if (textarea) {
-      textarea.style.height = 'auto';
-      textarea.style.height = Math.max(textarea.scrollHeight, 150) + 'px';
-    }
-  };
-
-  const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    const newValue = e.target.value;
-    if (maxLength && newValue.length > maxLength) return;
-    onChange(newValue);
-    setCharCount(newValue.length);
-  };
+  const [isFocused, setIsFocused] = useState(false);
+  const charCount = value?.length || 0;
+  
+  // Only show counter when approaching limits or there's an issue
+  const showCounter = charCount > 0 && (charCount < minLength || charCount > maxLength * 0.9);
+  const isUnderMin = charCount > 0 && charCount < minLength;
+  const isNearMax = charCount > maxLength * 0.9;
+  const isOverMax = charCount > maxLength;
 
   return (
-    <div className="w-full">
+    <div className="space-y-2">
       <textarea
-        ref={textareaRef}
         value={value || ''}
-        onChange={handleChange}
-        onBlur={onBlur}
+        onChange={(e) => onChange(e.target.value)}
+        onFocus={() => setIsFocused(true)}
+        onBlur={() => {
+          setIsFocused(false);
+          onBlur?.();
+        }}
         placeholder={placeholder}
-        maxLength={maxLength}
-        className="w-full min-h-[150px] bg-black border border-[#333333] rounded-lg p-4 text-white placeholder:text-gray-600 focus:border-red-500 focus:outline-none focus:ring-1 focus:ring-red-500 resize-y transition-colors"
-        style={{ lineHeight: '1.6' }}
-        aria-invalid={error ? 'true' : 'false'}
-        aria-describedby={error ? 'error-message' : undefined}
+        rows={5}
+        className={`
+          w-full min-h-[140px] max-h-[400px]
+          bg-black/50 
+          border rounded-lg 
+          p-4 
+          text-white text-base leading-relaxed
+          placeholder:text-gray-600
+          resize-y
+          transition-all duration-200
+          ${error 
+            ? 'border-red-500 focus:border-red-500 focus:ring-1 focus:ring-red-500' 
+            : isFocused 
+              ? 'border-red-500 ring-1 ring-red-500/50' 
+              : 'border-[#333333] hover:border-[#444444]'
+          }
+          focus:outline-none
+        `}
       />
       
-      {/* Error Message */}
-      {error && (
-        <div className="mt-2">
-          <span id="error-message" className="text-red-500 text-sm block">
-            {error}
-          </span>
-        </div>
-      )}
-
-      {/* Character Counter - Only show when needed */}
-      {(value.length > 900 || (minLength && value.length < minLength && value.length > 0)) && (
-        <div className="mt-2 text-xs">
-          {value.length < minLength && value.length > 0 && (
-            <span className="text-yellow-500">Please add more detail ({value.length}/{minLength} min)</span>
-          )}
-          {value.length > 900 && (
-            <span className="text-yellow-500">Approaching limit: {value.length}/{maxLength}</span>
+      {/* Conditional Counter/Feedback - Only shows when needed */}
+      {(showCounter || error) && (
+        <div className="flex items-center justify-between text-xs">
+          <div className="flex items-center gap-2">
+            {error && (
+              <span className="flex items-center gap-1 text-red-500">
+                <AlertCircle className="w-3 h-3" />
+                {error}
+              </span>
+            )}
+            {!error && isUnderMin && (
+              <span className="text-yellow-500">
+                Add more detail ({charCount}/{minLength} min)
+              </span>
+            )}
+          </div>
+          
+          {(isNearMax || isOverMax) && (
+            <span className={isOverMax ? 'text-red-500' : 'text-yellow-500'}>
+              {charCount}/{maxLength}
+            </span>
           )}
         </div>
       )}

@@ -2,8 +2,8 @@
 
 import { useState, useEffect } from 'react';
 import { useParams, useSearchParams, useRouter } from 'next/navigation';
-import { ProgressIndicator } from '@/components/questionnaire/navigation';
-import StepFooter from '@/components/questionnaire/navigation/step-footer';
+import { ProgressStepper } from '@/components/questionnaire/navigation/progress-stepper';
+import { RichFooter } from '@/components/questionnaire/navigation/rich-footer';
 import { useQuestionnaireForm } from '@/lib/questionnaire/use-questionnaire-form';
 import { QuestionnaireReview } from '@/components/questionnaire/review';
 
@@ -39,6 +39,7 @@ export default function QuestionnairePage() {
   } = questionnaireForm;
 
   const [showReview, setShowReview] = useState(false);
+  const [footerSaveStatus, setFooterSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
 
   // Read step from URL on mount
   useEffect(() => {
@@ -161,15 +162,15 @@ export default function QuestionnairePage() {
 
   return (
     <div className="min-h-screen bg-background pb-24">
-      {/* Top Progress Indicator */}
-      <ProgressIndicator
+      {/* Top Progress Stepper */}
+      <ProgressStepper
         currentSection={currentSection}
         completedSections={completedSections}
-        onStepClick={handleStepClick}
+        onSectionClick={handleStepClick}
       />
 
       {/* Main Content */}
-      <main className="max-w-3xl mx-auto px-4 py-8">
+      <main className="max-w-3xl mx-auto px-4 py-8 pb-32">
         {!showReview ? (
           <>
             <div className="mb-8">
@@ -199,15 +200,12 @@ export default function QuestionnairePage() {
 
       {/* Bottom Navigation Footer */}
       {!showReview && (
-        <StepFooter
-          currentStep={currentSection}
-          totalSteps={8}
-          canGoNext={canGoNext()}
-          canGoPrevious={canGoPrevious()}
-          onNext={handleNext}
+        <RichFooter
+          currentSection={currentSection}
           onPrevious={handlePrevious}
-          onSave={manualSave}
-          saveStatus={saveStatus}
+          onNext={handleNext}
+          saveStatus={saveStatus === 'saved' ? 'saved' : saveStatus === 'saving' ? 'saving' : 'idle'}
+          isLastSection={currentSection === 8}
         />
       )}
 
