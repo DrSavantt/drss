@@ -1,5 +1,6 @@
 'use client';
 
+import React from 'react';
 import { HelpCircle } from 'lucide-react';
 
 interface QuestionWrapperProps {
@@ -11,7 +12,7 @@ interface QuestionWrapperProps {
   children: React.ReactNode;
 }
 
-export default function QuestionWrapper({
+export function QuestionWrapper({
   questionNumber,
   questionText,
   isRequired = false,
@@ -20,36 +21,44 @@ export default function QuestionWrapper({
   children,
 }: QuestionWrapperProps) {
   return (
-    <div className="mb-12">
-      <div className="flex items-start justify-between mb-4">
-        <div className="flex items-start gap-3">
-          <span className="bg-red-primary text-white rounded-full px-3 py-1 text-sm font-semibold flex-shrink-0">
-            Q{questionNumber}
+    <div className="relative bg-[#1a1a1a] border border-[#333333] rounded-xl p-6 mb-8 hover:border-red-500/50 transition-colors duration-200">
+      {/* Top Row: Question Number + Time */}
+      <div className="flex items-center justify-between">
+        <span className="inline-flex items-center bg-red-500/20 text-red-500 px-3 py-1 rounded-lg text-sm font-medium">
+          Q{questionNumber}
+        </span>
+        
+        {estimatedTime && (
+          <span className="text-xs text-gray-500 flex items-center gap-1">
+            <span>⏱️</span> {estimatedTime}
           </span>
-          <div>
-            <h3 className="font-bold text-lg text-foreground">
-              {questionText}
-              {isRequired && <span className="text-red-500 ml-1">*</span>}
-            </h3>
-            {estimatedTime && (
-              <span className="text-silver text-sm mt-1 inline-block">
-                {estimatedTime}
-              </span>
-            )}
-          </div>
-        </div>
-        {onHelpClick && (
-          <button
-            type="button"
-            onClick={onHelpClick}
-            className="p-2 rounded-lg hover:bg-surface-highlight transition-colors"
-            aria-label="Help"
-          >
-            <HelpCircle className="w-5 h-5 text-silver" />
-          </button>
         )}
       </div>
-      <div className="ml-12">{children}</div>
+
+      {/* Question Text */}
+      <p className="text-lg font-medium text-white mt-3 mb-4">
+        {questionText}
+        {isRequired && <span className="text-red-500 ml-1">*</span>}
+      </p>
+
+      {/* Help Button - Absolute Positioned */}
+      {onHelpClick && (
+        <button
+          type="button"
+          onClick={onHelpClick}
+          className="absolute top-6 right-6 text-gray-500 hover:text-red-500 transition-colors p-2 rounded-lg hover:bg-white/5"
+          aria-label="Get help for this question"
+        >
+          <HelpCircle className="w-5 h-5" />
+        </button>
+      )}
+
+      {/* Input Area */}
+      <div className="mt-4">
+        {children}
+      </div>
     </div>
   );
 }
+
+export default QuestionWrapper;
