@@ -7,21 +7,21 @@ import ShortTextQuestion from '../question-types/short-text-question';
 import MultipleChoiceQuestion from '../question-types/multiple-choice-question';
 import { FileUploadQuestion } from '../question-types/file-upload-question';
 import SectionContainer from './section-container';
-import { useQuestionnaireForm } from '@/lib/questionnaire/use-questionnaire-form';
+import { UseQuestionnaireFormReturn } from '@/lib/questionnaire/use-questionnaire-form';
 import { HelpPanel, HelpContent } from '../help-system';
 
 interface Props {
   clientId: string;
+  questionnaireForm: UseQuestionnaireFormReturn;
 }
 
-export default function BrandVoiceSection({ clientId }: Props) {
+export default function BrandVoiceSection({ clientId, questionnaireForm }: Props) {
   const {
     formData,
     updateQuestion,
-    
     markQuestionCompleted,
     completedQuestions,
-  } = useQuestionnaireForm(clientId);
+  } = questionnaireForm;
 
   const [helpOpen, setHelpOpen] = useState(false);
   const [currentHelpQuestion, setCurrentHelpQuestion] = useState(20);

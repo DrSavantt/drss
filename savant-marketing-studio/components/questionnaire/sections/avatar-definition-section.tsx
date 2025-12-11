@@ -5,21 +5,21 @@ import QuestionWrapper from '../question-types/question-wrapper';
 import LongTextQuestion from '../question-types/long-text-question';
 import MultipleChoiceQuestion from '../question-types/multiple-choice-question';
 import SectionContainer from './section-container';
-import { useQuestionnaireForm } from '@/lib/questionnaire/use-questionnaire-form';
+import { UseQuestionnaireFormReturn } from '@/lib/questionnaire/use-questionnaire-form';
 import { HelpPanel, HelpContent } from '../help-system';
 
 interface Props {
   clientId: string;
+  questionnaireForm: UseQuestionnaireFormReturn;
 }
 
-export default function AvatarDefinitionSection({ clientId }: Props) {
+export default function AvatarDefinitionSection({ clientId, questionnaireForm }: Props) {
   const {
     formData,
     updateQuestion,
-    
     markQuestionCompleted,
     completedQuestions,
-  } = useQuestionnaireForm(clientId);
+  } = questionnaireForm;
 
   const [helpOpen, setHelpOpen] = useState(false);
   const [currentHelpQuestion, setCurrentHelpQuestion] = useState(1);

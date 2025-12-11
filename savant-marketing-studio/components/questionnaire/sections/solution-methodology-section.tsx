@@ -4,21 +4,21 @@ import { useState } from 'react';
 import QuestionWrapper from '../question-types/question-wrapper';
 import LongTextQuestion from '../question-types/long-text-question';
 import SectionContainer from './section-container';
-import { useQuestionnaireForm } from '@/lib/questionnaire/use-questionnaire-form';
+import { UseQuestionnaireFormReturn } from '@/lib/questionnaire/use-questionnaire-form';
 import { HelpPanel, HelpContent } from '../help-system';
 
 interface Props {
   clientId: string;
+  questionnaireForm: UseQuestionnaireFormReturn;
 }
 
-export default function SolutionMethodologySection({ clientId }: Props) {
+export default function SolutionMethodologySection({ clientId, questionnaireForm }: Props) {
   const {
     formData,
     updateQuestion,
-    
     markQuestionCompleted,
     completedQuestions,
-  } = useQuestionnaireForm(clientId);
+  } = questionnaireForm;
 
   const [helpOpen, setHelpOpen] = useState(false);
   const [currentHelpQuestion, setCurrentHelpQuestion] = useState(16);
