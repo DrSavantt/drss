@@ -89,30 +89,36 @@ export const q23Schema = z.string()
   .min(20, "Please provide at least 20 characters")
   .max(500, "Please keep under 500 characters");
 
-export const q24Schema = z.string()
-  .min(20, "Please provide at least 20 characters")
-  .max(2000, "Please keep under 2000 characters");
+// Q24 - Brand assets (file upload, optional)
+export const q24Schema = z.any().optional();
 
 export const q25Schema = z.string()
   .min(20, "Please provide at least 20 characters")
+  .max(2000, "Please keep under 2000 characters");
+
+export const q26Schema = z.string()
+  .min(20, "Please provide at least 20 characters")
   .max(1000, "Please keep under 1000 characters");
 
-export const q26Schema = z.string().max(500, "Please keep under 500 characters");
+export const q27Schema = z.string().max(500, "Please keep under 500 characters");
 
-export const q27Schema = z.string()
+export const q28Schema = z.string()
   .min(20, "Please provide at least 20 characters")
   .max(500, "Please keep under 500 characters");
 
-export const q28Schema = z.string();
+// Q29 - Proof assets (file upload, optional)
+export const q29Schema = z.any().optional();
 
-export const q29Schema = z.string().max(1000, "Please keep under 1000 characters");
+export const q30Schema = z.string();
 
-export const q30Schema = z.string().max(500, "Please keep under 500 characters");
+export const q31Schema = z.string().max(1000, "Please keep under 1000 characters");
 
-export const q31Schema = z.string()
+export const q32Schema = z.string().max(500, "Please keep under 500 characters");
+
+export const q33Schema = z.string()
   .min(1, "Please select a revenue range");
 
-export const q32Schema = z.string()
+export const q34Schema = z.string()
   .min(1, "Please select a primary goal");
 
 // Full questionnaire schema
@@ -149,21 +155,23 @@ export const questionnaireSchema = z.object({
     q21_personality_words: q21Schema,
     q22_signature_phrases: q22Schema,
     q23_avoid_topics: q23Schema,
+    q24_brand_assets: q24Schema.optional(),
   }),
   proof_transformation: z.object({
-    q24_transformation_story: q24Schema,
-    q25_measurable_results: q25Schema,
-    q26_credentials: q26Schema.optional(),
-    q27_guarantees: q27Schema,
+    q25_transformation_story: q25Schema,
+    q26_measurable_results: q26Schema,
+    q27_credentials: q27Schema.optional(),
+    q28_guarantees: q28Schema,
+    q29_proof_assets: q29Schema.optional(),
   }),
   faith_integration: z.object({
-    q28_faith_preference: q28Schema.optional(),
-    q29_faith_mission: q29Schema.optional(),
-    q30_biblical_principles: q30Schema.optional(),
+    q30_faith_preference: q30Schema.optional(),
+    q31_faith_mission: q31Schema.optional(),
+    q32_biblical_principles: q32Schema.optional(),
   }),
   business_metrics: z.object({
-    q31_annual_revenue: q31Schema,
-    q32_primary_goal: q32Schema,
+    q33_annual_revenue: q33Schema,
+    q34_primary_goal: q34Schema,
   }),
 });
 
@@ -201,4 +209,6 @@ export const questionSchemas: Record<string, z.ZodSchema> = {
   q30: q30Schema,
   q31: q31Schema,
   q32: q32Schema,
+  q33: q33Schema,
+  q34: q34Schema,
 };

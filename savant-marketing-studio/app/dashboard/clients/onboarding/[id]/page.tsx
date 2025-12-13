@@ -6,6 +6,10 @@ import { ProgressStepper } from '@/components/questionnaire/navigation/progress-
 import { RichFooter } from '@/components/questionnaire/navigation/rich-footer';
 import { useQuestionnaireForm } from '@/lib/questionnaire/use-questionnaire-form';
 import { QuestionnaireReview } from '@/components/questionnaire/review';
+import { getClient } from '@/app/actions/clients';
+import { QuestionnaireData } from '@/lib/questionnaire/types';
+import { Info } from 'lucide-react';
+import { CopyableCode } from '@/components/copyable-code';
 
 // Import all 8 section components
 import AvatarDefinitionSection from '@/components/questionnaire/sections/avatar-definition-section';
@@ -22,10 +26,40 @@ export default function QuestionnairePage() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const clientId = params.id as string;
+  const mode = searchParams.get('mode') || 'create';
+  const isEditMode = mode === 'edit';
   
-  const questionnaireForm = useQuestionnaireForm(clientId);
+  // State for existing data when in edit mode
+  const [existingData, setExistingData] = useState<QuestionnaireData | null>(null);
+  const [clientCode, setClientCode] = useState<string | null>(null);
+  const [loading, setLoading] = useState(isEditMode);
+
+  // Fetch client data (always for client_code, and responses when in edit mode)
+  useEffect(() => {
+    const fetchClientData = async () => {
+      try {
+        const client = await getClient(clientId);
+        if (client) {
+          setClientCode(client.client_code || null);
+          if (isEditMode && client.intake_responses?.sections) {
+            setExistingData(client.intake_responses.sections as QuestionnaireData);
+          }
+        }
+      } catch (error) {
+        console.error('Failed to fetch client data:', error);
+      } finally {
+        if (isEditMode) {
+          setLoading(false);
+        }
+      }
+    };
+    fetchClientData();
+  }, [isEditMode, clientId]);
+  
+  const questionnaireForm = useQuestionnaireForm(clientId, existingData, isEditMode);
   
   const {
+    formData,
     currentSection,
     completedQuestions,
     goToSection,
@@ -53,13 +87,14 @@ export default function QuestionnairePage() {
     }
   }, [searchParams, goToSection]);
 
-  // Update URL when step changes
+  // Update URL when step changes (preserve mode parameter)
   useEffect(() => {
+    const modeParam = isEditMode ? '&mode=edit' : '';
     const url = showReview 
-      ? `/dashboard/clients/onboarding/${clientId}?step=review`
-      : `/dashboard/clients/onboarding/${clientId}?step=${currentSection}`;
+      ? `/dashboard/clients/onboarding/${clientId}?step=review${modeParam}`
+      : `/dashboard/clients/onboarding/${clientId}?step=${currentSection}${modeParam}`;
     window.history.replaceState({}, '', url);
-  }, [currentSection, showReview, clientId]);
+  }, [currentSection, showReview, clientId, isEditMode]);
 
   // Keyboard navigation
   useEffect(() => {
@@ -98,18 +133,35 @@ export default function QuestionnairePage() {
     3: ['q11', 'q12', 'q14', 'q15'],
     4: ['q16', 'q17', 'q18', 'q19'],
     5: ['q20', 'q21', 'q22', 'q23'],
-    6: ['q24', 'q25', 'q27'],
-    7: [],
-    8: ['q31', 'q32'],
+    6: ['q25', 'q26', 'q28'],
+    7: ['q30'], // Faith section - special logic below
+    8: ['q33', 'q34'],
   };
 
   Object.entries(sectionQuestionMap).forEach(([section, questions]) => {
-    if (questions.length === 0) {
-      completedSections.push(parseInt(section));
-    } else {
-      const allComplete = questions.every(q => completedQuestions.has(q));
-      if (allComplete) completedSections.push(parseInt(section));
+    const sectionNum = parseInt(section);
+    
+    // Special logic for Section 7 (Faith Integration)
+    if (sectionNum === 7) {
+      const q30 = formData.faith_integration?.q30_faith_preference;
+      
+      // Section 7 is complete if:
+      // - Q30 is answered with "separate" (Q31/Q32 hidden), OR
+      // - Q30 is answered with "explicit" or "values_aligned" AND Q31 and Q32 are both completed
+      if (q30 === 'separate') {
+        completedSections.push(sectionNum);
+      } else if (q30 && (q30 === 'explicit' || q30 === 'values_aligned')) {
+        if (completedQuestions.has('q31') && completedQuestions.has('q32')) {
+          completedSections.push(sectionNum);
+        }
+      }
+      // If Q30 is empty or any other value, section is not complete
+      return;
     }
+    
+    // Standard logic for all other sections
+      const allComplete = questions.every(q => completedQuestions.has(q));
+    if (allComplete) completedSections.push(sectionNum);
   });
 
   const handleNext = () => {
@@ -170,14 +222,39 @@ export default function QuestionnairePage() {
 
       {/* Main Content */}
       <main className="max-w-3xl mx-auto px-4 py-8 pb-32">
-        {!showReview ? (
+        {loading ? (
+          <div className="flex items-center justify-center py-20">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-red-primary"></div>
+            <span className="ml-3 text-silver">Loading responses...</span>
+          </div>
+        ) : !showReview ? (
           <>
+            {/* Edit Mode Banner */}
+            {isEditMode && (
+              <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-4 mb-6">
+                <p className="text-blue-400 text-sm flex items-center">
+                  <Info className="w-4 h-4 mr-2 flex-shrink-0" />
+                  You are editing existing responses. Changes will be saved when you submit.
+                </p>
+              </div>
+            )}
+
             <div className="mb-8">
-              <h1 className="text-3xl font-bold text-foreground mb-2">
-                Client Onboarding Questionnaire
+              <div className="flex items-center gap-3 mb-2">
+                {clientCode && (
+                  <CopyableCode 
+                    code={clientCode} 
+                    className="bg-dark-gray px-2.5 py-1 rounded text-sm"
+                  />
+                )}
+                <h1 className="text-3xl font-bold text-foreground">
+                  {isEditMode ? 'Edit Responses' : 'Onboarding'}
               </h1>
+              </div>
               <p className="text-silver">
-                Complete all sections to help us understand your business. Your progress is auto-saved as you type.
+                {isEditMode 
+                  ? 'Update any answers below. Your changes will be saved when you submit.'
+                  : 'Complete all sections to help us understand your business. Your progress is auto-saved as you type.'}
               </p>
             </div>
 
@@ -192,7 +269,7 @@ export default function QuestionnairePage() {
             >
               ← Back to Questionnaire
             </button>
-            <QuestionnaireReview clientId={clientId} />
+            <QuestionnaireReview clientId={clientId} mode={mode as 'create' | 'edit'} />
           </>
         )}
       </main>
@@ -200,6 +277,7 @@ export default function QuestionnairePage() {
       {/* Bottom Navigation Footer */}
       {!showReview && (
         <RichFooter
+          clientId={clientId}
           currentSection={currentSection}
           onPrevious={handlePrevious}
           onNext={handleNext}
@@ -208,22 +286,6 @@ export default function QuestionnairePage() {
         />
       )}
 
-      {/* Dev-only Reset Button */}
-      {process.env.NODE_ENV === 'development' && (
-        <button
-          onClick={() => {
-            if (confirm('Clear ALL questionnaire data and start fresh?')) {
-              localStorage.removeItem(`questionnaire_draft_${clientId}`);
-              localStorage.removeItem(`questionnaire_completed_${clientId}`);
-              localStorage.removeItem(`questionnaire_section_${clientId}`);
-              window.location.reload();
-            }
-          }}
-          className="fixed bottom-4 left-4 z-50 bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg shadow-lg text-sm font-medium"
-        >
-          🗑️ Reset
-        </button>
-      )}
     </div>
   );
 }

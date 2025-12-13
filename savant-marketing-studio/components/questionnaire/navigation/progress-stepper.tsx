@@ -47,11 +47,11 @@ export function ProgressStepper({
                 <div
                   className={`
                     relative w-10 h-10 rounded-full flex items-center justify-center
-                    transition-all duration-300 font-semibold text-sm
+                    font-semibold text-sm
                     ${isCompleted(section.number)
                       ? 'bg-green-500 text-white'
                       : isCurrent(section.number)
-                        ? 'bg-red-500 text-white ring-4 ring-red-500/30 animate-pulse'
+                        ? 'bg-red-500 text-white'
                         : 'border-2 border-[#444444] text-gray-500 group-hover:border-gray-400 group-hover:text-gray-400'
                     }
                   `}
@@ -66,7 +66,7 @@ export function ProgressStepper({
                 {/* Section Name */}
                 <span
                   className={`
-                    mt-2 text-xs font-medium transition-colors duration-200
+                    mt-2 text-xs font-medium
                     ${isCompleted(section.number)
                       ? 'text-green-500'
                       : isCurrent(section.number)
@@ -84,7 +84,6 @@ export function ProgressStepper({
                 <div
                   className={`
                     flex-1 h-0.5 min-w-[20px] mx-1
-                    transition-colors duration-300
                     ${isCompleted(section.number) ? 'bg-green-500' : 'bg-[#333333]'}
                   `}
                 />

@@ -23,21 +23,21 @@ export default function FaithIntegrationSection({ clientId, questionnaireForm }:
   } = questionnaireForm;
 
   const [helpOpen, setHelpOpen] = useState(false);
-  const [currentHelpQuestion, setCurrentHelpQuestion] = useState(28);
+  const [currentHelpQuestion, setCurrentHelpQuestion] = useState(30);
 
   const openHelp = (questionNumber: number) => {
     setCurrentHelpQuestion(questionNumber);
     setHelpOpen(true);
   };
 
-  // Check if Q29 and Q30 should be shown (conditional logic)
-  const showQ29 = shouldShowQuestion('q29', formData);
-  const showQ30 = shouldShowQuestion('q30', formData);
+  // Check if Q31 and Q32 should be shown (conditional logic)
+  const showQ31 = shouldShowQuestion('q31', formData);
+  const showQ32 = shouldShowQuestion('q32', formData);
 
   // Calculate section progress (only count visible questions)
-  const sectionQuestions = ['q28'];
-  if (showQ29) sectionQuestions.push('q29');
-  if (showQ30) sectionQuestions.push('q30');
+  const sectionQuestions = ['q30'];
+  if (showQ31) sectionQuestions.push('q31');
+  if (showQ32) sectionQuestions.push('q32');
   
   const answeredCount = sectionQuestions.filter(q => 
     completedQuestions.has(q)
@@ -57,16 +57,16 @@ export default function FaithIntegrationSection({ clientId, questionnaireForm }:
         currentProgress={{ answered: answeredCount, total: sectionQuestions.length }}
       >
         <QuestionWrapper
-          questionNumber={28}
+          questionNumber={30}
           questionText="How does faith integrate with your business?"
-          onHelpClick={() => openHelp(28)}
+          onHelpClick={() => openHelp(30)}
           estimatedTime="1 min"
         >
           <MultipleChoiceQuestion
-            value={formData.faith_integration.q28_faith_preference}
+            value={formData.faith_integration.q30_faith_preference}
             onChange={(val) => {
-              updateQuestion('q28', val);
-              if (val) markQuestionCompleted('q28');
+              updateQuestion('q30', val);
+              if (val) markQuestionCompleted('q30');
             }}
             options={[
               { value: 'explicit', label: 'Yes - Explicitly faith-forward in marketing' },
@@ -77,34 +77,34 @@ export default function FaithIntegrationSection({ clientId, questionnaireForm }:
           />
         </QuestionWrapper>
 
-        {showQ29 && (
+        {showQ31 && (
           <QuestionWrapper
-            questionNumber={29}
+            questionNumber={31}
             questionText="What is your faith-driven mission?"
-            onHelpClick={() => openHelp(29)}
+            onHelpClick={() => openHelp(31)}
             estimatedTime="1 min"
           >
             <LongTextQuestion
-              value={formData.faith_integration.q29_faith_mission}
-              onChange={(val) => updateQuestion('q29', val)}
-              onBlur={() => markQuestionCompleted('q29')}
+              value={formData.faith_integration.q31_faith_mission}
+              onChange={(val) => updateQuestion('q31', val)}
+              onBlur={() => markQuestionCompleted('q31')}
               placeholder="I believe business is ministry. My goal is to serve kingdom-minded entrepreneurs..."
               maxLength={1000}
             />
           </QuestionWrapper>
         )}
 
-        {showQ30 && (
+        {showQ32 && (
           <QuestionWrapper
-            questionNumber={30}
+            questionNumber={32}
             questionText="What biblical principles guide your work?"
-            onHelpClick={() => openHelp(30)}
+            onHelpClick={() => openHelp(32)}
             estimatedTime="1 min"
           >
             <LongTextQuestion
-              value={formData.faith_integration.q30_biblical_principles}
-              onChange={(val) => updateQuestion('q30', val)}
-              onBlur={() => markQuestionCompleted('q30')}
+              value={formData.faith_integration.q32_biblical_principles}
+              onChange={(val) => updateQuestion('q32', val)}
+              onBlur={() => markQuestionCompleted('q32')}
               placeholder="Servant leadership, excellence as worship, generosity, stewardship..."
               maxLength={500}
             />

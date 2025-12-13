@@ -40,23 +40,23 @@ export interface QuestionnaireData {
     q21_personality_words: string;
     q22_signature_phrases: string;
     q23_avoid_topics: string;
-    q33_brand_assets?: UploadedFile[]; // Optional: logos, style guides, etc.
+    q24_brand_assets?: UploadedFile[]; // Optional: logos, style guides, etc.
   };
   proof_transformation: {
-    q24_transformation_story: string;
-    q25_measurable_results: string;
-    q26_credentials: string;
-    q27_guarantees: string;
-    q34_proof_assets?: UploadedFile[]; // Optional: testimonials, case studies, etc.
+    q25_transformation_story: string;
+    q26_measurable_results: string;
+    q27_credentials: string;
+    q28_guarantees: string;
+    q29_proof_assets?: UploadedFile[]; // Optional: testimonials, case studies, etc.
   };
   faith_integration: {
-    q28_faith_preference: string;
-    q29_faith_mission: string;
-    q30_biblical_principles: string;
+    q30_faith_preference: string;
+    q31_faith_mission: string;
+    q32_biblical_principles: string;
   };
   business_metrics: {
-    q31_annual_revenue: string;
-    q32_primary_goal: string;
+    q33_annual_revenue: string;
+    q34_primary_goal: string;
   };
 }
 
@@ -68,12 +68,12 @@ export const REQUIRED_QUESTIONS = [
   'q11', 'q12', 'q14', 'q15',
   'q16', 'q17', 'q18', 'q19',
   'q20', 'q21', 'q22', 'q23',
-  'q24', 'q25', 'q27',
-  'q31', 'q32'
+  'q25', 'q26', 'q28',
+  'q33', 'q34'
 ];
 
 export const OPTIONAL_QUESTIONS = [
-  'q13', 'q26', 'q28', 'q29', 'q30'
+  'q13', 'q24', 'q27', 'q29', 'q30', 'q31', 'q32'
 ];
 
 export const EMPTY_QUESTIONNAIRE_DATA: QuestionnaireData = {
@@ -109,22 +109,22 @@ export const EMPTY_QUESTIONNAIRE_DATA: QuestionnaireData = {
     q21_personality_words: '',
     q22_signature_phrases: '',
     q23_avoid_topics: '',
-    q33_brand_assets: [],
+    q24_brand_assets: [],
   },
   proof_transformation: {
-    q24_transformation_story: '',
-    q25_measurable_results: '',
-    q26_credentials: '',
-    q27_guarantees: '',
-    q34_proof_assets: [],
+    q25_transformation_story: '',
+    q26_measurable_results: '',
+    q27_credentials: '',
+    q28_guarantees: '',
+    q29_proof_assets: [],
   },
   faith_integration: {
-    q28_faith_preference: '',
-    q29_faith_mission: '',
-    q30_biblical_principles: '',
+    q30_faith_preference: '',
+    q31_faith_mission: '',
+    q32_biblical_principles: '',
   },
   business_metrics: {
-    q31_annual_revenue: '',
-    q32_primary_goal: '',
+    q33_annual_revenue: '',
+    q34_primary_goal: '',
   },
 };

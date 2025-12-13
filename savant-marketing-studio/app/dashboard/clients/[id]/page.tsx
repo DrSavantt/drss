@@ -5,6 +5,7 @@ import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import { DeleteClientButton } from './delete-button'
 import { ClientCaptures } from './client-captures'
+import { ClientCodeDisplay } from './client-code-display'
 import { FolderKanban, FileText, Calendar, Building2, Check } from 'lucide-react'
 
 export default async function ClientDetailPage({
@@ -68,9 +69,17 @@ export default async function ClientDetailPage({
       <div className="bg-charcoal border border-mid-gray rounded-xl p-8 hover:border-red-bright/50 transition-all duration-200">
         <div className="flex items-start justify-between mb-6">
           <div className="flex-1">
-            <h1 className="text-4xl font-bold mb-2 text-red-primary">
+            <div className="flex items-center gap-3 mb-2">
+              <h1 className="text-4xl font-bold text-red-primary">
               {client.name}
             </h1>
+              {client.client_code && (
+                <ClientCodeDisplay 
+                  code={client.client_code} 
+                  className="bg-dark-gray px-2 py-1 rounded text-slate hover:text-silver"
+                />
+              )}
+            </div>
             {client.email && (
               <p className="text-silver flex items-center gap-2">
                 <span className="inline-flex items-center justify-center w-5 h-5 bg-dark-gray rounded">

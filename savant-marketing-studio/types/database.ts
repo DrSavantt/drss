@@ -70,6 +70,7 @@ export type Database = {
       clients: {
         Row: {
           brand_data: Json | null
+          client_code: string | null
           created_at: string | null
           email: string | null
           id: string
@@ -84,6 +85,7 @@ export type Database = {
         }
         Insert: {
           brand_data?: Json | null
+          client_code?: string | null
           created_at?: string | null
           email?: string | null
           id?: string
@@ -98,6 +100,7 @@ export type Database = {
         }
         Update: {
           brand_data?: Json | null
+          client_code?: string | null
           created_at?: string | null
           email?: string | null
           id?: string
@@ -569,6 +572,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      generate_client_code: { Args: never; Returns: string }
       match_framework_chunks: {
         Args: {
           match_count: number

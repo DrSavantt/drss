@@ -22,7 +22,7 @@ export default function BusinessMetricsSection({ clientId, questionnaireForm }: 
   } = questionnaireForm;
 
   const [helpOpen, setHelpOpen] = useState(false);
-  const [currentHelpQuestion, setCurrentHelpQuestion] = useState(31);
+  const [currentHelpQuestion, setCurrentHelpQuestion] = useState(33);
 
   const openHelp = (questionNumber: number) => {
     setCurrentHelpQuestion(questionNumber);
@@ -30,7 +30,7 @@ export default function BusinessMetricsSection({ clientId, questionnaireForm }: 
   };
 
   // Calculate section progress
-  const sectionQuestions = ['q31', 'q32'];
+  const sectionQuestions = ['q33', 'q34'];
   const answeredCount = sectionQuestions.filter(q => 
     completedQuestions.has(q)
   ).length;
@@ -49,32 +49,32 @@ export default function BusinessMetricsSection({ clientId, questionnaireForm }: 
         currentProgress={{ answered: answeredCount, total: 2 }}
       >
         <QuestionWrapper
-          questionNumber={31}
+          questionNumber={33}
           questionText="What is your current annual revenue?"
           isRequired={true}
-          onHelpClick={() => openHelp(31)}
+          onHelpClick={() => openHelp(33)}
           estimatedTime="1 min"
         >
           <ShortTextQuestion
-            value={formData.business_metrics.q31_annual_revenue}
-            onChange={(val) => updateQuestion('q31', val)}
-            onBlur={() => markQuestionCompleted('q31')}
+            value={formData.business_metrics.q33_annual_revenue}
+            onChange={(val) => updateQuestion('q33', val)}
+            onBlur={() => markQuestionCompleted('q33')}
             placeholder="$500K ARR"
             maxLength={100}
           />
         </QuestionWrapper>
 
         <QuestionWrapper
-          questionNumber={32}
+          questionNumber={34}
           questionText="What is your primary business goal for the next 12 months?"
           isRequired={true}
-          onHelpClick={() => openHelp(32)}
+          onHelpClick={() => openHelp(34)}
           estimatedTime="3 min"
         >
           <LongTextQuestion
-            value={formData.business_metrics.q32_primary_goal}
-            onChange={(val) => updateQuestion('q32', val)}
-            onBlur={() => markQuestionCompleted('q32')}
+            value={formData.business_metrics.q34_primary_goal}
+            onChange={(val) => updateQuestion('q34', val)}
+            onBlur={() => markQuestionCompleted('q34')}
             placeholder="Scale from $500K to $1.5M while working 30 hours/week instead of 60..."
             minLength={1}
             maxLength={1000}

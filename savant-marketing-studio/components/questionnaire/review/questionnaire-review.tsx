@@ -9,13 +9,16 @@ import ReviewSectionCard from './review-section-card';
 
 interface Props {
   clientId: string;
+  mode?: 'create' | 'edit';
 }
 
-export default function QuestionnaireReview({ clientId }: Props) {
+export default function QuestionnaireReview({ clientId, mode = 'create' }: Props) {
   const router = useRouter();
+  const isEditMode = mode === 'edit';
   const { formData, completedQuestions, progress } = useQuestionnaireForm(clientId);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
   const handleSubmit = async () => {
     // Validate all required questions
@@ -28,17 +31,44 @@ export default function QuestionnaireReview({ clientId }: Props) {
     setError(null);
 
     try {
-      const result = await saveQuestionnaire(clientId, formData);
+      const result = await saveQuestionnaire(clientId, formData, mode);
 
       if (result.success) {
         // Clear localStorage
         localStorage.removeItem(`questionnaire_draft_${clientId}`);
         localStorage.removeItem(`questionnaire_completed_${clientId}`);
 
-        // Redirect to client page
+        // Show success message briefly
+        setSuccessMessage(isEditMode ? 'Responses updated successfully!' : 'Questionnaire submitted successfully!');
+        
+        // Redirect based on mode
+        setTimeout(() => {
+          if (isEditMode) {
+            // Redirect back to responses page when editing
+            router.push(`/dashboard/clients/${clientId}/questionnaire-responses`);
+          } else {
+            // Redirect to client page when creating
         router.push(`/dashboard/clients/${clientId}`);
+          }
+        }, 1000);
+      } else {
+        // Handle validation errors
+        if (result.validationErrors && Object.keys(result.validationErrors).length > 0) {
+          const errorCount = Object.keys(result.validationErrors).length;
+          const errorList = Object.entries(result.validationErrors)
+            .slice(0, 3) // Show first 3 errors
+            .map(([field, message]) => `${field}: ${message}`)
+            .join('\n');
+          
+          setError(
+            `${errorCount} validation ${errorCount === 1 ? 'error' : 'errors'} found:\n\n${errorList}${
+              errorCount > 3 ? `\n\n...and ${errorCount - 3} more` : ''
+            }`
+          );
+          console.error('Validation errors:', result.validationErrors);
       } else {
         setError(result.error || 'Failed to save questionnaire');
+        }
         setSubmitting(false);
       }
     } catch {
@@ -56,10 +86,12 @@ export default function QuestionnaireReview({ clientId }: Props) {
     <div className="max-w-4xl mx-auto p-8">
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-foreground mb-2">
-          Review Your Answers
+          {isEditMode ? 'Review Your Changes' : 'Review Your Answers'}
         </h1>
         <p className="text-silver">
-          Review all your responses before submitting. You can edit any section if needed.
+          {isEditMode 
+            ? 'Review your updated responses before saving. You can edit any section if needed.'
+            : 'Review all your responses before submitting. You can edit any section if needed.'}
         </p>
       </div>
 
@@ -168,22 +200,31 @@ export default function QuestionnaireReview({ clientId }: Props) {
       {/* Error message */}
       {error && (
         <div className="mb-8 p-4 bg-red-500/10 border border-red-500 rounded-lg">
-          <p className="text-red-500 font-medium">{error}</p>
+          <p className="text-red-500 font-medium whitespace-pre-line">{error}</p>
+        </div>
+      )}
+
+      {/* Success message */}
+      {successMessage && (
+        <div className="mb-8 p-4 bg-green-500/10 border border-green-500 rounded-lg">
+          <p className="text-green-500 font-medium">{successMessage}</p>
         </div>
       )}
 
       {/* Submit button */}
       <button
         onClick={handleSubmit}
-        disabled={submitting || progress < 100}
+        disabled={submitting || progress < 100 || !!successMessage}
         className="w-full bg-red-primary text-white py-4 px-6 rounded-lg font-bold text-lg hover:bg-red-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
       >
-        {submitting ? 'Submitting...' : 'Submit Questionnaire'}
+        {submitting 
+          ? (isEditMode ? 'Saving Changes...' : 'Submitting...') 
+          : (isEditMode ? 'Save Changes' : 'Submit Questionnaire')}
       </button>
 
       {progress < 100 && (
         <p className="text-center text-sm text-silver mt-4">
-          Please complete all required questions before submitting
+          Please complete all required questions before {isEditMode ? 'saving' : 'submitting'}
         </p>
       )}
     </div>
