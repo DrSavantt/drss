@@ -1,7 +1,9 @@
 import { getClient } from '@/app/actions/clients';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft, Download, FileText, Image as ImageIcon, File } from 'lucide-react';
+import { ArrowLeft, Download, FileText, Image as ImageIcon, File, Pencil } from 'lucide-react';
+import { ClientCodeDisplay } from '../client-code-display';
+import { ResetButton } from './reset-button';
 
 interface IntakeResponse {
   version: string;
@@ -21,9 +23,10 @@ interface IntakeResponse {
 export default async function QuestionnaireResponsesPage({
   params,
 }: {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }) {
-  const client = await getClient(params.id);
+  const { id } = await params;
+  const client = await getClient(id);
 
   if (!client) {
     notFound();
@@ -201,9 +204,17 @@ export default async function QuestionnaireResponsesPage({
             <ArrowLeft size={16} />
             Back to {client.name}
           </Link>
-          <h1 className="text-3xl font-bold text-foreground mb-2">
+          <div className="flex items-center gap-3 mb-2">
+            {client.client_code && (
+              <ClientCodeDisplay 
+                code={client.client_code} 
+                className="bg-dark-gray px-2.5 py-1 rounded text-sm"
+              />
+            )}
+            <h1 className="text-3xl font-bold text-foreground">
             Questionnaire Responses
           </h1>
+          </div>
           <p className="text-silver">
             Completed on {new Date(responses.completed_at).toLocaleDateString('en-US', {
               year: 'numeric',
@@ -213,6 +224,18 @@ export default async function QuestionnaireResponsesPage({
               minute: '2-digit',
             })}
           </p>
+        </div>
+        
+        {/* Action Buttons */}
+        <div className="flex items-center gap-3">
+          <ResetButton clientId={client.id} />
+          <Link
+            href={`/dashboard/clients/onboarding/${client.id}?mode=edit`}
+            className="inline-flex items-center px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg transition-colors font-medium"
+          >
+            <Pencil className="w-4 h-4 mr-2" />
+            Edit Responses
+          </Link>
         </div>
       </div>
 

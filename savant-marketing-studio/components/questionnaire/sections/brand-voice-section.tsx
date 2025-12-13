@@ -32,7 +32,7 @@ export default function BrandVoiceSection({ clientId, questionnaireForm }: Props
   };
 
   // Calculate section progress
-  const sectionQuestions = ['q20', 'q21', 'q22', 'q23'];
+  const sectionQuestions = ['q20', 'q21', 'q22', 'q23', 'q24'];
   const answeredCount = sectionQuestions.filter(q => 
     completedQuestions.has(q)
   ).length;
@@ -47,8 +47,8 @@ export default function BrandVoiceSection({ clientId, questionnaireForm }: Props
         sectionNumber={5}
         title="Brand Voice & Communication"
         description="Define how your brand communicates and sounds"
-        estimatedTime="5 minutes"
-        currentProgress={{ answered: answeredCount, total: 4 }}
+        estimatedTime="7 minutes"
+        currentProgress={{ answered: answeredCount, total: 5 }}
       >
         <QuestionWrapper
           questionNumber={20}
@@ -125,17 +125,17 @@ export default function BrandVoiceSection({ clientId, questionnaireForm }: Props
         </QuestionWrapper>
 
         <QuestionWrapper
-          questionNumber={33}
+          questionNumber={24}
           questionText="Upload brand assets (optional)"
           isRequired={false}
-          onHelpClick={() => openHelp(33)}
+          onHelpClick={() => openHelp(24)}
           estimatedTime="2 min"
         >
           <FileUploadQuestion
-            value={formData.brand_voice.q33_brand_assets || []}
+            value={formData.brand_voice.q24_brand_assets || []}
             onChange={(files) => {
-              updateQuestion('q33', files);
-              if (files.length > 0) markQuestionCompleted('q33');
+              updateQuestion('q24', files);
+              if (files.length > 0) markQuestionCompleted('q24');
             }}
             label="Brand Assets"
             description="Upload logos, style guides, color palettes, or any brand materials (optional)"

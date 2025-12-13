@@ -8,6 +8,7 @@ import { ClientGridSkeleton } from '@/components/skeleton-loader'
 import { metroContainerVariants, metroItemVariants } from '@/lib/animations'
 import { useScreenSize } from '@/hooks/use-mobile'
 import { Building2, Mail, Globe, ArrowRight, Users, PlusCircle } from 'lucide-react'
+import { CopyableCode } from '@/components/copyable-code'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useState, useEffect } from 'react'
@@ -21,6 +22,7 @@ export default function ClientsPage() {
     name: string
     email: string | null
     website: string | null
+    client_code: string | null
     created_at: string
   }
   
@@ -91,6 +93,18 @@ export default function ClientsPage() {
                 onClick={() => router.push(`/dashboard/clients/${client.id}`)}
               >
                 <div className="absolute inset-0 bg-gradient-to-br from-red-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                
+                {/* Client Code Badge */}
+                {client.client_code && (
+                  <div className="absolute top-3 right-3 z-10">
+                    <CopyableCode 
+                      code={client.client_code} 
+                      className="bg-dark-gray/80 backdrop-blur-sm px-2 py-1 rounded text-[10px]"
+                      showIcon={false}
+                    />
+                  </div>
+                )}
+                
                 <div className="relative">
                   <motion.div
                     className="w-16 h-16 bg-gradient-to-br from-red-primary to-red-bright rounded-xl flex items-center justify-center mb-4"

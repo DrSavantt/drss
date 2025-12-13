@@ -24,7 +24,11 @@ export interface UseQuestionnaireFormReturn {
   isDraft: boolean;
 }
 
-export function useQuestionnaireForm(clientId: string): UseQuestionnaireFormReturn {
+export function useQuestionnaireForm(
+  clientId: string, 
+  existingData?: QuestionnaireData | null,
+  isEditMode: boolean = false
+): UseQuestionnaireFormReturn {
   const [formData, setFormData] = useState<QuestionnaireData>(EMPTY_QUESTIONNAIRE_DATA);
   const [currentSection, setCurrentSection] = useState(1);
   const [completedQuestions, setCompletedQuestions] = useState<Set<string>>(new Set());
@@ -33,12 +37,63 @@ export function useQuestionnaireForm(clientId: string): UseQuestionnaireFormRetu
   
   // Track if we've already restored from localStorage to prevent multiple restorations
   const hasRestoredRef = useRef(false);
+  // Track if we've initialized with existing data in edit mode
+  const hasInitializedEditDataRef = useRef(false);
 
-  // Restore from localStorage on mount
+  // Initialize with existing data in edit mode (takes priority over localStorage)
   useEffect(() => {
-    // Only restore once on true initial mount
-    if (hasRestoredRef.current) {
+    if (isEditMode && existingData && !hasInitializedEditDataRef.current) {
+      console.log('[EDIT MODE] Initializing with existing data from database');
+      setFormData(existingData);
+      
+      // Mark all questions that have values as completed
+      const completed = new Set<string>();
+      const checkSection = (sectionData: Record<string, unknown>, prefix: string) => {
+        Object.entries(sectionData).forEach(([key, value]) => {
+          // Extract question number from key (e.g., q1_ideal_customer -> q1)
+          const match = key.match(/^(q\d+)_/);
+          if (match) {
+            const questionId = match[1];
+            if (value && (typeof value === 'string' ? value.trim() !== '' : Array.isArray(value) ? value.length > 0 : false)) {
+              completed.add(questionId);
+            }
+          }
+        });
+      };
+      
+      checkSection(existingData.avatar_definition as unknown as Record<string, unknown>, 'avatar');
+      checkSection(existingData.dream_outcome as unknown as Record<string, unknown>, 'dream');
+      checkSection(existingData.problems_obstacles as unknown as Record<string, unknown>, 'problems');
+      checkSection(existingData.solution_methodology as unknown as Record<string, unknown>, 'solution');
+      checkSection(existingData.brand_voice as unknown as Record<string, unknown>, 'brand');
+      checkSection(existingData.proof_transformation as unknown as Record<string, unknown>, 'proof');
+      checkSection(existingData.faith_integration as unknown as Record<string, unknown>, 'faith');
+      checkSection(existingData.business_metrics as unknown as Record<string, unknown>, 'business');
+      
+      setCompletedQuestions(completed);
+      hasInitializedEditDataRef.current = true;
+      hasRestoredRef.current = true; // Skip localStorage restore since we have existing data
+      console.log('[EDIT MODE] ✓ Initialized with', completed.size, 'completed questions');
+    }
+  }, [isEditMode, existingData]);
+
+  // Restore from localStorage on mount (only for create mode, not edit mode)
+  useEffect(() => {
+    // Skip restore if we just cleared (reset button was clicked)
+    if (sessionStorage.getItem('skipRestore') === 'true') {
+      sessionStorage.removeItem('skipRestore');
+      hasRestoredRef.current = true;
+      console.log('[RESTORE] Skipping - form was just reset');
+      return;
+    }
+    
+    // Skip if in edit mode or already restored
+    if (isEditMode || hasRestoredRef.current) {
+      if (isEditMode) {
+        console.log('[RESTORE] Skipping - in edit mode, using existing data instead');
+      } else {
       console.log('[RESTORE] Skipping - already restored');
+      }
       return;
     }
 
@@ -83,7 +138,7 @@ export function useQuestionnaireForm(clientId: string): UseQuestionnaireFormRetu
       } catch (error) {
       console.error('[RESTORE] ❌ FAILED:', error);
     }
-  }, [clientId]); // Still depends on clientId, but ref prevents multiple runs
+  }, [clientId, isEditMode]); // Still depends on clientId, but ref prevents multiple runs
 
   // Auto-save to localStorage - immediate, no debounce
   useEffect(() => {
@@ -221,28 +276,28 @@ export function useQuestionnaireForm(clientId: string): UseQuestionnaireFormRetu
         };
       } else if (questionId === 'q20' || questionId === 'q21' || 
                  questionId === 'q22' || questionId === 'q23' ||
-                 questionId === 'q33') {
+                 questionId === 'q24') {
         const key = getQuestionKey(questionId);
         updated.brand_voice = {
           ...updated.brand_voice,
           [`${questionId}_${key}`]: value as string | UploadedFile[]
         };
-      } else if (questionId === 'q24' || questionId === 'q25' || 
-                 questionId === 'q26' || questionId === 'q27' ||
-                 questionId === 'q34') {
+      } else if (questionId === 'q25' || questionId === 'q26' || 
+                 questionId === 'q27' || questionId === 'q28' ||
+                 questionId === 'q29') {
         const key = getQuestionKey(questionId);
         updated.proof_transformation = {
           ...updated.proof_transformation,
           [`${questionId}_${key}`]: value as string | UploadedFile[]
         };
-      } else if (questionId === 'q28' || questionId === 'q29' || 
-                 questionId === 'q30') {
+      } else if (questionId === 'q30' || questionId === 'q31' || 
+                 questionId === 'q32') {
         const key = getQuestionKey(questionId);
         updated.faith_integration = {
           ...updated.faith_integration,
           [`${questionId}_${key}`]: value as string
         };
-      } else if (questionId === 'q31' || questionId === 'q32') {
+      } else if (questionId === 'q33' || questionId === 'q34') {
         const key = getQuestionKey(questionId);
         updated.business_metrics = {
           ...updated.business_metrics,
@@ -302,9 +357,9 @@ export function useQuestionnaireForm(clientId: string): UseQuestionnaireFormRetu
       3: ['q11', 'q12', 'q14', 'q15'], // Q13 optional
       4: ['q16', 'q17', 'q18', 'q19'],
       5: ['q20', 'q21', 'q22', 'q23'],
-      6: ['q24', 'q25', 'q27'], // Q26 optional
+      6: ['q25', 'q26', 'q28'], // Q27, Q29 optional
       7: [], // All optional (faith section)
-      8: ['q31', 'q32'],
+      8: ['q33', 'q34'],
     };
 
     const requiredQuestions = sectionQuestionMap[sectionNumber] || [];
@@ -445,17 +500,17 @@ function getQuestionKey(questionId: string): string {
     q21: 'personality_words',
     q22: 'signature_phrases',
     q23: 'avoid_topics',
-    q24: 'transformation_story',
-    q25: 'measurable_results',
-    q26: 'credentials',
-    q27: 'guarantees',
-    q28: 'faith_preference',
-    q29: 'faith_mission',
-    q30: 'biblical_principles',
-    q31: 'annual_revenue',
-    q32: 'primary_goal',
-    q33: 'brand_assets',
-    q34: 'proof_assets',
+    q24: 'brand_assets',
+    q25: 'transformation_story',
+    q26: 'measurable_results',
+    q27: 'credentials',
+    q28: 'guarantees',
+    q29: 'proof_assets',
+    q30: 'faith_preference',
+    q31: 'faith_mission',
+    q32: 'biblical_principles',
+    q33: 'annual_revenue',
+    q34: 'primary_goal',
   };
   return keyMap[questionId] || '';
 }
@@ -466,7 +521,7 @@ function getQuestionValue(questionId: string, formData: QuestionnaireData): stri
   console.log(`[getQuestionValue] ${questionId} → key: ${key}`);
   
   // Skip file upload questions - they don't need validation
-  if (questionId === 'q33' || questionId === 'q34') return '';
+  if (questionId === 'q24' || questionId === 'q29') return '';
   
   // Use exact matching to avoid q10 matching q1, q11 matching q1, etc.
   if (questionId === 'q1' || questionId === 'q2' || 
@@ -490,14 +545,14 @@ function getQuestionValue(questionId: string, formData: QuestionnaireData): stri
              questionId === 'q22' || questionId === 'q23') {
     const value = (formData.brand_voice as Record<string, unknown>)[key];
     return typeof value === 'string' ? value : '';
-  } else if (questionId === 'q24' || questionId === 'q25' || 
-             questionId === 'q26' || questionId === 'q27') {
+  } else if (questionId === 'q25' || questionId === 'q26' || 
+             questionId === 'q27' || questionId === 'q28') {
     const value = (formData.proof_transformation as Record<string, unknown>)[key];
     return typeof value === 'string' ? value : '';
-  } else if (questionId === 'q28' || questionId === 'q29' || 
-             questionId === 'q30') {
+  } else if (questionId === 'q30' || questionId === 'q31' || 
+             questionId === 'q32') {
     return (formData.faith_integration as Record<string, string>)[key] || '';
-  } else if (questionId === 'q31' || questionId === 'q32') {
+  } else if (questionId === 'q33' || questionId === 'q34') {
     const value = (formData.business_metrics as Record<string, string>)[key] || '';
     console.log(`[getQuestionValue] ${questionId} found in business_metrics:`, value);
     return value;

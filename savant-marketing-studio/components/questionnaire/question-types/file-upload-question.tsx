@@ -3,6 +3,16 @@
 import { useCallback, useState } from 'react';
 import { Upload, X, FileText, Image as ImageIcon, File } from 'lucide-react';
 
+// Allowed file types for uploads (must match server validation)
+const ALLOWED_TYPES = [
+  'application/pdf',
+  'image/jpeg',
+  'image/jpg',
+  'image/png',
+  'image/webp',
+  'image/gif',
+];
+
 export interface UploadedFile {
   id: string;
   name: string;
@@ -64,6 +74,12 @@ export function FileUploadQuestion({
         const sizeInMB = file.size / 1024 / 1024;
         if (sizeInMB > maxSizeInMB) {
           errors.push(`${file.name} exceeds ${maxSizeInMB}MB limit`);
+          return;
+        }
+
+        // Check file type
+        if (!ALLOWED_TYPES.includes(file.type)) {
+          errors.push(`${file.name} - only PDF and images allowed`);
           return;
         }
 
