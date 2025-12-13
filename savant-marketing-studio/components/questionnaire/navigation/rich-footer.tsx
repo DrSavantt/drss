@@ -4,7 +4,6 @@ import { useState } from 'react';
 import { ChevronLeft, ChevronRight, Check, Loader2, Circle, RotateCcw } from 'lucide-react';
 import {
   AlertDialog,
-  AlertDialogAction,
   AlertDialogCancel,
   AlertDialogContent,
   AlertDialogDescription,
@@ -50,46 +49,6 @@ export function RichFooter({
   const previousName = currentSection > 1 ? SECTION_NAMES[currentSection - 2] : null;
   const nextName = currentSection < 8 ? SECTION_NAMES[currentSection] : null;
 
-  // Helper to extract clientId from URL as fallback
-  const getClientIdFromUrl = () => {
-    const path = window.location.pathname;
-    const match = path.match(/\/onboarding\/([^\/]+)/);
-    return match ? match[1] : null;
-  };
-
-  const handleConfirmReset = () => {
-    const actualClientId = clientId || getClientIdFromUrl();
-    
-    console.log('[RESET] Starting reset for clientId:', actualClientId);
-    
-    if (!actualClientId) {
-      console.error('[RESET] ❌ No clientId found!');
-      alert('Error: Could not determine client ID');
-      return;
-    }
-    
-    // Show what's in localStorage before clearing
-    const draftKey = `questionnaire_draft_${actualClientId}`;
-    const completedKey = `questionnaire_completed_${actualClientId}`;
-    const sectionKey = `questionnaire_section_${actualClientId}`;
-    
-    console.log('[RESET] Draft before clear:', localStorage.getItem(draftKey) ? 'EXISTS' : 'NULL');
-    console.log('[RESET] Completed before clear:', localStorage.getItem(completedKey) ? 'EXISTS' : 'NULL');
-    console.log('[RESET] Section before clear:', localStorage.getItem(sectionKey));
-    
-    // Clear localStorage
-    localStorage.removeItem(draftKey);
-    localStorage.removeItem(completedKey);
-    localStorage.removeItem(sectionKey);
-    
-    console.log('[RESET] Draft after clear:', localStorage.getItem(draftKey));
-    console.log('[RESET] Completed after clear:', localStorage.getItem(completedKey));
-    console.log('[RESET] Section after clear:', localStorage.getItem(sectionKey));
-    console.log('[RESET] ✓ localStorage cleared, reloading page...');
-    
-    // Reload page to reset form
-    window.location.reload();
-  };
 
   return (
     <footer className="fixed bottom-0 left-0 right-0 z-50">
