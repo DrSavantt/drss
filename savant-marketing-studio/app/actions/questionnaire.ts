@@ -132,10 +132,10 @@ function validateQuestionnaireData(data: QuestionnaireData): {
   const skipFaithQuestions = !faithPreference || faithPreference === 'separate';
 
   // Validate each section's questions
-  Object.entries(data).forEach(([sectionKey, sectionData]) => {
+  Object.entries(data).forEach(([, sectionData]) => {
     if (!sectionData || typeof sectionData !== 'object') return;
 
-    Object.entries(sectionData as Record<string, any>).forEach(([questionKey, value]) => {
+    Object.entries(sectionData as Record<string, unknown>).forEach(([questionKey, value]) => {
       // Extract question ID (q1, q2, etc.)
       const questionId = questionKey.split('_')[0];
 
@@ -165,7 +165,7 @@ function validateQuestionnaireData(data: QuestionnaireData): {
         // Validate the value
         const result = schema.safeParse(value);
         if (!result.success) {
-          const errorMessage = result.error.errors[0]?.message || 'Invalid value';
+          const errorMessage = result.error.issues[0]?.message || 'Invalid value';
           errors[questionKey] = errorMessage;
         }
       }
