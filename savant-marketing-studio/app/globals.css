@@ -117,6 +117,14 @@ select {
     --spotlight-color-end: rgba(251, 113, 133, 0.05);
     --spotlight-shadow: inset 0 0 20px rgba(251, 113, 133, 0.1);
 
+    /* Glass morphism (light mode) */
+    --glass-bg: rgba(255, 255, 255, 0.7);
+    --glass-border: rgba(0, 0, 0, 0.1);
+    --glass-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+    --hover-bg: rgba(0, 0, 0, 0.03);
+    --active-ring: rgba(220, 38, 38, 0.2);
+    --active-shadow: rgba(220, 38, 38, 0.1);
+
     /* Semantic mappings - light */
     --background: 0 0% 98%;          /* ghost-white */
     --foreground: 0 0% 0%;           /* black */
@@ -160,6 +168,14 @@ select {
     --spotlight-color-mid: rgba(251, 113, 133, 0.08);
     --spotlight-color-end: rgba(251, 113, 133, 0.0);
     --spotlight-shadow: none;
+
+    /* Glass morphism (dark mode) */
+    --glass-bg: rgba(0, 0, 0, 0.4);
+    --glass-border: rgba(255, 255, 255, 0.1);
+    --glass-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+    --hover-bg: rgba(255, 255, 255, 0.05);
+    --active-ring: rgba(251, 113, 133, 0.3);
+    --active-shadow: rgba(251, 113, 133, 0.1);
 
     --background: var(--pure-black);
     --foreground: var(--pure-white);

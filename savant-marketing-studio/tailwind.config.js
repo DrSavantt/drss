@@ -12,6 +12,9 @@ module.exports = {
         sans: ['var(--font-inter)', 'sans-serif'],
         mono: ['var(--font-geist-mono)', 'monospace'],
       },
+      backgroundImage: {
+        'gradient-radial': 'radial-gradient(var(--tw-gradient-stops))',
+      },
       boxShadow: {
         'premium-sm': '0px 1px 2px rgba(0,0,0,0.4), 0px 0px 0px 1px rgba(255,255,255,0.05) inset',
         'premium-card': '0px 4px 12px rgba(0,0,0,0.5), 0px 0px 0px 1px rgba(255,255,255,0.05) inset',
@@ -118,6 +121,19 @@ module.exports = {
         // Surface colors for premium depth
         'surface': 'hsl(var(--surface))',
         'surface-highlight': 'hsl(var(--surface-highlight))',
+        
+        // Glass morphism colors
+        'glass': {
+          bg: 'var(--glass-bg)',
+          border: 'var(--glass-border)',
+        },
+        'hover': {
+          bg: 'var(--hover-bg)',
+        },
+        'active': {
+          ring: 'var(--active-ring)',
+          shadow: 'var(--active-shadow)',
+        },
       },
       screens: {
         'xs': '320px',
