@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronDown, Users, Zap, FileText, HardDrive, Target } from 'lucide-react';
 import { springTransitions } from '@/lib/animations';
@@ -50,12 +49,10 @@ interface MetricData {
 }
 
 interface MetricCardsProps {
-  showAnalyticsLinks?: boolean;
   autoExpand?: string;
 }
 
-export function MetricCards({ showAnalyticsLinks = false, autoExpand }: MetricCardsProps) {
-  const router = useRouter();
+export function MetricCards({ autoExpand }: MetricCardsProps) {
   const [metrics, setMetrics] = useState<MetricData | null>(null);
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
   const [loading, setLoading] = useState(true);
@@ -89,13 +86,6 @@ export function MetricCards({ showAnalyticsLinks = false, autoExpand }: MetricCa
   const toggleExpand = (metricKey: string) => {
     setExpanded(prev => ({ ...prev, [metricKey]: !prev[metricKey] }));
     setActiveCard(expanded[metricKey] ? null : metricKey);
-  };
-
-  const goToAnalytics = (metric: string, focus?: string) => {
-    const params = new URLSearchParams();
-    params.set('metric', metric);
-    if (focus) params.set('focus', focus);
-    router.push(`/dashboard/analytics?${params.toString()}`);
   };
 
   if (loading || !metrics) {
@@ -177,68 +167,28 @@ export function MetricCards({ showAnalyticsLinks = false, autoExpand }: MetricCa
                 className="overflow-hidden relative z-10"
               >
                 <div className="mt-4 space-y-1 border-t border-border pt-4">
-                  <motion.button 
-                    onClick={() => goToAnalytics('clientHealth', 'total')}
-                    whileHover={{ x: 4 }}
-                    whileTap={{ scale: 0.98 }}
-                    transition={springTransitions.springMicro}
-                    className="w-full flex justify-between p-2 rounded-lg hover:bg-hover-bg transition-colors"
-                  >
+                  <div className="w-full flex justify-between p-2 rounded-lg">
                     <span className="text-sm text-muted-foreground">Total Clients</span>
                     <span className="text-sm text-foreground">{metrics.clientHealth.total}</span>
-                  </motion.button>
-                  <motion.button 
-                    onClick={() => goToAnalytics('clientHealth', 'active')}
-                    whileHover={{ x: 4 }}
-                    whileTap={{ scale: 0.98 }}
-                    transition={springTransitions.springMicro}
-                    className="w-full flex justify-between p-2 rounded-lg hover:bg-hover-bg transition-colors"
-                  >
+                  </div>
+                  <div className="w-full flex justify-between p-2 rounded-lg">
                     <span className="text-sm text-muted-foreground">Active (30d)</span>
                     <span className="text-sm text-green-500">{metrics.clientHealth.active}</span>
-                  </motion.button>
-                  <motion.button 
-                    onClick={() => goToAnalytics('clientHealth', 'questionnaires')}
-                    whileHover={{ x: 4 }}
-                    whileTap={{ scale: 0.98 }}
-                    transition={springTransitions.springMicro}
-                    className="w-full flex justify-between p-2 rounded-lg hover:bg-hover-bg transition-colors"
-                  >
+                  </div>
+                  <div className="w-full flex justify-between p-2 rounded-lg">
                     <span className="text-sm text-muted-foreground">Questionnaires Done</span>
                     <span className="text-sm text-foreground">{metrics.clientHealth.questionnairesCompleted}</span>
-                  </motion.button>
+                  </div>
                   {metrics.clientHealth.inactive > 0 && (
-                    <motion.button 
-                      onClick={() => goToAnalytics('clientHealth', 'inactive')}
-                      whileHover={{ x: 4 }}
-                      whileTap={{ scale: 0.98 }}
-                      transition={springTransitions.springMicro}
-                      className="w-full flex justify-between p-2 rounded-lg hover:bg-hover-bg transition-colors"
-                    >
+                    <div className="w-full flex justify-between p-2 rounded-lg">
                       <span className="text-sm text-muted-foreground">Inactive</span>
                       <span className="text-sm text-yellow-500">{metrics.clientHealth.inactive}</span>
-                    </motion.button>
+                    </div>
                   )}
                   {metrics.clientHealth.overdueProjects > 0 && (
-                    <motion.button 
-                      onClick={() => goToAnalytics('clientHealth', 'overdue')}
-                      whileHover={{ x: 4 }}
-                      whileTap={{ scale: 0.98 }}
-                      transition={springTransitions.springMicro}
-                      className="w-full flex justify-between p-2 rounded-lg hover:bg-hover-bg transition-colors"
-                    >
+                    <div className="w-full flex justify-between p-2 rounded-lg">
                       <span className="text-sm text-muted-foreground">With Overdue Projects</span>
                       <span className="text-sm text-red-500">{metrics.clientHealth.overdueProjects}</span>
-                    </motion.button>
-                  )}
-                  {showAnalyticsLinks && (
-                    <div className="pt-3 mt-2 border-t border-border">
-                      <button 
-                        onClick={() => goToAnalytics('clientHealth')}
-                        className="text-xs text-red-primary hover:underline"
-                      >
-                        View detailed analytics →
-                      </button>
                     </div>
                   )}
                 </div>
@@ -304,66 +254,26 @@ export function MetricCards({ showAnalyticsLinks = false, autoExpand }: MetricCa
                 className="overflow-hidden relative z-10"
               >
                 <div className="mt-4 space-y-1 border-t border-border pt-4">
-                  <motion.button 
-                    onClick={() => goToAnalytics('projectVelocity', 'backlog')}
-                    whileHover={{ x: 4 }}
-                    whileTap={{ scale: 0.98 }}
-                    transition={springTransitions.springMicro}
-                    className="w-full flex justify-between p-2 rounded-lg hover:bg-hover-bg transition-colors"
-                  >
+                  <div className="w-full flex justify-between p-2 rounded-lg">
                     <span className="text-sm text-muted-foreground">Backlog</span>
                     <span className="text-sm text-foreground">{metrics.projectVelocity.backlog}</span>
-                  </motion.button>
-                  <motion.button 
-                    onClick={() => goToAnalytics('projectVelocity', 'inProgress')}
-                    whileHover={{ x: 4 }}
-                    whileTap={{ scale: 0.98 }}
-                    transition={springTransitions.springMicro}
-                    className="w-full flex justify-between p-2 rounded-lg hover:bg-hover-bg transition-colors"
-                  >
+                  </div>
+                  <div className="w-full flex justify-between p-2 rounded-lg">
                     <span className="text-sm text-muted-foreground">In Progress</span>
                     <span className="text-sm text-blue-500">{metrics.projectVelocity.inProgress}</span>
-                  </motion.button>
-                  <motion.button 
-                    onClick={() => goToAnalytics('projectVelocity', 'inReview')}
-                    whileHover={{ x: 4 }}
-                    whileTap={{ scale: 0.98 }}
-                    transition={springTransitions.springMicro}
-                    className="w-full flex justify-between p-2 rounded-lg hover:bg-hover-bg transition-colors"
-                  >
+                  </div>
+                  <div className="w-full flex justify-between p-2 rounded-lg">
                     <span className="text-sm text-muted-foreground">In Review</span>
                     <span className="text-sm text-yellow-500">{metrics.projectVelocity.inReview}</span>
-                  </motion.button>
-                  <motion.button 
-                    onClick={() => goToAnalytics('projectVelocity', 'done')}
-                    whileHover={{ x: 4 }}
-                    whileTap={{ scale: 0.98 }}
-                    transition={springTransitions.springMicro}
-                    className="w-full flex justify-between p-2 rounded-lg hover:bg-hover-bg transition-colors"
-                  >
+                  </div>
+                  <div className="w-full flex justify-between p-2 rounded-lg">
                     <span className="text-sm text-muted-foreground">Done</span>
                     <span className="text-sm text-green-500">{metrics.projectVelocity.done}</span>
-                  </motion.button>
+                  </div>
                   {metrics.projectVelocity.stuck > 0 && (
-                    <motion.button 
-                      onClick={() => goToAnalytics('projectVelocity', 'stuck')}
-                      whileHover={{ x: 4 }}
-                      whileTap={{ scale: 0.98 }}
-                      transition={springTransitions.springMicro}
-                      className="w-full flex justify-between p-2 rounded-lg hover:bg-hover-bg transition-colors"
-                    >
+                    <div className="w-full flex justify-between p-2 rounded-lg">
                       <span className="text-sm text-muted-foreground">Stuck (7+ days)</span>
                       <span className="text-sm text-red-500">{metrics.projectVelocity.stuck}</span>
-                    </motion.button>
-                  )}
-                  {showAnalyticsLinks && (
-                    <div className="pt-3 mt-2 border-t border-border">
-                      <button 
-                        onClick={() => goToAnalytics('projectVelocity')}
-                        className="text-xs text-red-primary hover:underline"
-                      >
-                        View detailed analytics →
-                      </button>
                     </div>
                   )}
                 </div>
@@ -429,49 +339,23 @@ export function MetricCards({ showAnalyticsLinks = false, autoExpand }: MetricCa
                 className="overflow-hidden relative z-10"
               >
                 <div className="mt-4 space-y-1 border-t border-border pt-4">
-                  <motion.button 
-                    onClick={() => goToAnalytics('contentOutput', 'thisWeek')}
-                    whileHover={{ x: 4 }}
-                    whileTap={{ scale: 0.98 }}
-                    transition={springTransitions.springMicro}
-                    className="w-full flex justify-between p-2 rounded-lg hover:bg-hover-bg transition-colors"
-                  >
+                  <div className="w-full flex justify-between p-2 rounded-lg">
                     <span className="text-sm text-muted-foreground">This Week</span>
                     <span className="text-sm text-foreground">{metrics.contentOutput.thisWeek}</span>
-                  </motion.button>
-                  <motion.button 
-                    onClick={() => goToAnalytics('contentOutput', 'total')}
-                    whileHover={{ x: 4 }}
-                    whileTap={{ scale: 0.98 }}
-                    transition={springTransitions.springMicro}
-                    className="w-full flex justify-between p-2 rounded-lg hover:bg-hover-bg transition-colors"
-                  >
+                  </div>
+                  <div className="w-full flex justify-between p-2 rounded-lg">
                     <span className="text-sm text-muted-foreground">Total</span>
                     <span className="text-sm text-foreground">{metrics.contentOutput.total}</span>
-                  </motion.button>
+                  </div>
                   {Object.entries(metrics.contentOutput.byType).map(([type, count]) => (
-                    <motion.button 
+                    <div 
                       key={type}
-                      onClick={() => goToAnalytics('contentOutput', type)}
-                      whileHover={{ x: 4 }}
-                      whileTap={{ scale: 0.98 }}
-                      transition={springTransitions.springMicro}
-                      className="w-full flex justify-between p-2 rounded-lg hover:bg-hover-bg transition-colors"
+                      className="w-full flex justify-between p-2 rounded-lg"
                     >
                       <span className="text-sm text-muted-foreground capitalize">{type.replace('_', ' ')}</span>
                       <span className="text-sm text-foreground">{count as number}</span>
-                    </motion.button>
-                  ))}
-                  {showAnalyticsLinks && (
-                    <div className="pt-3 mt-2 border-t border-border">
-                      <button 
-                        onClick={() => goToAnalytics('contentOutput')}
-                        className="text-xs text-red-primary hover:underline"
-                      >
-                        View detailed analytics →
-                      </button>
                     </div>
-                  )}
+                  ))}
                 </div>
               </motion.div>
             )}
@@ -535,36 +419,14 @@ export function MetricCards({ showAnalyticsLinks = false, autoExpand }: MetricCa
                 className="overflow-hidden relative z-10"
               >
                 <div className="mt-4 space-y-1 border-t border-border pt-4">
-                  <motion.button 
-                    onClick={() => goToAnalytics('storage', 'files')}
-                    whileHover={{ x: 4 }}
-                    whileTap={{ scale: 0.98 }}
-                    transition={springTransitions.springMicro}
-                    className="w-full flex justify-between p-2 rounded-lg hover:bg-hover-bg transition-colors"
-                  >
+                  <div className="w-full flex justify-between p-2 rounded-lg">
                     <span className="text-sm text-muted-foreground">Total Files</span>
                     <span className="text-sm text-foreground">{metrics.storage.filesCount}</span>
-                  </motion.button>
-                  <motion.button 
-                    onClick={() => goToAnalytics('storage', 'thisWeek')}
-                    whileHover={{ x: 4 }}
-                    whileTap={{ scale: 0.98 }}
-                    transition={springTransitions.springMicro}
-                    className="w-full flex justify-between p-2 rounded-lg hover:bg-hover-bg transition-colors"
-                  >
+                  </div>
+                  <div className="w-full flex justify-between p-2 rounded-lg">
                     <span className="text-sm text-muted-foreground">Files This Week</span>
                     <span className="text-sm text-foreground">{metrics.storage.filesThisWeek}</span>
-                  </motion.button>
-                  {showAnalyticsLinks && (
-                    <div className="pt-3 mt-2 border-t border-border">
-                      <button 
-                        onClick={() => goToAnalytics('storage')}
-                        className="text-xs text-red-primary hover:underline"
-                      >
-                        View detailed analytics →
-                      </button>
-                    </div>
-                  )}
+                  </div>
                 </div>
               </motion.div>
             )}
@@ -628,46 +490,18 @@ export function MetricCards({ showAnalyticsLinks = false, autoExpand }: MetricCa
                 className="overflow-hidden relative z-10"
               >
                 <div className="mt-4 space-y-1 border-t border-border pt-4">
-                  <motion.button 
-                    onClick={() => goToAnalytics('capacity', 'current')}
-                    whileHover={{ x: 4 }}
-                    whileTap={{ scale: 0.98 }}
-                    transition={springTransitions.springMicro}
-                    className="w-full flex justify-between p-2 rounded-lg hover:bg-hover-bg transition-colors"
-                  >
+                  <div className="w-full flex justify-between p-2 rounded-lg">
                     <span className="text-sm text-muted-foreground">Current Clients</span>
                     <span className="text-sm text-foreground">{metrics.capacity.currentClients}</span>
-                  </motion.button>
-                  <motion.button 
-                    onClick={() => goToAnalytics('capacity', 'available')}
-                    whileHover={{ x: 4 }}
-                    whileTap={{ scale: 0.98 }}
-                    transition={springTransitions.springMicro}
-                    className="w-full flex justify-between p-2 rounded-lg hover:bg-hover-bg transition-colors"
-                  >
+                  </div>
+                  <div className="w-full flex justify-between p-2 rounded-lg">
                     <span className="text-sm text-muted-foreground">Can Add</span>
                     <span className="text-sm text-green-500">{metrics.capacity.clientsCanAdd}</span>
-                  </motion.button>
-                  <motion.button 
-                    onClick={() => goToAnalytics('capacity', 'hours')}
-                    whileHover={{ x: 4 }}
-                    whileTap={{ scale: 0.98 }}
-                    transition={springTransitions.springMicro}
-                    className="w-full flex justify-between p-2 rounded-lg hover:bg-hover-bg transition-colors"
-                  >
+                  </div>
+                  <div className="w-full flex justify-between p-2 rounded-lg">
                     <span className="text-sm text-muted-foreground">Hours Per Client</span>
                     <span className="text-sm text-foreground">{metrics.capacity.avgHoursPerClient}h</span>
-                  </motion.button>
-                  {showAnalyticsLinks && (
-                    <div className="pt-3 mt-2 border-t border-border">
-                      <button 
-                        onClick={() => goToAnalytics('capacity')}
-                        className="text-xs text-red-primary hover:underline"
-                      >
-                        View detailed analytics →
-                      </button>
-                    </div>
-                  )}
+                  </div>
                 </div>
               </motion.div>
             )}

@@ -157,18 +157,10 @@ export default function DashboardPage() {
       
       {/* Key Metrics - The new collapsible cards */}
       <section>
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-2xl md:text-3xl font-bold uppercase tracking-wide text-foreground border-b-2 border-border pb-2">
-            KEY METRICS
-          </h2>
-          <Link 
-            href="/dashboard/analytics"
-            className="text-sm text-red-primary hover:underline"
-          >
-            View Analytics →
-          </Link>
-        </div>
-        <MetricCards showAnalyticsLinks={true} />
+        <h2 className="text-2xl md:text-3xl font-bold uppercase tracking-wide mb-6 text-foreground border-b-2 border-border pb-2">
+          KEY METRICS
+        </h2>
+        <MetricCards />
       </section>
       
       {/* Activity Feed - Single unified section */}
