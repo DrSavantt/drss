@@ -3,6 +3,7 @@
 import { createClient as createSupabaseClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
+import { logActivity } from '@/lib/activity-log'
 
 export async function getClients() {
   const supabase = await createSupabaseClient()
@@ -67,7 +68,7 @@ export async function createClient(formData: FormData) {
     return { error: 'Not authenticated' }
   }
   
-  const { error } = await supabase
+  const { data, error } = await supabase
     .from('clients')
     .insert({
       name,
@@ -82,6 +83,14 @@ export async function createClient(formData: FormData) {
     console.error('Error creating client:', error)
     return { error: 'Failed to create client' }
   }
+  
+  // Log activity
+  await logActivity({
+    activityType: 'client_created',
+    entityType: 'client',
+    entityId: data.id,
+    entityName: data.name
+  })
   
   revalidatePath('/dashboard/clients')
   redirect('/dashboard/clients')
@@ -116,16 +125,35 @@ export async function updateClient(id: string, formData: FormData) {
     return { error: 'Failed to update client' }
   }
   
+  // Log activity
+  await logActivity({
+    activityType: 'client_updated',
+    entityType: 'client',
+    entityId: id,
+    entityName: name
+  })
+  
   revalidatePath('/dashboard/clients')
   revalidatePath(`/dashboard/clients/${id}`)
   return { success: true }
 }
 
-export async function deleteClient(id: string) {
+export async function deleteClient(id: string, clientName?: string) {
   const supabase = await createSupabaseClient()
   
   if (!supabase) {
     return { error: 'Database connection not configured' }
+  }
+  
+  // Get client name if not provided
+  let name = clientName
+  if (!name) {
+    const { data: client } = await supabase
+      .from('clients')
+      .select('name')
+      .eq('id', id)
+      .single()
+    name = client?.name
   }
   
   const { error } = await supabase
@@ -137,6 +165,14 @@ export async function deleteClient(id: string) {
     console.error('Error deleting client:', error)
     return { error: 'Failed to delete client' }
   }
+  
+  // Log activity
+  await logActivity({
+    activityType: 'client_deleted',
+    entityType: 'client',
+    entityId: id,
+    entityName: name
+  })
   
   revalidatePath('/dashboard/clients')
   redirect('/dashboard/clients')

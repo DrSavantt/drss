@@ -102,7 +102,7 @@ export function ClientCaptures({ clientId, clientName }: Props) {
                 >
                   <div
                     className="text-sm text-foreground mb-3 leading-relaxed"
-                    dangerouslySetInnerHTML={{ __html: highlightMentions(entry.content) }}
+                    dangerouslySetInnerHTML={{ __html: highlightMentions(entry.content, [clientName]) }}
                   />
                   <div className="flex items-center justify-between text-xs text-slate">
                     <div className="flex items-center gap-3">

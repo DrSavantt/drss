@@ -206,7 +206,7 @@ export function FilePreviewClient({ content }: Props) {
                     >
                       <div
                         className="text-sm text-foreground mb-3 leading-relaxed"
-                        dangerouslySetInnerHTML={{ __html: highlightMentions(entry.content) }}
+                        dangerouslySetInnerHTML={{ __html: highlightMentions(entry.content, [content.title, content.clients?.name, content.projects?.name].filter(Boolean) as string[]) }}
                       />
                       <div className="flex items-center justify-between text-xs text-slate">
                         <div className="flex items-center gap-3">

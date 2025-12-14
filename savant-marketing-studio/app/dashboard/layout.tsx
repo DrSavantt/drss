@@ -65,6 +65,18 @@ export default function DashboardLayout({
                 Dashboard
               </Link>
               <Link 
+                href="/dashboard/analytics" 
+                className={`
+                  text-sm font-medium transition-colors no-underline px-3 py-1.5 rounded-lg
+                  ${pathname.startsWith('/dashboard/analytics')
+                    ? 'text-red-primary bg-red-primary/10 font-semibold'
+                    : 'text-silver hover:text-foreground hover:bg-surface-highlight'
+                  }
+                `}
+              >
+                Analytics
+              </Link>
+              <Link 
                 href="/dashboard/clients" 
                 className={`
                   text-sm font-medium transition-colors no-underline px-3 py-1.5 rounded-lg

@@ -3,6 +3,7 @@
 import { createClient as createSupabaseClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
+import { logActivity } from '@/lib/activity-log'
 
 export async function getProjects(clientId: string) {
   const supabase = await createSupabaseClient()
@@ -62,7 +63,7 @@ export async function createProject(clientId: string, formData: FormData) {
     return { error: 'Project name is required' }
   }
   
-  const { error } = await supabase
+  const { data, error } = await supabase
     .from('projects')
     .insert({
       client_id: clientId,
@@ -80,6 +81,15 @@ export async function createProject(clientId: string, formData: FormData) {
     return { error: 'Failed to create project' }
   }
   
+  // Log activity
+  await logActivity({
+    activityType: 'project_created',
+    entityType: 'project',
+    entityId: data.id,
+    entityName: data.name,
+    metadata: { client_id: data.client_id, status: data.status }
+  })
+  
   revalidatePath(`/dashboard/clients/${clientId}`)
   redirect(`/dashboard/clients/${clientId}`)
 }
@@ -91,6 +101,13 @@ export async function updateProject(id: string, formData: FormData) {
     return { error: 'Database connection not configured' }
   }
   
+  // Get current project for status comparison
+  const { data: currentProject } = await supabase
+    .from('projects')
+    .select('name, status, client_id')
+    .eq('id', id)
+    .single()
+  
   const name = formData.get('name') as string
   const description = formData.get('description') as string
   const due_date = formData.get('due_date') as string
@@ -101,6 +118,9 @@ export async function updateProject(id: string, formData: FormData) {
     return { error: 'Project name is required' }
   }
   
+  const oldStatus = currentProject?.status
+  const newStatus = status || 'backlog'
+  
   const { error } = await supabase
     .from('projects')
     .update({
@@ -108,7 +128,7 @@ export async function updateProject(id: string, formData: FormData) {
       description: description || null,
       due_date: due_date || null,
       priority: priority || 'medium',
-      status: status || 'backlog'
+      status: newStatus
     })
     .eq('id', id)
   
@@ -116,6 +136,19 @@ export async function updateProject(id: string, formData: FormData) {
     console.error('Error updating project:', error)
     return { error: 'Failed to update project' }
   }
+  
+  // Log activity - differentiate between status change and general update
+  await logActivity({
+    activityType: oldStatus !== newStatus ? 'project_status_changed' : 'project_updated',
+    entityType: 'project',
+    entityId: id,
+    entityName: name,
+    metadata: { 
+      old_status: oldStatus, 
+      new_status: newStatus,
+      client_id: currentProject?.client_id 
+    }
+  })
   
   return { success: true }
 }
@@ -131,6 +164,15 @@ export async function updateProjectStatus(
     return { error: 'Database connection not configured' }
   }
   
+  // Get current project info before update
+  const { data: project } = await supabase
+    .from('projects')
+    .select('name, status, client_id')
+    .eq('id', projectId)
+    .single()
+  
+  const oldStatus = project?.status
+  
   const { error } = await supabase
     .from('projects')
     .update({
@@ -144,15 +186,41 @@ export async function updateProjectStatus(
     return { error: 'Failed to update project' }
   }
   
+  // Log activity if status actually changed
+  if (oldStatus !== newStatus) {
+    await logActivity({
+      activityType: 'project_status_changed',
+      entityType: 'project',
+      entityId: projectId,
+      entityName: project?.name,
+      metadata: { 
+        old_status: oldStatus, 
+        new_status: newStatus,
+        client_id: project?.client_id 
+      }
+    })
+  }
+  
   revalidatePath('/dashboard/projects/board')
   return { success: true }
 }
 
-export async function deleteProject(id: string, clientId: string) {
+export async function deleteProject(id: string, clientId: string, projectName?: string) {
   const supabase = await createSupabaseClient()
   
   if (!supabase) {
     return { error: 'Database connection not configured' }
+  }
+  
+  // Get project name if not provided
+  let name = projectName
+  if (!name) {
+    const { data: project } = await supabase
+      .from('projects')
+      .select('name')
+      .eq('id', id)
+      .single()
+    name = project?.name
   }
   
   const { error } = await supabase
@@ -164,6 +232,14 @@ export async function deleteProject(id: string, clientId: string) {
     console.error('Error deleting project:', error)
     return { error: 'Failed to delete project' }
   }
+  
+  // Log activity
+  await logActivity({
+    activityType: 'project_deleted',
+    entityType: 'project',
+    entityId: id,
+    entityName: name
+  })
   
   revalidatePath(`/dashboard/clients/${clientId}`)
   return { success: true }

@@ -3,6 +3,7 @@
 import { createClient as createSupabaseClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
+import { logActivity } from '@/lib/activity-log'
 
 export async function getContentAssets(clientId: string) {
   const supabase = await createSupabaseClient()
@@ -75,7 +76,7 @@ export async function createContentAsset(clientId: string, formData: FormData) {
     contentValue = content_json
   }
   
-  const { error } = await supabase
+  const { data, error } = await supabase
     .from('content_assets')
     .insert({
       client_id: clientId,
@@ -92,6 +93,15 @@ export async function createContentAsset(clientId: string, formData: FormData) {
     console.error('Error creating content:', error)
     return { error: 'Failed to create content' }
   }
+  
+  // Log activity
+  await logActivity({
+    activityType: 'content_created',
+    entityType: 'content',
+    entityId: data.id,
+    entityName: data.title,
+    metadata: { client_id: clientId, asset_type: 'note' }
+  })
   
   revalidatePath(`/dashboard/clients/${clientId}`)
   redirect(`/dashboard/clients/${clientId}`)
@@ -126,14 +136,33 @@ export async function updateContentAsset(id: string, formData: FormData) {
     return { error: 'Failed to update content' }
   }
   
+  // Log activity
+  await logActivity({
+    activityType: 'content_updated',
+    entityType: 'content',
+    entityId: id,
+    entityName: title
+  })
+  
   return { success: true }
 }
 
-export async function deleteContentAsset(id: string, clientId: string) {
+export async function deleteContentAsset(id: string, clientId: string, contentTitle?: string) {
   const supabase = await createSupabaseClient()
   
   if (!supabase) {
     return { error: 'Database connection not configured' }
+  }
+  
+  // Get content title if not provided
+  let title = contentTitle
+  if (!title) {
+    const { data: content } = await supabase
+      .from('content_assets')
+      .select('title')
+      .eq('id', id)
+      .single()
+    title = content?.title
   }
   
   const { error } = await supabase
@@ -145,6 +174,14 @@ export async function deleteContentAsset(id: string, clientId: string) {
     console.error('Error deleting content:', error)
     return { error: 'Failed to delete content' }
   }
+  
+  // Log activity
+  await logActivity({
+    activityType: 'content_deleted',
+    entityType: 'content',
+    entityId: id,
+    entityName: title
+  })
   
   revalidatePath(`/dashboard/clients/${clientId}`)
   return { success: true }
@@ -213,7 +250,7 @@ export async function createFileAsset(clientId: string, formData: FormData) {
     return { error: 'File is required' }
   }
   
-  const { error } = await supabase
+  const { data, error } = await supabase
     .from('content_assets')
     .insert({
       client_id: clientId,
@@ -232,6 +269,19 @@ export async function createFileAsset(clientId: string, formData: FormData) {
     console.error('Error creating file asset:', error)
     return { error: 'Failed to create file asset' }
   }
+  
+  // Log activity
+  await logActivity({
+    activityType: 'file_uploaded',
+    entityType: 'file',
+    entityId: data.id,
+    entityName: data.title,
+    metadata: { 
+      file_size: file_size, 
+      file_type: file_type,
+      client_id: clientId 
+    }
+  })
   
   revalidatePath(`/dashboard/clients/${clientId}`)
   redirect(`/dashboard/clients/${clientId}`)

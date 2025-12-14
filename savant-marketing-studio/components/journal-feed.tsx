@@ -20,9 +20,21 @@ interface Client {
   name: string
 }
 
+interface Project {
+  id: string
+  name: string
+}
+
+interface Content {
+  id: string
+  title: string
+}
+
 interface Props {
   entries: Entry[]
   clients: Client[]
+  projects?: Project[]
+  content?: Content[]
   onEntryDeleted?: (id: string) => void
   selectedIds?: Set<string>
   onToggleSelection?: (id: string) => void
@@ -31,12 +43,20 @@ interface Props {
 
 export function JournalFeed({ 
   entries, 
-  clients, 
+  clients,
+  projects = [],
+  content = [],
   onEntryDeleted,
   selectedIds = new Set(),
   onToggleSelection,
   onConvertToNote
 }: Props) {
+  // Combine all known names for highlighting mentions
+  const allKnownNames = [
+    ...clients.map(c => c.name),
+    ...projects.map(p => p.name),
+    ...content.map(c => c.title)
+  ]
   const [deleting, setDeleting] = useState<string | null>(null)
 
   async function handleDelete(id: string) {
@@ -124,7 +144,7 @@ export function JournalFeed({
                       </div>
           <div
                         className="text-foreground whitespace-pre-wrap text-sm leading-relaxed"
-            dangerouslySetInnerHTML={{ __html: highlightMentions(entry.content) }}
+            dangerouslySetInnerHTML={{ __html: highlightMentions(entry.content, allKnownNames) }}
           />
                     </div>
                   </div>

@@ -9,32 +9,49 @@ export function parseMentions(
   const contentMentions: string[] = []
   const tags: string[] = []
 
-  // Extract all @mentions from text using the SAME regex as highlighting
-  // Match @[first word][optional additional CAPITALIZED words][optional parentheses content]
-  // Stops at lowercase words
-  const mentionRegex = /@([A-Za-z0-9]+(?:\s+[A-Z0-9][A-Za-z0-9]*)*(?:\s*\([^)]+\))?)/g
+  // Extract all @mentions from text
+  // Match @[words] - captures multiple words including lowercase
+  // Stops at punctuation (except parentheses), double space, or newline
+  // Examples: @test client, @Maurice M, @Candy Business (IG Reel)
+  const mentionRegex = /@([A-Za-z0-9]+(?:\s+[A-Za-z0-9]+)*(?:\s*\([^)]+\))?)/g
   const mentions = [...text.matchAll(mentionRegex)].map(m => m[1].toLowerCase())
 
-  // Match mentions to clients
+  // Match mentions to clients - find best match (longest matching name)
   mentions.forEach(mentionText => {
-      const client = clients.find(c => 
-      c.name.toLowerCase() === mentionText || 
-      c.name.toLowerCase().includes(mentionText)
-      )
-      if (client && !clientMentions.includes(client.id)) {
-        clientMentions.push(client.id)
-      }
+    // Try exact match first, then partial match
+    let bestMatch: { id: string; name: string } | undefined
+    
+    // Exact match
+    bestMatch = clients.find(c => c.name.toLowerCase() === mentionText)
+    
+    // If no exact match, find the client whose name is contained in the mention
+    if (!bestMatch) {
+      bestMatch = clients.find(c => mentionText.startsWith(c.name.toLowerCase()))
+    }
+    
+    // If still no match, check if mention starts with client name
+    if (!bestMatch) {
+      bestMatch = clients.find(c => c.name.toLowerCase().startsWith(mentionText))
+    }
+    
+    if (bestMatch && !clientMentions.includes(bestMatch.id)) {
+      clientMentions.push(bestMatch.id)
+    }
   })
 
   // Match mentions to projects
   if (projects) {
     mentions.forEach(mentionText => {
-      const project = projects.find(p => 
-        p.name.toLowerCase() === mentionText || 
-        p.name.toLowerCase().includes(mentionText)
-      )
-      if (project && !projectMentions.includes(project.id)) {
-        projectMentions.push(project.id)
+      let bestMatch: { id: string; name: string } | undefined
+      bestMatch = projects.find(p => p.name.toLowerCase() === mentionText)
+      if (!bestMatch) {
+        bestMatch = projects.find(p => mentionText.startsWith(p.name.toLowerCase()))
+      }
+      if (!bestMatch) {
+        bestMatch = projects.find(p => p.name.toLowerCase().startsWith(mentionText))
+      }
+      if (bestMatch && !projectMentions.includes(bestMatch.id)) {
+        projectMentions.push(bestMatch.id)
       }
     })
   }
@@ -42,17 +59,21 @@ export function parseMentions(
   // Match mentions to content
   if (content) {
     mentions.forEach(mentionText => {
-      const contentItem = content.find(c => 
-        c.title.toLowerCase() === mentionText || 
-        c.title.toLowerCase().includes(mentionText)
-      )
-      if (contentItem && !contentMentions.includes(contentItem.id)) {
-        contentMentions.push(contentItem.id)
+      let bestMatch: { id: string; title: string } | undefined
+      bestMatch = content.find(c => c.title.toLowerCase() === mentionText)
+      if (!bestMatch) {
+        bestMatch = content.find(c => mentionText.startsWith(c.title.toLowerCase()))
+      }
+      if (!bestMatch) {
+        bestMatch = content.find(c => c.title.toLowerCase().startsWith(mentionText))
+      }
+      if (bestMatch && !contentMentions.includes(bestMatch.id)) {
+        contentMentions.push(bestMatch.id)
       }
     })
-    }
+  }
     
-    // Find #tags
+  // Find #tags
   const words = text.split(/\s+/)
   words.forEach(word => {
     if (word.startsWith('#')) {
@@ -71,17 +92,22 @@ export function parseMentions(
   }
 }
 
-export function highlightMentions(text: string) {
+export function highlightMentions(text: string, knownNames: string[] = []) {
   let result = text
   
-  // Highlight @mentions in blue/info color
-  // Match @[first word][optional additional CAPITALIZED words][optional parentheses content]
-  // This stops at lowercase words (which are likely the continuation of the sentence)
-  // Examples:
-  // - @Greg → highlights "Greg"
-  // - @Greg yo → highlights "Greg" (yo is lowercase, not part of mention)
-  // - @Candy Business (IG Reel Content) yo → highlights "Candy Business (IG Reel Content)"
-  result = result.replace(/@([A-Za-z0-9]+(?:\s+[A-Z0-9][A-Za-z0-9]*)*(?:\s*\([^)]+\))?)/g, '<span class="text-info font-semibold">@$1</span>')
+  // Only highlight exact matches of known names
+  if (knownNames.length > 0) {
+    // Sort by length (longest first) to match longer names before shorter ones
+    const sortedNames = [...knownNames].sort((a, b) => b.length - a.length)
+    
+    sortedNames.forEach(name => {
+      // Escape special regex characters in the name
+      const escapedName = name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+      // Match @name exactly (case insensitive), followed by word boundary or punctuation
+      const nameRegex = new RegExp(`@(${escapedName})(?=\\s|$|[.,!?;:])`, 'gi')
+      result = result.replace(nameRegex, '<span class="text-info font-semibold">@$1</span>')
+    })
+  }
   
   // Highlight #tags in red/primary color
   result = result.replace(/#(\w+)/g, '<span class="text-red-primary font-semibold">#$1</span>')
