@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server';
 import { revalidatePath } from 'next/cache';
 import { QuestionnaireData, UploadedFile } from '@/lib/questionnaire/types';
 import { questionSchemas } from '@/lib/questionnaire/validation-schemas';
+import { logActivity } from '@/lib/activity-log';
 
 // File upload constraints
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
@@ -302,6 +303,25 @@ export async function saveQuestionnaire(
       console.error('Supabase error:', error);
       throw error;
     }
+
+    // Get client name for logging
+    const { data: client } = await supabase
+      .from('clients')
+      .select('name')
+      .eq('id', clientId)
+      .single();
+    
+    // Log activity
+    await logActivity({
+      activityType: mode === 'create' ? 'questionnaire_completed' : 'questionnaire_updated',
+      entityType: 'questionnaire',
+      entityId: clientId,
+      entityName: client?.name,
+      metadata: { 
+        sections_answered: Object.keys(data).length,
+        mode 
+      }
+    });
 
     // Revalidate paths
     revalidatePath(`/dashboard/clients/${clientId}`);

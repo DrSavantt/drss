@@ -471,6 +471,8 @@ export function JournalPageClient({
             <JournalFeed 
               entries={entries} 
               clients={clients}
+              projects={projects}
+              content={content}
               onEntryDeleted={handleEntryDeleted}
               selectedIds={selectedIds}
               onToggleSelection={toggleSelection}

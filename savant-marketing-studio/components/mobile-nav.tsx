@@ -1,6 +1,6 @@
 'use client'
 
-import { Menu, X, Home, Folder, Layout, FileText, BookOpen } from 'lucide-react'
+import { Menu, X, Home, Folder, Layout, FileText, BookOpen, BarChart3 } from 'lucide-react'
 import { useState } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
@@ -17,6 +17,7 @@ export function MobileNav({ userEmail }: MobileNavProps) {
 
   const navItems = [
     { href: '/dashboard', icon: Home, label: 'Dashboard' },
+    { href: '/dashboard/analytics', icon: BarChart3, label: 'Analytics' },
     { href: '/dashboard/clients', icon: Folder, label: 'Clients' },
     { href: '/dashboard/projects/board', icon: Layout, label: 'Projects' },
     { href: '/dashboard/content', icon: FileText, label: 'Content' },

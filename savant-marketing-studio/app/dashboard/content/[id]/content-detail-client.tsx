@@ -287,7 +287,7 @@ export function ContentDetailClient({ content }: ContentDetailClientProps) {
                   >
                     <div
                       className="text-sm text-foreground/90 leading-relaxed"
-                      dangerouslySetInnerHTML={{ __html: highlightMentions(entry.content) }}
+                      dangerouslySetInnerHTML={{ __html: highlightMentions(entry.content, [content.title, content.clients?.name, content.projects?.name].filter(Boolean) as string[]) }}
                     />
                     <div className="flex items-center gap-3 mt-2 text-xs text-silver/60">
                       <span>
