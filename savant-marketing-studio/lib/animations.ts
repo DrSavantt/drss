@@ -32,41 +32,55 @@ export const springTransitions = {
   },
 }
 
-// Framer Motion variants for staggered animations
+// Framer Motion variants for staggered animations - smooth, no flicker
 export const containerVariants = {
-  hidden: { opacity: 0 },
+  hidden: { opacity: 1 }, // Start visible to prevent flash
   visible: {
     opacity: 1,
     transition: {
-      staggerChildren: 0.05,
-      delayChildren: 0.1,
+      staggerChildren: 0.06,
+      delayChildren: 0,
     },
   },
 }
 
 export const itemVariants = {
-  hidden: { opacity: 0, y: 10 },
+  hidden: { opacity: 0.8, y: 6 }, // Start mostly visible
   visible: {
     opacity: 1,
     y: 0,
-    transition: springTransitions.springMicro,
+    transition: {
+      duration: 0.3,
+      ease: [0.25, 0.1, 0.25, 1],
+    },
   },
 }
 
-// Additional utility variants
+// Additional utility variants - smoother
 export const fadeInVariant = {
-  hidden: { opacity: 0 },
-  visible: { opacity: 1 },
+  hidden: { opacity: 0.9 },
+  visible: { 
+    opacity: 1,
+    transition: { duration: 0.3, ease: [0.25, 0.1, 0.25, 1] }
+  },
 }
 
 export const slideUpVariant = {
-  hidden: { opacity: 0, y: 20 },
-  visible: { opacity: 1, y: 0 },
+  hidden: { opacity: 0.8, y: 12 },
+  visible: { 
+    opacity: 1, 
+    y: 0,
+    transition: { duration: 0.35, ease: [0.25, 0.1, 0.25, 1] }
+  },
 }
 
 export const scaleInVariant = {
-  hidden: { opacity: 0, scale: 0.95 },
-  visible: { opacity: 1, scale: 1 },
+  hidden: { opacity: 0.9, scale: 0.98 },
+  visible: { 
+    opacity: 1, 
+    scale: 1,
+    transition: { duration: 0.3, ease: [0.25, 0.1, 0.25, 1] }
+  },
 }
 
 // Legacy exports for backward compatibility
@@ -75,41 +89,42 @@ export const buttonTap = { scale: 0.98 }
 export const cardHover = { scale: 1.02, y: -2 }
 export const cardTap = { scale: 0.98 }
 
-// Metro-style animations (Windows Phone inspired)
-const metroEase: Easing = [0.4, 0, 0.2, 1] // Cubic bezier for easeOut
+// Premium smooth easing - feels luxurious on mobile
+const smoothEase: Easing = [0.25, 0.1, 0.25, 1] // Smooth cubic bezier
 
 export const metroSlideVariants: Variants = {
-  hidden: { opacity: 0, x: -20 },
+  hidden: { opacity: 0.8, x: -8 },
   visible: { 
     opacity: 1, 
     x: 0,
     transition: {
-      duration: 0.2,
-      ease: metroEase
+      duration: 0.4,
+      ease: smoothEase
     }
   }
 }
 
-// Metro stagger (faster than default)
+// Container with NO initial opacity change to prevent flicker
 export const metroContainerVariants: Variants = {
-  hidden: { opacity: 0 },
+  hidden: { opacity: 1 }, // Start visible to prevent flash
   visible: {
     opacity: 1,
     transition: {
-      staggerChildren: 0.03, // Faster stagger for Metro feel
-      delayChildren: 0.05
+      staggerChildren: 0.08, // Slower, smoother stagger
+      delayChildren: 0
     }
   }
 }
 
+// Items fade in smoothly from nearly-visible state
 export const metroItemVariants: Variants = {
-  hidden: { opacity: 0, x: -10 },
+  hidden: { opacity: 0.7, y: 8 }, // Start mostly visible, slight offset
   visible: {
     opacity: 1,
-    x: 0,
+    y: 0,
     transition: {
-      duration: 0.2,
-      ease: metroEase
+      duration: 0.35, // Slower, smoother
+      ease: smoothEase
     }
   }
 }
@@ -120,13 +135,13 @@ export const tileFlipVariants = {
   back: { rotateY: 180 }
 }
 
-// Tile hover lift (Metro tiles lift on hover)
+// Tile hover lift - smooth and subtle
 export const metroTileHover = { 
-  y: -4, 
-  transition: { duration: 0.15 } 
+  y: -2, // Subtle lift
+  transition: { duration: 0.25, ease: smoothEase } 
 }
 
 export const metroTileTap = { 
   scale: 0.98,
-  transition: { duration: 0.1 }
+  transition: { duration: 0.15, ease: smoothEase }
 }
