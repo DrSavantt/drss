@@ -1,6 +1,5 @@
 'use client'
 
-import { motion } from 'framer-motion'
 import { logout } from '@/app/actions/auth'
 import { SearchBar } from '@/components/search-bar'
 import { MobileNav } from '@/components/mobile-nav'
