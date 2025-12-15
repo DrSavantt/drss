@@ -410,6 +410,11 @@ nav {
   padding-right: env(safe-area-inset-right, 0);
 }
 
+/* Additional safe area utility with default padding */
+.safe-area-bottom-with-padding {
+  padding-bottom: calc(env(safe-area-inset-bottom, 0) + 1rem);
+}
+
 /* Mobile-specific improvements */
 @media (max-width: 768px) {
   /* Prevent horizontal scroll */
