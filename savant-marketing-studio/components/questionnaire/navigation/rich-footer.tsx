@@ -51,14 +51,82 @@ export function RichFooter({
 
 
   return (
-    <footer className="fixed bottom-0 left-0 right-0 z-50">
+    <footer className="fixed bottom-0 left-0 right-0 z-50 safe-area-bottom">
       {/* Gradient fade effect */}
       <div className="absolute inset-x-0 -top-8 h-8 bg-gradient-to-t from-black to-transparent pointer-events-none" />
       
       {/* Footer content */}
-      <div className="bg-[#1a1a1a]/95 backdrop-blur-xl border-t border-[#333333]">
-        <div className="max-w-4xl mx-auto px-6 py-4">
-          <div className="grid grid-cols-3 items-center gap-4">
+      <div className="bg-surface/95 backdrop-blur-xl border-t border-border">
+        <div className="max-w-4xl mx-auto px-4 md:px-6 py-3 md:py-4">
+          {/* Mobile Layout - Two column with status above */}
+          <div className="block md:hidden">
+            {/* Save Status Row */}
+            <div className="flex items-center justify-center gap-4 mb-3">
+              <div className="flex items-center gap-1.5">
+                {saveStatus === 'saving' && (
+                  <>
+                    <Loader2 className="w-3 h-3 text-silver animate-spin" />
+                    <span className="text-xs text-silver">Saving...</span>
+                  </>
+                )}
+                {saveStatus === 'saved' && (
+                  <>
+                    <Check className="w-3 h-3 text-green-500" />
+                    <span className="text-xs text-green-500">Saved</span>
+                  </>
+                )}
+                {saveStatus === 'idle' && (
+                  <>
+                    <Circle className="w-2 h-2 text-silver fill-silver" />
+                    <span className="text-xs text-silver">Draft</span>
+                  </>
+                )}
+              </div>
+              <span className="text-xs text-foreground">
+                Step <span className="text-red-primary font-semibold">{currentSection}</span>/8
+              </span>
+            </div>
+            
+            {/* Buttons Row */}
+            <div className="flex gap-3">
+              <button
+                type="button"
+                onClick={onPrevious}
+                disabled={isFirstSection}
+                className={`
+                  flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-lg min-h-[48px]
+                  border border-border 
+                  transition-all duration-200
+                  ${isFirstSection
+                    ? 'opacity-40 cursor-not-allowed text-silver'
+                    : 'text-foreground hover:bg-surface-highlight active:bg-surface-highlight'
+                  }
+                `}
+              >
+                <ChevronLeft className="w-4 h-4" />
+                <span className="font-medium">Previous</span>
+              </button>
+              
+              <button
+                type="button"
+                onClick={onNext}
+                className={`
+                  flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-lg min-h-[48px]
+                  font-medium transition-all duration-200
+                  ${isLastSection
+                    ? 'bg-green-500 text-white active:bg-green-600'
+                    : 'bg-red-primary text-white active:bg-red-primary/90'
+                  }
+                `}
+              >
+                <span>{isLastSection ? 'Review' : 'Next'}</span>
+                <ChevronRight className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+          
+          {/* Desktop Layout - Three column */}
+          <div className="hidden md:grid grid-cols-3 items-center gap-4">
             
             {/* LEFT: Previous Button */}
             <div className="flex flex-col items-start">
@@ -67,12 +135,12 @@ export function RichFooter({
                 onClick={onPrevious}
                 disabled={isFirstSection}
                 className={`
-                  flex items-center gap-2 px-4 py-2.5 rounded-lg
-                  border border-[#333333] 
+                  flex items-center gap-2 px-4 py-2.5 rounded-lg min-h-[44px]
+                  border border-border 
                   transition-all duration-200
                   ${isFirstSection
-                    ? 'opacity-40 cursor-not-allowed text-gray-500'
-                    : 'text-gray-300 hover:bg-white/5 hover:border-[#444444] hover:text-white'
+                    ? 'opacity-40 cursor-not-allowed text-silver'
+                    : 'text-light-gray hover:bg-surface-highlight hover:border-mid-gray hover:text-foreground'
                   }
                 `}
               >
@@ -80,7 +148,7 @@ export function RichFooter({
                 <span className="font-medium">Previous</span>
               </button>
               {previousName && !isFirstSection && (
-                <span className="text-xs text-gray-500 mt-1.5 pl-1 truncate max-w-[140px]">
+                <span className="text-xs text-silver mt-1.5 pl-1 truncate max-w-[140px]">
                   {previousName}
                 </span>
               )}
@@ -88,16 +156,16 @@ export function RichFooter({
 
             {/* CENTER: Step Counter + Save Status */}
             <div className="flex flex-col items-center justify-center">
-              <span className="text-sm text-white font-medium">
-                Step <span className="text-red-500">{currentSection}</span> of 8
+              <span className="text-sm text-foreground font-medium">
+                Step <span className="text-red-primary">{currentSection}</span> of 8
               </span>
               
               <div className="flex items-center gap-3 mt-1.5">
                 <div className="flex items-center gap-1.5">
                   {saveStatus === 'saving' && (
                     <>
-                      <Loader2 className="w-3 h-3 text-gray-400 animate-spin" />
-                      <span className="text-xs text-gray-400">Saving...</span>
+                      <Loader2 className="w-3 h-3 text-silver animate-spin" />
+                      <span className="text-xs text-silver">Saving...</span>
                     </>
                   )}
                   {saveStatus === 'saved' && (
@@ -108,37 +176,37 @@ export function RichFooter({
                   )}
                   {saveStatus === 'idle' && (
                     <>
-                      <Circle className="w-2 h-2 text-gray-500 fill-gray-500" />
-                      <span className="text-xs text-gray-500">Draft</span>
+                      <Circle className="w-2 h-2 text-silver fill-silver" />
+                      <span className="text-xs text-silver">Draft</span>
                     </>
                   )}
                 </div>
                 
-                <span className="text-gray-600">•</span>
+                <span className="text-mid-gray">•</span>
                 
                 <AlertDialog open={resetDialogOpen} onOpenChange={setResetDialogOpen}>
                   <AlertDialogTrigger asChild>
                     <button
                       type="button"
-                      className="flex items-center gap-1 text-xs text-gray-500 hover:text-red-400 transition-colors"
+                      className="flex items-center gap-1 text-xs text-silver hover:text-red-primary transition-colors"
                     >
                       <RotateCcw className="w-3 h-3" />
                       <span>Reset</span>
                     </button>
                   </AlertDialogTrigger>
                   
-                  <AlertDialogContent className="bg-[#1a1a1a] border-[#333333]">
+                  <AlertDialogContent className="bg-surface border-border max-w-[90vw] md:max-w-md">
                     <AlertDialogHeader>
-                      <AlertDialogTitle className="text-white">
+                      <AlertDialogTitle className="text-foreground">
                         Clear Form?
                       </AlertDialogTitle>
-                      <AlertDialogDescription className="text-gray-400">
+                      <AlertDialogDescription className="text-silver">
                         This will delete all your current answers and start fresh. This cannot be undone.
                       </AlertDialogDescription>
                     </AlertDialogHeader>
                     
-                    <AlertDialogFooter>
-                      <AlertDialogCancel className="border-[#333333] bg-transparent text-gray-300 hover:bg-white/5 hover:text-white">
+                    <AlertDialogFooter className="flex-col sm:flex-row gap-2">
+                      <AlertDialogCancel className="border-border bg-transparent text-light-gray hover:bg-surface-highlight hover:text-foreground min-h-[44px]">
                         Cancel
                       </AlertDialogCancel>
                       <button
@@ -162,7 +230,7 @@ export function RichFooter({
                           // Navigate to same URL (forces fresh mount)
                           window.location.href = window.location.pathname + '?reset=true';
                         }}
-                        className="inline-flex h-10 items-center justify-center rounded-md bg-red-500 hover:bg-red-600 px-4 py-2 text-sm font-semibold text-white transition-colors focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 focus:ring-offset-black"
+                        className="inline-flex h-11 min-h-[44px] items-center justify-center rounded-md bg-red-primary hover:bg-red-primary/90 px-4 py-2 text-sm font-semibold text-white transition-colors focus:outline-none focus:ring-2 focus:ring-red-primary focus:ring-offset-2 focus:ring-offset-surface"
                       >
                         Clear Everything
                       </button>
@@ -178,11 +246,11 @@ export function RichFooter({
                 type="button"
                 onClick={onNext}
                 className={`
-                  flex items-center gap-2 px-5 py-2.5 rounded-lg
+                  flex items-center gap-2 px-5 py-2.5 rounded-lg min-h-[44px]
                   font-medium transition-all duration-200
                   ${isLastSection
                     ? 'bg-green-500 text-white hover:bg-green-600 shadow-lg shadow-green-500/20'
-                    : 'bg-red-500 text-white hover:bg-red-600 shadow-lg shadow-red-500/20'
+                    : 'bg-red-primary text-white hover:bg-red-primary/90 shadow-lg shadow-red-primary/20'
                   }
                 `}
               >
@@ -190,12 +258,12 @@ export function RichFooter({
                 <ChevronRight className="w-4 h-4" />
               </button>
               {nextName && !isLastSection && (
-                <span className="text-xs text-gray-500 mt-1.5 pr-1 truncate max-w-[140px]">
+                <span className="text-xs text-silver mt-1.5 pr-1 truncate max-w-[140px]">
                   {nextName}
                 </span>
               )}
               {isLastSection && (
-                <span className="text-xs text-gray-500 mt-1.5 pr-1">
+                <span className="text-xs text-silver mt-1.5 pr-1">
                   Review Answers
                 </span>
               )}

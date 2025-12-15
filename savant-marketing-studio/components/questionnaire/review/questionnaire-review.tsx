@@ -3,26 +3,55 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useQuestionnaireForm } from '@/lib/questionnaire/use-questionnaire-form';
-import { REQUIRED_QUESTIONS } from '@/lib/questionnaire/types';
+import { REQUIRED_QUESTIONS, QuestionnaireData } from '@/lib/questionnaire/types';
 import { saveQuestionnaire } from '@/app/actions/questionnaire';
 import ReviewSectionCard from './review-section-card';
 
 interface Props {
   clientId: string;
   mode?: 'create' | 'edit';
+  isPublic?: boolean;
+  publicFormData?: QuestionnaireData;
+  onPublicSubmit?: () => Promise<void>;
 }
 
-export default function QuestionnaireReview({ clientId, mode = 'create' }: Props) {
+export default function QuestionnaireReview({ 
+  clientId, 
+  mode = 'create',
+  isPublic = false,
+  publicFormData,
+  onPublicSubmit
+}: Props) {
   const router = useRouter();
   const isEditMode = mode === 'edit';
-  const { formData, completedQuestions, progress } = useQuestionnaireForm(clientId);
+  
+  // Use hook for internal forms, or use provided data for public forms
+  const internalForm = useQuestionnaireForm(clientId);
+  const formData = isPublic && publicFormData ? publicFormData : internalForm.formData;
+  const completedQuestions = isPublic ? new Set<string>() : internalForm.completedQuestions;
+  const progress = isPublic ? 100 : internalForm.progress; // Public forms don't block on progress
+  
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
   const handleSubmit = async () => {
-    // Validate all required questions
-    if (progress < 100) {
+    // For public forms, use the provided callback
+    if (isPublic && onPublicSubmit) {
+      setSubmitting(true);
+      setError(null);
+      try {
+        await onPublicSubmit();
+        setSuccessMessage('Questionnaire submitted successfully!');
+      } catch {
+        setError('An unexpected error occurred');
+        setSubmitting(false);
+      }
+      return;
+    }
+
+    // Validate all required questions (only for internal forms)
+    if (!isPublic && progress < 100) {
       setError('Please complete all required questions before submitting.');
       return;
     }
@@ -214,15 +243,15 @@ export default function QuestionnaireReview({ clientId, mode = 'create' }: Props
       {/* Submit button */}
       <button
         onClick={handleSubmit}
-        disabled={submitting || progress < 100 || !!successMessage}
-        className="w-full bg-red-primary text-white py-4 px-6 rounded-lg font-bold text-lg hover:bg-red-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+        disabled={submitting || (!isPublic && progress < 100) || !!successMessage}
+        className="w-full bg-red-primary text-white py-4 px-6 rounded-lg font-bold text-lg hover:bg-red-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-all min-h-[56px]"
       >
         {submitting 
           ? (isEditMode ? 'Saving Changes...' : 'Submitting...') 
           : (isEditMode ? 'Save Changes' : 'Submit Questionnaire')}
       </button>
 
-      {progress < 100 && (
+      {!isPublic && progress < 100 && (
         <p className="text-center text-sm text-silver mt-4">
           Please complete all required questions before {isEditMode ? 'saving' : 'submitting'}
         </p>

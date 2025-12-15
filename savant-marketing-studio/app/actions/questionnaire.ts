@@ -5,6 +5,7 @@ import { revalidatePath } from 'next/cache';
 import { QuestionnaireData, UploadedFile } from '@/lib/questionnaire/types';
 import { questionSchemas } from '@/lib/questionnaire/validation-schemas';
 import { logActivity } from '@/lib/activity-log';
+import { logPublicActivity } from '@/lib/activity-log-public';
 
 // File upload constraints
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
@@ -381,6 +382,160 @@ export async function resetQuestionnaire(
     return {
       success: false,
       error: errorMessage,
+    };
+  }
+}
+
+/**
+ * Submit questionnaire from public form (no auth required)
+ * Uses token-based authentication
+ */
+export async function submitPublicQuestionnaire(
+  token: string,
+  data: QuestionnaireData
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const supabase = await createClient();
+
+    if (!supabase) {
+      return { success: false, error: 'Failed to connect to database' };
+    }
+
+    // Verify token and get client
+    const { data: client, error: clientError } = await supabase
+      .from('clients')
+      .select('id, user_id, name')
+      .eq('questionnaire_token', token)
+      .single();
+
+    if (clientError || !client) {
+      console.error('Invalid token:', clientError);
+      return { success: false, error: 'Invalid or expired form link' };
+    }
+
+    // Structure as JSONB for database
+    const intakeResponses = {
+      version: '1.0',
+      completed_at: new Date().toISOString(),
+      submitted_via: 'public_link',
+      sections: {
+        avatar_definition: data.avatar_definition,
+        dream_outcome: data.dream_outcome,
+        problems_obstacles: data.problems_obstacles,
+        solution_methodology: data.solution_methodology,
+        brand_voice: data.brand_voice,
+        proof_transformation: data.proof_transformation,
+        faith_integration: data.faith_integration,
+        business_metrics: data.business_metrics,
+      },
+    };
+
+    // Update client with questionnaire data
+    const { error } = await supabase
+      .from('clients')
+      .update({
+        intake_responses: intakeResponses,
+        questionnaire_status: 'completed',
+        questionnaire_completed_at: new Date().toISOString(),
+      })
+      .eq('id', client.id);
+
+    if (error) {
+      console.error('Failed to save questionnaire:', error);
+      throw error;
+    }
+
+    // Log activity (using the client's user_id for proper RLS)
+    await logPublicActivity(
+      client.user_id,
+      client.id,
+      'questionnaire_completed',
+      client.name,
+      { submitted_via: 'public_link' }
+    );
+
+    // Revalidate paths
+    revalidatePath('/dashboard/clients');
+    revalidatePath(`/dashboard/clients/${client.id}`);
+    revalidatePath(`/dashboard/clients/${client.id}/questionnaire-responses`);
+
+    return { success: true };
+  } catch (error: unknown) {
+    console.error('Failed to submit public questionnaire:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Failed to submit questionnaire';
+    return {
+      success: false,
+      error: errorMessage,
+    };
+  }
+}
+
+/**
+ * Save public questionnaire progress (auto-save)
+ * Uses token-based authentication
+ */
+export async function savePublicQuestionnaireProgress(
+  token: string,
+  data: QuestionnaireData
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const supabase = await createClient();
+
+    if (!supabase) {
+      return { success: false, error: 'Failed to connect to database' };
+    }
+
+    // Verify token and get client
+    const { data: client, error: clientError } = await supabase
+      .from('clients')
+      .select('id, questionnaire_status')
+      .eq('questionnaire_token', token)
+      .single();
+
+    if (clientError || !client) {
+      return { success: false, error: 'Invalid token' };
+    }
+
+    // Don't overwrite completed questionnaires
+    if (client.questionnaire_status === 'completed') {
+      return { success: true };
+    }
+
+    // Save progress
+    const progressData = {
+      version: '1.0',
+      last_saved: new Date().toISOString(),
+      sections: {
+        avatar_definition: data.avatar_definition,
+        dream_outcome: data.dream_outcome,
+        problems_obstacles: data.problems_obstacles,
+        solution_methodology: data.solution_methodology,
+        brand_voice: data.brand_voice,
+        proof_transformation: data.proof_transformation,
+        faith_integration: data.faith_integration,
+        business_metrics: data.business_metrics,
+      },
+    };
+
+    const { error } = await supabase
+      .from('clients')
+      .update({
+        intake_responses: progressData,
+        questionnaire_status: 'in_progress',
+      })
+      .eq('id', client.id);
+
+    if (error) {
+      console.error('Failed to save progress:', error);
+      throw error;
+    }
+
+    return { success: true };
+  } catch (error: unknown) {
+    console.error('Failed to save progress:', error);
+    return {
+      success: false,
+      error: 'Failed to save progress',
     };
   }
 }

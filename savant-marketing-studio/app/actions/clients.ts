@@ -74,7 +74,8 @@ export async function createClient(formData: FormData) {
       name,
       email: email || null,
       website: website || null,
-      user_id: user.id
+      user_id: user.id,
+      questionnaire_token: crypto.randomUUID()
     })
     .select()
     .single()
