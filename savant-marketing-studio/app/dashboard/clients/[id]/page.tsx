@@ -6,6 +6,7 @@ import Link from 'next/link'
 import { DeleteClientButton } from './delete-button'
 import { ClientCaptures } from './client-captures'
 import { ClientCodeDisplay } from './client-code-display'
+import { CopyFormLinkButton } from './copy-form-link-button'
 import { FolderKanban, FileText, Calendar, Building2, Check } from 'lucide-react'
 
 export default async function ClientDetailPage({
@@ -125,7 +126,7 @@ export default async function ClientDetailPage({
             </div>
           ) : (
             <div className="bg-green-500/10 border border-green-500/30 rounded-lg p-6">
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between flex-wrap gap-4">
                 <div className="flex items-center gap-3">
                   <div className="w-12 h-12 rounded-full bg-green-500 flex items-center justify-center">
                     <Check className="w-6 h-6 text-white" />
@@ -145,6 +146,11 @@ export default async function ClientDetailPage({
                 </Link>
               </div>
             </div>
+          )}
+          
+          {/* Copy Form Link - Always show if token exists */}
+          {client.questionnaire_token && (
+            <CopyFormLinkButton token={client.questionnaire_token} />
           )}
         </div>
 

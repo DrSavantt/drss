@@ -24,7 +24,7 @@ export default function SectionContainer({
   return (
     <section
       id={`section-${sectionNumber}`}
-      className="scroll-mt-20 mb-16"
+      className="scroll-mt-20 mb-8 md:mb-16"
     >
       <SectionHeader
         sectionNumber={sectionNumber}
@@ -33,16 +33,16 @@ export default function SectionContainer({
         estimatedTime={estimatedTime}
       />
 
-      <div className="mb-6">
+      <div className="mb-4 md:mb-6">
         <div className="flex items-center justify-between mb-2">
-          <span className="text-sm font-medium text-foreground">
-            Questions answered: {currentProgress.answered}/{currentProgress.total}
+          <span className="text-xs md:text-sm font-medium text-foreground">
+            Questions: {currentProgress.answered}/{currentProgress.total}
           </span>
-          <span className="text-sm text-silver">
+          <span className="text-xs md:text-sm text-silver">
             {Math.round(progressPercentage)}%
           </span>
         </div>
-        <div className="w-full h-2 bg-surface-highlight rounded-full overflow-hidden">
+        <div className="w-full h-1.5 md:h-2 bg-surface-highlight rounded-full overflow-hidden">
           <div
             className="h-full bg-red-primary transition-all duration-300"
             style={{ width: `${progressPercentage}%` }}
@@ -50,7 +50,7 @@ export default function SectionContainer({
         </div>
       </div>
 
-      <div className="space-y-8">
+      <div className="space-y-6 md:space-y-8">
         {children}
       </div>
     </section>

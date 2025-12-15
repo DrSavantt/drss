@@ -79,6 +79,7 @@ export type Database = {
           questionnaire_completed_at: string | null
           questionnaire_progress: Json | null
           questionnaire_status: string | null
+          questionnaire_token: string | null
           updated_at: string | null
           user_id: string
           website: string | null
@@ -94,6 +95,7 @@ export type Database = {
           questionnaire_completed_at?: string | null
           questionnaire_progress?: Json | null
           questionnaire_status?: string | null
+          questionnaire_token?: string | null
           updated_at?: string | null
           user_id: string
           website?: string | null
@@ -109,6 +111,7 @@ export type Database = {
           questionnaire_completed_at?: string | null
           questionnaire_progress?: Json | null
           questionnaire_status?: string | null
+          questionnaire_token?: string | null
           updated_at?: string | null
           user_id?: string
           website?: string | null

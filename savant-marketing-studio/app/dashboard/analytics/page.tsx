@@ -45,30 +45,30 @@ export default function AnalyticsPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen p-8 flex items-center justify-center">
+      <div className="min-h-screen p-4 md:p-8 flex items-center justify-center">
         <div className="text-silver">Loading analytics...</div>
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen p-8">
+    <div className="min-h-screen p-4 md:p-8">
       {/* Header */}
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-foreground mb-2">Analytics</h1>
-        <p className="text-silver">Historical trends and insights</p>
+      <div className="mb-6 md:mb-8">
+        <h1 className="text-2xl md:text-3xl font-bold text-foreground mb-2">Analytics</h1>
+        <p className="text-silver text-sm md:text-base">Historical trends and insights</p>
       </div>
 
-      {/* Time Period Selector */}
-      <div className="flex gap-2 mb-8">
+      {/* Time Period Selector - Scrollable on mobile */}
+      <div className="flex gap-2 mb-6 md:mb-8 overflow-x-auto pb-2 -mx-4 px-4 md:mx-0 md:px-0">
         {TIME_PERIODS.map(({ label, value }) => (
           <button
             key={value}
             onClick={() => setPeriod(value)}
-            className={`px-4 py-2 rounded-lg transition-all ${
+            className={`px-4 py-2 rounded-lg transition-all min-h-[44px] whitespace-nowrap text-sm md:text-base ${
               period === value
                 ? 'bg-red-primary text-white'
-                : 'bg-[var(--glass-bg)] border border-[var(--glass-border)] text-silver hover:text-foreground'
+                : 'bg-[var(--glass-bg)] border border-[var(--glass-border)] text-silver hover:text-foreground active:bg-surface-highlight'
             }`}
           >
             {label}
@@ -76,8 +76,8 @@ export default function AnalyticsPage() {
         ))}
       </div>
 
-      {/* Charts Grid */}
-      <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+      {/* Charts Grid - Stack on mobile */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
         <ChartCard
           title="Client Growth"
           icon={<Users className="w-5 h-5" />}
@@ -134,21 +134,21 @@ function ChartCard({
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={springTransitions.springMedium}
-      className="bg-[var(--glass-bg)] border border-[var(--glass-border)] rounded-xl p-6 backdrop-blur-xl"
+      className="bg-[var(--glass-bg)] border border-[var(--glass-border)] rounded-xl p-4 md:p-6 backdrop-blur-xl"
     >
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center gap-3">
-          <div className="text-foreground">{icon}</div>
-          <h3 className="text-lg font-semibold text-foreground">{title}</h3>
+      <div className="flex items-center justify-between mb-4 md:mb-6 gap-3">
+        <div className="flex items-center gap-2 md:gap-3 min-w-0">
+          <div className="text-foreground flex-shrink-0">{icon}</div>
+          <h3 className="text-base md:text-lg font-semibold text-foreground truncate">{title}</h3>
         </div>
-        <div className="text-right">
-          <div className="text-2xl font-bold text-foreground">{total}</div>
-          <div className="text-sm text-silver">{valueLabel}</div>
+        <div className="text-right flex-shrink-0">
+          <div className="text-xl md:text-2xl font-bold text-foreground">{total}</div>
+          <div className="text-xs md:text-sm text-silver">{valueLabel}</div>
         </div>
       </div>
 
-      <ResponsiveContainer width="100%" height={200}>
-        <LineChart data={data}>
+      <ResponsiveContainer width="100%" height={180}>
+        <LineChart data={data} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
           <CartesianGrid 
             strokeDasharray="3 3" 
             stroke="var(--border)" 
@@ -156,21 +156,24 @@ function ChartCard({
           />
           <XAxis
             dataKey="date"
-            tick={{ fill: 'var(--silver)', fontSize: 12 }}
+            tick={{ fill: 'var(--silver)', fontSize: 10 }}
             tickFormatter={(date) => {
               const d = new Date(date)
               return `${d.getMonth() + 1}/${d.getDate()}`
             }}
+            interval="preserveStartEnd"
           />
           <YAxis
-            tick={{ fill: 'var(--silver)', fontSize: 12 }}
+            tick={{ fill: 'var(--silver)', fontSize: 10 }}
+            width={30}
           />
           <Tooltip
             contentStyle={{
               backgroundColor: 'var(--glass-bg)',
               border: '1px solid var(--glass-border)',
               borderRadius: '8px',
-              color: 'var(--foreground)'
+              color: 'var(--foreground)',
+              fontSize: '12px'
             }}
             labelFormatter={(date) => {
               const d = new Date(date)
