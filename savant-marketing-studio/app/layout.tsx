@@ -16,13 +16,21 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "DRSS - Marketing Agency OS",
-  description: "Personal operating system for solo marketing agencies",
+  title: "DRSS Marketing Studio",
+  description: "Internal marketing agency management",
   manifest: "/manifest.json",
+  themeColor: "#fb7185",
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
     title: "DRSS",
+  },
+  viewport: {
+    width: "device-width",
+    initialScale: 1,
+    maximumScale: 1,
+    userScalable: false,
+    viewportFit: "cover",
   },
   formatDetection: {
     telephone: false,
@@ -42,7 +50,7 @@ export default function RootLayout({
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
         <meta name="apple-mobile-web-app-title" content="DRSS" />
-        <meta name="theme-color" content="#000000" />
+        <meta name="theme-color" content="#fb7185" />
         
         {/* Viewport - SIMPLE VERSION */}
         <meta
