@@ -95,7 +95,7 @@ export function MobileNav({ userEmail }: MobileNavProps) {
       </header>
 
       {/* Mobile Menu with AnimatePresence */}
-      <AnimatePresence mode="wait">
+      <AnimatePresence mode="sync">
         {isOpen && (
           <>
             {/* Overlay */}
@@ -104,7 +104,7 @@ export function MobileNav({ userEmail }: MobileNavProps) {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              transition={{ duration: 0.2 }}
+              transition={{ duration: 0.2, ease: 'easeOut' }}
               onClick={close}
               className="lg:hidden fixed inset-0 bg-black/60 z-[100]"
             />
@@ -115,7 +115,7 @@ export function MobileNav({ userEmail }: MobileNavProps) {
               initial={{ x: '100%' }}
               animate={{ x: 0 }}
               exit={{ x: '100%' }}
-              transition={{ type: 'spring', damping: 30, stiffness: 300 }}
+              transition={{ duration: 0.25, ease: [0.32, 0.72, 0, 1] }}
               className="lg:hidden fixed top-0 right-0 bottom-0 w-80 max-w-[85vw] bg-surface border-l border-border z-[101] overflow-y-auto"
             >
               {/* Header */}
