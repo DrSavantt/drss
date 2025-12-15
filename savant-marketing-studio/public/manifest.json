@@ -1,13 +1,12 @@
 {
-  "name": "DRSS - Marketing Agency OS",
+  "name": "DRSS Marketing Studio",
   "short_name": "DRSS",
-  "id": "/?source=drss-pwa",
-  "scope": "/",
-  "start_url": "/dashboard?source=pwa",
+  "description": "Internal marketing agency management system",
+  "start_url": "/dashboard",
   "display": "standalone",
-  "background_color": "#0A0A0A",
-  "theme_color": "#FF4444",
-  "orientation": "any",
+  "background_color": "#000000",
+  "theme_color": "#fb7185",
+  "orientation": "portrait-primary",
   "icons": [
     {
       "src": "/icon-192.png",
@@ -22,6 +21,14 @@
       "purpose": "any maskable"
     }
   ],
-  "categories": ["business", "productivity"],
+  "screenshots": [
+    {
+      "src": "/screenshot-mobile.png",
+      "sizes": "1170x2532",
+      "type": "image/png",
+      "form_factor": "narrow"
+    }
+  ],
+  "categories": ["productivity", "business"],
   "prefer_related_applications": false
 }

@@ -7,6 +7,7 @@ import { MobileNav } from '@/components/mobile-nav'
 import { PerfMonitor } from '@/components/perf-monitor'
 import { ThemeToggle } from '@/components/theme-toggle'
 import { CommandPalette } from '@/components/command-palette'
+import { InstallPrompt } from '@/components/install-prompt'
 import Link from 'next/link'
 import { useState, useEffect } from 'react'
 import { usePathname } from 'next/navigation'
@@ -33,6 +34,9 @@ export default function DashboardLayout({
     <div className="min-h-screen bg-background">
       {/* Command Palette (Cmd+K) */}
       <CommandPalette />
+
+      {/* PWA Install Prompt */}
+      <InstallPrompt />
 
       {/* Mobile Navigation */}
       <MobileNav userEmail={userEmail} />

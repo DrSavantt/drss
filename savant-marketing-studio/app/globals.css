@@ -19,11 +19,17 @@ body {
   /* DO NOT use overflow: hidden - it breaks scrolling */
 }
 
-/* Safe area for iPhone notch */
-@supports (padding: env(safe-area-inset-top)) {
-  body {
-    padding-top: env(safe-area-inset-top);
-    padding-bottom: env(safe-area-inset-bottom);
+/* Safe area for iPhone notch - apply to main content, not body */
+/* Body padding removed to prevent conflicts with fixed nav */
+
+/* Main content safe spacing for mobile nav */
+main {
+  padding-top: calc(env(safe-area-inset-top, 0) + 64px); /* nav height */
+}
+
+@media (min-width: 1024px) {
+  main {
+    padding-top: 0; /* Desktop doesn't need top padding */
   }
 }
 
@@ -268,10 +274,7 @@ nav {
   z-index: 50;
 }
 
-main {
-  position: relative;
-  z-index: 1;
-}
+/* Main content stacking - z-index handled separately from padding */
 
 /* ========================================
    LANDING PAGE REVEAL ANIMATIONS
