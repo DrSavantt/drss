@@ -1,6 +1,5 @@
 'use client'
 
-import { motion } from 'framer-motion'
 import { logout } from '@/app/actions/auth'
 import { SearchBar } from '@/components/search-bar'
 import { MobileNav } from '@/components/mobile-nav'
@@ -46,13 +45,9 @@ export default function DashboardLayout({
         <div className="max-w-7xl mx-auto px-4 sm:px-6">
           <div className="flex items-center gap-4 sm:gap-8 h-14">
             <Link href="/dashboard" className="flex-shrink-0">
-              <motion.h1 
-                className="text-lg font-bold text-red-primary"
-                whileHover={{ scale: 1.05 }}
-                transition={{ duration: 0.2 }}
-              >
+              <h1 className="text-lg font-bold text-red-primary">
                 DRSS
-              </motion.h1>
+              </h1>
             </Link>
 
             <nav className="flex gap-6">
@@ -140,22 +135,20 @@ export default function DashboardLayout({
               )}
               <ThemeToggle />
               <form action={logout}>
-                <motion.button
+                <button
                   type="submit"
                   className="text-sm font-medium bg-secondary text-silver px-4 py-2 rounded-lg hover:bg-dark-gray hover:text-foreground transition-colors"
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
                 >
                   Logout
-                </motion.button>
+                </button>
               </form>
             </div>
           </div>
         </div>
       </header>
 
-      {/* Instant page loads - no blocking transitions */}
-      <main className="pt-16 lg:pt-0 px-4 lg:px-0 py-6 lg:py-8 transition-opacity duration-150">
+      {/* Instant page loads - no transitions */}
+      <main className="pt-16 lg:pt-0 px-4 lg:px-0 py-6 lg:py-8">
         <div className="max-w-7xl mx-auto lg:px-4">
           {children}
         </div>
