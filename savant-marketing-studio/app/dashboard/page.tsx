@@ -69,11 +69,6 @@ export default function DashboardPage() {
                   <p className="text-xs md:text-sm font-semibold text-foreground">CLIENT</p>
                   <p className="text-xs text-muted-foreground hidden sm:block">Create new</p>
                 </div>
-                
-                {/* Hover spotlight */}
-                <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
-                  <div className="absolute inset-0 bg-gradient-to-br from-red-primary/10 to-transparent" />
-                </div>
               </div>
             </motion.div>
           </Link>
@@ -96,9 +91,6 @@ export default function DashboardPage() {
                 <div>
                   <p className="text-xs md:text-sm font-semibold text-foreground">PROJECT</p>
                   <p className="text-xs text-muted-foreground hidden sm:block">Create new</p>
-                </div>
-                <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
-                  <div className="absolute inset-0 bg-gradient-to-br from-red-primary/10 to-transparent" />
                 </div>
               </div>
             </motion.div>
@@ -123,9 +115,6 @@ export default function DashboardPage() {
                   <p className="text-xs md:text-sm font-semibold text-foreground">CONTENT</p>
                   <p className="text-xs text-muted-foreground hidden sm:block">Create new</p>
                 </div>
-                <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
-                  <div className="absolute inset-0 bg-gradient-to-br from-red-primary/10 to-transparent" />
-                </div>
               </div>
             </motion.div>
           </Link>
@@ -145,9 +134,6 @@ export default function DashboardPage() {
                 <div>
                   <p className="text-xs md:text-sm font-semibold text-foreground">NOTE</p>
                   <p className="text-xs text-muted-foreground hidden sm:block">Quick capture</p>
-                </div>
-                <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
-                  <div className="absolute inset-0 bg-gradient-to-br from-red-primary/10 to-transparent" />
                 </div>
               </div>
             </motion.div>
