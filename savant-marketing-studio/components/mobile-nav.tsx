@@ -78,9 +78,15 @@ export function MobileNav({ userEmail }: MobileNavProps) {
 
   return (
     <>
-      {/* Fixed Mobile Header */}
-      <header className="lg:hidden fixed top-0 left-0 right-0 bg-background/95 backdrop-blur-xl border-b border-border z-50 h-16">
-        <div className="flex items-center justify-between px-4 h-full">
+      {/* Fixed Mobile Header - Respects iOS Safe Area */}
+      <header 
+        className="lg:hidden fixed top-0 left-0 right-0 bg-background/95 backdrop-blur-xl border-b border-border z-50"
+        style={{
+          paddingTop: 'env(safe-area-inset-top)',
+          height: 'calc(4rem + env(safe-area-inset-top))'
+        }}
+      >
+        <div className="flex items-center justify-between px-4 h-16">
           <Link href="/dashboard" onClick={close}>
             <h1 className="text-red-primary font-bold text-xl">DRSS</h1>
           </Link>
@@ -111,6 +117,10 @@ export function MobileNav({ userEmail }: MobileNavProps) {
               exit={{ x: '100%' }}
               transition={{ duration: 0.3, ease: [0.25, 0.1, 0.25, 1] }}
               className="lg:hidden fixed top-0 right-0 bottom-0 w-80 max-w-[85vw] bg-surface border-l border-border z-[101] overflow-y-auto"
+              style={{
+                paddingTop: 'env(safe-area-inset-top)',
+                paddingBottom: 'env(safe-area-inset-bottom)'
+              }}
             >
               {/* Header */}
               <div className="flex items-center justify-between px-4 h-16 border-b border-border">

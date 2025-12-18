@@ -3,6 +3,31 @@
 @tailwind utilities;
 
 /* ========================================
+   iOS SAFE AREA SUPPORT
+   ======================================== */
+
+/* iOS Safe Area CSS Variables */
+:root {
+  --sat: env(safe-area-inset-top);
+  --sar: env(safe-area-inset-right);
+  --sab: env(safe-area-inset-bottom);
+  --sal: env(safe-area-inset-left);
+}
+
+html, body {
+  padding: 0;
+  margin: 0;
+}
+
+/* Push all content to respect safe areas */
+body {
+  padding-top: env(safe-area-inset-top);
+  padding-bottom: env(safe-area-inset-bottom);
+  padding-left: env(safe-area-inset-left);
+  padding-right: env(safe-area-inset-right);
+}
+
+/* ========================================
    MOBILE VIEWPORT - FILL SCREEN, PREVENT ZOOM
    ======================================== */
 
@@ -17,6 +42,7 @@
   body {
     width: 100vw;
     min-height: 100vh;
+    min-height: 100dvh;
     min-height: -webkit-fill-available;
     overflow-x: hidden;
     overscroll-behavior: none;
@@ -47,18 +73,6 @@
 main {
   min-height: 100vh;
   min-height: 100dvh;
-}
-
-/* Safe area for iPhone notch */
-main {
-  padding-top: calc(env(safe-area-inset-top, 0) + 64px); /* nav height */
-  padding-bottom: env(safe-area-inset-bottom, 0);
-}
-
-@media (min-width: 1024px) {
-  main {
-    padding-top: 0; /* Desktop doesn't need top padding */
-  }
 }
 
 /* Prevent iOS zoom on input focus - 16px minimum */
