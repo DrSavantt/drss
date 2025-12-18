@@ -148,7 +148,12 @@ export default function DashboardLayout({
       </header>
 
       {/* Instant page loads - no transitions */}
-      <main className="pt-16 lg:pt-0 px-4 lg:px-0 py-6 lg:py-8">
+      <main 
+        className="lg:pt-0 px-4 lg:px-0 py-6 lg:py-8"
+        style={{
+          paddingTop: 'calc(4rem + env(safe-area-inset-top))'
+        }}
+      >
         <div className="max-w-7xl mx-auto lg:px-4">
           {children}
         </div>
