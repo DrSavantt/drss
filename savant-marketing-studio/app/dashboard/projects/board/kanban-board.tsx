@@ -17,6 +17,7 @@ import { updateProjectStatus } from '@/app/actions/projects'
 import { ProjectCard } from './project-card'
 import { DroppableColumn } from './droppable-column'
 import { ProjectModal } from './project-modal'
+import { MoveProjectModal } from './move-project-modal'
 import { LoadingSpinner } from '@/components/loading-spinner'
 
 interface Project {
@@ -54,6 +55,7 @@ export function KanbanBoard({
   const [mounted, setMounted] = useState(false)
   const [isUpdating, setIsUpdating] = useState(false)
   const [selectedProject, setSelectedProject] = useState<Project | null>(null)
+  const [moveProject, setMoveProject] = useState<Project | null>(null)
 
   // Apply filters and sorting
   const filteredAndSortedProjects = useMemo(() => {
@@ -420,86 +422,97 @@ export function KanbanBoard({
         </DndContext>
       </div>
 
-      {/* Mobile: Horizontal Scroll Columns with Touch Drag */}
+      {/* Mobile: Horizontal Scroll Columns with Tap-to-Move (no drag) */}
       <div className="lg:hidden pb-20">
-        <DndContext
-          sensors={sensors}
-          onDragStart={handleDragStart}
-          onDragEnd={handleDragEnd}
-          onDragCancel={handleDragCancel}
+        <div 
+          className="overflow-x-auto scrollbar-hide" 
+          style={{ WebkitOverflowScrolling: 'touch', scrollbarWidth: 'none', msOverflowStyle: 'none' }}
         >
-          <div className="overflow-x-auto scrollbar-hide touch-pan-y" style={{ WebkitOverflowScrolling: 'touch', scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
-            <div className="flex gap-4 min-w-max px-4 py-4">
-              {columns.map((column) => {
-                const columnProjects = getProjectsByStatus(column.id)
-                
-                return (
-                  <div key={column.id} className="w-[85vw] flex-shrink-0">
-                    <DroppableColumn
-                      id={column.id}
-                      title={column.title}
-                      count={columnProjects.length}
-                    >
-                      <SortableContext
-                        items={columnProjects.map(p => p.id)}
-                        strategy={verticalListSortingStrategy}
-                      >
-                        {columnProjects.length === 0 ? (
-                          <div className="flex items-center justify-center h-32 text-sm text-slate">
-                            Long-press to drag
-                          </div>
-                        ) : (
-                          columnProjects.map((project) => (
-                            <div key={project.id} className="touch-manipulation">
-                              <ProjectCard
-                                project={project}
-                                onClick={() => setSelectedProject(project)}
-                              />
-                            </div>
-                          ))
-                        )}
-                      </SortableContext>
-                    </DroppableColumn>
+          <div className="flex gap-4 min-w-max px-4 py-4">
+            {columns.map((column) => {
+              const columnProjects = getProjectsByStatus(column.id)
+              
+              return (
+                <div key={column.id} className="w-[85vw] flex-shrink-0">
+                  {/* Column Header */}
+                  <div className="bg-charcoal border border-mid-gray rounded-t-lg px-4 py-3">
+                    <div className="flex items-center justify-between">
+                      <h2 className="font-semibold text-foreground">{column.title}</h2>
+                      <span className="text-xs font-medium text-slate bg-mid-gray px-2 py-1 rounded-full">
+                        {columnProjects.length}
+                      </span>
+                    </div>
                   </div>
-                )
-              })}
-            </div>
+                  
+                  {/* Column Content */}
+                  <div className="bg-dark-gray border border-t-0 border-mid-gray rounded-b-lg p-3 space-y-3 min-h-[400px] max-h-[60vh] overflow-y-auto">
+                    {columnProjects.length === 0 ? (
+                      <div className="flex items-center justify-center h-32 text-sm text-slate">
+                        No projects
+                      </div>
+                    ) : (
+                      columnProjects.map((project) => (
+                        <div
+                          key={project.id}
+                          className="bg-charcoal border border-mid-gray rounded-lg overflow-hidden"
+                        >
+                          {/* Card Content - Tap to view details */}
+                          <button
+                            onClick={() => setSelectedProject(project)}
+                            className="w-full p-4 text-left active:bg-mid-gray/50 transition-colors"
+                          >
+                            <h3 className="font-semibold text-foreground mb-2 line-clamp-1">
+                              {project.name}
+                            </h3>
+                            {project.description && (
+                              <p className="text-sm text-silver mb-3 line-clamp-2">
+                                {project.description}
+                              </p>
+                            )}
+                            <div className="mb-3">
+                              <span className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium rounded bg-info/20 text-info border border-info/30">
+                                {project.clients?.name || 'Unknown Client'}
+                              </span>
+                            </div>
+                            <div className="flex items-center justify-between text-xs gap-2">
+                              <span className={`px-2 py-1 rounded font-medium ${
+                                project.priority === 'urgent' ? 'bg-red-primary/20 text-red-light border border-red-primary/30' :
+                                project.priority === 'high' ? 'bg-red-bright/20 text-red-bright border border-red-bright/30' :
+                                project.priority === 'medium' ? 'bg-warning/20 text-warning border border-warning/30' :
+                                'bg-slate/50 text-light-gray'
+                              }`}>
+                                {project.priority}
+                              </span>
+                              {project.due_date && (
+                                <span className="text-slate">
+                                  {new Date(project.due_date).toLocaleDateString('en-US', {
+                                    month: 'short',
+                                    day: 'numeric'
+                                  })}
+                                </span>
+                              )}
+                            </div>
+                          </button>
+                          
+                          {/* Move Button - Always visible on mobile */}
+                          <button
+                            onClick={() => setMoveProject(project)}
+                            className="w-full px-4 py-3 border-t border-mid-gray bg-mid-gray/30 flex items-center justify-center gap-2 text-sm font-medium text-silver hover:text-foreground active:bg-mid-gray transition-colors"
+                          >
+                            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+                            </svg>
+                            Move to...
+                          </button>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
+              )
+            })}
           </div>
-
-          {/* Mobile Drag Overlay */}
-          <DragOverlay>
-            {activeProject ? (
-              <div className="w-[80vw] bg-charcoal border-2 border-red-primary rounded-lg p-4 shadow-2xl transform scale-105 touch-none">
-                <h3 className="font-semibold text-foreground mb-2">
-                  {activeProject.name}
-                </h3>
-                {activeProject.description && (
-                  <p className="text-sm text-silver mb-3 line-clamp-2">
-                    {activeProject.description}
-                  </p>
-                )}
-                <div className="mb-3">
-                  <span className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium rounded bg-info/20 text-info border border-info/30">
-                    {activeProject.clients?.name || 'Unknown Client'}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between text-xs gap-2">
-                  <span className="px-2 py-1 rounded font-medium bg-info/20 text-info border border-info/30">
-                    {activeProject.priority}
-                  </span>
-                  {activeProject.due_date && (
-                    <span className="text-slate">
-                      {new Date(activeProject.due_date).toLocaleDateString('en-US', {
-                        month: 'short',
-                        day: 'numeric'
-                      })}
-                    </span>
-                  )}
-                </div>
-              </div>
-            ) : null}
-          </DragOverlay>
-        </DndContext>
+        </div>
       </div>
 
       {/* Project Modal */}
@@ -523,6 +536,23 @@ export function KanbanBoard({
               prevProjects.filter(p => p.id !== projectId)
             )
             // Modal will close automatically via onClose in handleDelete
+          }}
+        />
+      )}
+
+      {/* Move Project Modal (Mobile tap-to-move) */}
+      {moveProject && (
+        <MoveProjectModal
+          project={moveProject}
+          onClose={() => setMoveProject(null)}
+          onMoved={(projectId, newStatus) => {
+            // Update local state immediately
+            setProjects(prevProjects =>
+              prevProjects.map(p =>
+                p.id === projectId ? { ...p, status: newStatus } : p
+              )
+            )
+            setIsUpdating(false)
           }}
         />
       )}
