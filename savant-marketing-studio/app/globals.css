@@ -3,81 +3,48 @@
 @tailwind utilities;
 
 /* ========================================
-   NATIVE MOBILE APP - DEVICE FITTING
-   Makes app behave like native iOS/Android app
+   MOBILE VIEWPORT - FILL SCREEN, PREVENT ZOOM
    ======================================== */
 
-/* Root element fills device screen */
-html {
-  width: 100%;
-  height: 100%;
-  height: 100dvh; /* Dynamic viewport height for mobile */
-  overflow: hidden;
-  overscroll-behavior: none;
-  -webkit-overflow-scrolling: touch;
-  /* Prevent all zooming gestures */
-  touch-action: pan-x pan-y;
-  -ms-touch-action: pan-x pan-y;
+/* Mobile viewport - fill screen like native app */
+@media (max-width: 768px) {
+  html, body {
+    width: 100vw;
+    min-height: 100vh;
+    min-height: 100dvh; /* iOS safe */
+    overflow-x: hidden;
+    overscroll-behavior: none;
+  }
+  
+  /* Prevent zoom, keep scroll */
+  * {
+    touch-action: manipulation;
+  }
+  
+  /* Allow scrollable containers */
+  [data-scrollable="true"],
+  .overflow-y-auto,
+  .overflow-auto {
+    touch-action: pan-y;
+  }
 }
 
-body {
-  width: 100%;
-  height: 100%;
-  height: 100dvh;
-  margin: 0;
-  padding: 0;
-  overflow: hidden;
-  overscroll-behavior: none;
-  overscroll-behavior-y: contain;
-  /* Prevent double-tap zoom */
-  touch-action: manipulation;
-  -ms-touch-action: manipulation;
-  /* Prevent text selection like native app */
-  -webkit-user-select: none;
-  user-select: none;
-  /* Disable callout on long press */
-  -webkit-touch-callout: none;
-}
-
-/* Allow text selection in form fields and content areas */
-input,
-textarea,
-[contenteditable="true"],
-.ProseMirror,
-.selectable {
-  -webkit-user-select: text;
-  user-select: text;
-}
-
-/* Main app container - scrollable content area */
+/* Main app container should fill screen */
 #__next,
-main,
-.app-container {
-  width: 100%;
-  height: 100%;
-  overflow-y: auto;
-  overflow-x: hidden;
-  -webkit-overflow-scrolling: touch;
-  overscroll-behavior-y: contain;
+main {
+  min-height: 100vh;
+  min-height: 100dvh;
 }
 
-/* Safe area for iPhone notch - apply to main content */
+/* Safe area for iPhone notch */
 main {
   padding-top: calc(env(safe-area-inset-top, 0) + 64px); /* nav height */
   padding-bottom: env(safe-area-inset-bottom, 0);
-  min-height: 100%;
-  min-height: 100dvh;
 }
 
 @media (min-width: 1024px) {
   main {
     padding-top: 0; /* Desktop doesn't need top padding */
-  }
-  
-  /* Re-enable scrolling on body for desktop */
-  html, body {
-    overflow: auto;
-    height: auto;
   }
 }
 
@@ -87,8 +54,17 @@ textarea,
 select,
 .ProseMirror {
   font-size: 16px !important;
-  /* Prevent zoom on focus */
   touch-action: manipulation;
+}
+
+/* Allow text selection in form fields */
+input,
+textarea,
+[contenteditable="true"],
+.ProseMirror,
+.selectable {
+  -webkit-user-select: text;
+  user-select: text;
 }
 
 /* Tiptap editor specific mobile styles */
@@ -304,39 +280,17 @@ select,
   }
 }
 
-/* PWA full-screen support - native app behavior */
+/* PWA full-screen support */
 @media (display-mode: standalone) {
+  /* PWA gets same treatment as mobile browser */
   html, body {
-    /* Fixed dimensions for PWA */
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    width: 100%;
-    height: 100%;
-    overflow: hidden;
+    width: 100vw;
+    min-height: 100vh;
+    min-height: 100dvh;
   }
   
   body {
-    -webkit-user-select: none;
-    user-select: none;
-    -webkit-touch-callout: none;
     -webkit-tap-highlight-color: transparent;
-  }
-  
-  /* Scrollable content wrapper in PWA */
-  #__next,
-  main,
-  .app-container {
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    overflow-y: auto;
-    overflow-x: hidden;
-    -webkit-overflow-scrolling: touch;
   }
 }
 
@@ -593,10 +547,6 @@ nav {
 /* iOS Safari specific fixes */
 @supports (-webkit-touch-callout: none) {
   /* iOS uses dvh for proper viewport sizing */
-  html, body {
-    height: 100dvh;
-  }
-  
   .min-h-screen {
     min-height: 100dvh;
   }
@@ -614,11 +564,6 @@ nav {
   /* Prevent rubber-band scrolling on fixed elements */
   .fixed-no-bounce {
     overscroll-behavior: none;
-  }
-  
-  /* Prevent iOS Safari from zooming on double-tap */
-  * {
-    touch-action: manipulation;
   }
 }
 
