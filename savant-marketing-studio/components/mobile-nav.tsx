@@ -30,6 +30,25 @@ export function MobileNav({ userEmail }: MobileNavProps) {
   const { isOpen, close, toggle } = useMobileMenuStore()
   const pathname = usePathname()
 
+  // #region agent log - track state changes
+  useEffect(() => {
+    const logData = {
+      sessionId: 'debug-session',
+      runId: 'run1',
+      hypothesisId: 'H5',
+      location: 'mobile-nav.tsx:30',
+      message: 'isOpen state changed',
+      data: { isOpen, timestamp: Date.now() },
+      timestamp: Date.now()
+    }
+    fetch('http://127.0.0.1:7243/ingest/de6f83dd-b5e0-4c9a-99d4-d76568bc937c', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(logData)
+    }).catch(() => {})
+  }, [isOpen])
+  // #endregion agent log
+
   const navItems = [
     { href: '/dashboard', icon: Home, label: 'Dashboard' },
     { href: '/dashboard/analytics', icon: BarChart3, label: 'Analytics' },
@@ -104,6 +123,26 @@ export function MobileNav({ userEmail }: MobileNavProps) {
       <AnimatePresence mode="wait">
         {isOpen && (
           <>
+            {/* #region agent log - backdrop render */}
+            {(() => {
+              const logData = {
+                sessionId: 'debug-session',
+                runId: 'run1',
+                hypothesisId: 'H1,H3',
+                location: 'mobile-nav.tsx:105',
+                message: 'backdrop rendering',
+                data: { isOpen },
+                timestamp: Date.now()
+              }
+              fetch('http://127.0.0.1:7243/ingest/de6f83dd-b5e0-4c9a-99d4-d76568bc937c', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(logData)
+              }).catch(() => {})
+              return null
+            })()}
+            {/* #endregion agent log */}
+
             {/* Blurred backdrop */}
             <motion.div
               initial={{ opacity: 0 }}
