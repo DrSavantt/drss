@@ -66,6 +66,23 @@ body {
   .overflow-auto {
     touch-action: pan-y;
   }
+  
+  /* Hide scrollbars on mobile but keep functionality */
+  * {
+    scrollbar-width: none; /* Firefox */
+    -ms-overflow-style: none; /* IE/Edge */
+  }
+  
+  *::-webkit-scrollbar {
+    display: none; /* Chrome/Safari */
+  }
+  
+  /* Keep smooth scroll functionality */
+  .overflow-y-auto,
+  .overflow-x-auto,
+  .overflow-auto {
+    -webkit-overflow-scrolling: touch;
+  }
 }
 
 /* Main app container should fill screen */
