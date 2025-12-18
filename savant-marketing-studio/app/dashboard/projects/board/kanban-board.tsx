@@ -471,7 +471,7 @@ export function KanbanBoard({
         {/* Board View - Native Horizontal Scroll */}
         {mobileView === 'board' && (
           <div 
-            className="pb-20 overflow-x-scroll overflow-y-hidden"
+            className="pb-20 overflow-x-auto overflow-y-hidden scrollbar-hide"
             style={{ 
               WebkitOverflowScrolling: 'touch',
               scrollSnapType: 'x mandatory'
