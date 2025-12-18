@@ -468,82 +468,93 @@ export function KanbanBoard({
           </div>
         )}
 
-        {/* Board View - Horizontal Scroll */}
+        {/* Board View - Native Horizontal Scroll */}
         {mobileView === 'board' && (
-          <div className="pb-20">
+          <div 
+            className="pb-20 overflow-x-scroll overflow-y-hidden"
+            style={{ 
+              WebkitOverflowScrolling: 'touch',
+              scrollSnapType: 'x mandatory'
+            }}
+          >
             <div 
-              className="overflow-x-auto scrollbar-hide touch-pan-x" 
-              style={{ WebkitOverflowScrolling: 'touch' }}
+              className="flex gap-3 px-4 py-2"
+              style={{ width: 'max-content' }}
             >
-              <div className="flex gap-4 min-w-max px-4 py-2">
-                {columns.map((column) => {
-                  const columnProjects = getProjectsByStatus(column.id)
-                  
-                  return (
-                    <div key={column.id} className="w-[80vw] flex-shrink-0">
-                      <div className="bg-charcoal border border-mid-gray rounded-t-lg px-4 py-3">
-                        <div className="flex items-center justify-between">
-                          <h2 className="font-semibold text-foreground">{column.title}</h2>
-                          <span className="text-xs font-medium text-slate bg-mid-gray px-2 py-1 rounded-full">
-                            {columnProjects.length}
-                          </span>
-                        </div>
-                      </div>
-                      
-                      <div className="bg-dark-gray border border-t-0 border-mid-gray rounded-b-lg p-3 space-y-3 min-h-[300px] max-h-[55vh] overflow-y-auto">
-                        {columnProjects.length === 0 ? (
-                          <div className="flex items-center justify-center h-24 text-sm text-slate">
-                            No projects
-                          </div>
-                        ) : (
-                          columnProjects.map((project) => (
-                            <div
-                              key={project.id}
-                              className="bg-charcoal border border-mid-gray rounded-lg overflow-hidden"
-                            >
-                              <button
-                                onClick={() => setSelectedProject(project)}
-                                className="w-full p-3 text-left active:bg-mid-gray/50 transition-colors"
-                              >
-                                <h3 className="font-semibold text-foreground mb-1 text-sm line-clamp-1">
-                                  {project.name}
-                                </h3>
-                                <p className="text-xs text-silver mb-2">
-                                  {project.clients?.name || 'Unknown'}
-                                </p>
-                                <div className="flex items-center justify-between text-xs">
-                                  <span className={`px-2 py-0.5 rounded font-medium ${
-                                    project.priority === 'urgent' ? 'bg-red-primary/20 text-red-light' :
-                                    project.priority === 'high' ? 'bg-red-bright/20 text-red-bright' :
-                                    project.priority === 'medium' ? 'bg-warning/20 text-warning' :
-                                    'bg-slate/50 text-light-gray'
-                                  }`}>
-                                    {project.priority}
-                                  </span>
-                                  {project.due_date && (
-                                    <span className="text-slate">
-                                      {new Date(project.due_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-                                    </span>
-                                  )}
-                                </div>
-                              </button>
-                              <button
-                                onClick={() => setMoveProject(project)}
-                                className="w-full px-3 py-2 border-t border-mid-gray bg-mid-gray/30 flex items-center justify-center gap-1.5 text-xs font-medium text-silver active:bg-mid-gray transition-colors"
-                              >
-                                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
-                                </svg>
-                                Move
-                              </button>
-                            </div>
-                          ))
-                        )}
+              {columns.map((column) => {
+                const columnProjects = getProjectsByStatus(column.id)
+                
+                return (
+                  <div 
+                    key={column.id} 
+                    className="flex-none"
+                    style={{ 
+                      width: '75vw',
+                      scrollSnapAlign: 'start'
+                    }}
+                  >
+                    <div className="bg-charcoal border border-mid-gray rounded-t-lg px-3 py-2">
+                      <div className="flex items-center justify-between">
+                        <h2 className="font-semibold text-foreground text-sm">{column.title}</h2>
+                        <span className="text-xs font-medium text-slate bg-mid-gray px-2 py-0.5 rounded-full">
+                          {columnProjects.length}
+                        </span>
                       </div>
                     </div>
-                  )
-                })}
-              </div>
+                    
+                    <div className="bg-dark-gray border border-t-0 border-mid-gray rounded-b-lg p-2 space-y-2 overflow-y-auto" style={{ maxHeight: '65vh' }}>
+                      {columnProjects.length === 0 ? (
+                        <div className="flex items-center justify-center h-20 text-xs text-slate">
+                          No projects
+                        </div>
+                      ) : (
+                        columnProjects.map((project) => (
+                          <div
+                            key={project.id}
+                            className="bg-charcoal border border-mid-gray rounded-lg overflow-hidden"
+                          >
+                            <button
+                              onClick={() => setSelectedProject(project)}
+                              className="w-full p-3 text-left active:bg-mid-gray/50"
+                            >
+                              <h3 className="font-semibold text-foreground mb-1 text-sm line-clamp-1">
+                                {project.name}
+                              </h3>
+                              <p className="text-xs text-silver mb-2 line-clamp-1">
+                                {project.clients?.name || 'Unknown'}
+                              </p>
+                              <div className="flex items-center justify-between text-xs">
+                                <span className={`px-2 py-0.5 rounded font-medium ${
+                                  project.priority === 'urgent' ? 'bg-red-primary/20 text-red-light' :
+                                  project.priority === 'high' ? 'bg-red-bright/20 text-red-bright' :
+                                  project.priority === 'medium' ? 'bg-warning/20 text-warning' :
+                                  'bg-slate/50 text-light-gray'
+                                }`}>
+                                  {project.priority}
+                                </span>
+                                {project.due_date && (
+                                  <span className="text-slate">
+                                    {new Date(project.due_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                                  </span>
+                                )}
+                              </div>
+                            </button>
+                            <button
+                              onClick={() => setMoveProject(project)}
+                              className="w-full px-3 py-2 border-t border-mid-gray bg-mid-gray/30 flex items-center justify-center gap-1.5 text-xs font-medium text-silver active:bg-mid-gray"
+                            >
+                              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+                              </svg>
+                              Move
+                            </button>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  </div>
+                )
+              })}
             </div>
           </div>
         )}
