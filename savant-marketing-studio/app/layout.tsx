@@ -69,7 +69,7 @@ export default function RootLayout({
           }}
         />
       </head>
-      <body className={`${roboto.variable} ${geistMono.variable} antialiased font-sans`}>
+      <body className={`${roboto.variable} ${geistMono.variable} antialiased font-sans min-h-screen min-h-[100dvh]`}>
         <ThemeProvider>
         {children}
         </ThemeProvider>
