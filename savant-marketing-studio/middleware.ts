@@ -99,8 +99,17 @@ export async function middleware(request: NextRequest) {
     })
     fetch('http://127.0.0.1:7243/ingest/de6f83dd-b5e0-4c9a-99d4-d76568bc937c',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'middleware.ts:74',message:'Middleware error caught',data:{pathname:request.nextUrl.pathname,error:String(error)},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H4'})}).catch(()=>{});
     // #endregion
-    // If middleware fails, allow the request to proceed
-    // This prevents the entire site from crashing
+    
+    // FAIL CLOSED: If middleware fails, block protected routes
+    // This prevents authentication bypass via middleware crashes
+    if (request.nextUrl.pathname.startsWith('/dashboard')) {
+      return NextResponse.redirect(
+        new URL('/login?error=auth_failed', request.url)
+      )
+    }
+    
+    // Allow public routes (landing, form, api) to continue
+    // This prevents total site outage from middleware errors
     return NextResponse.next()
   }
 }
