@@ -101,7 +101,7 @@ export function MobileNav({ userEmail }: MobileNavProps) {
       </header>
 
       {/* Centered Blur Modal Menu */}
-      <AnimatePresence>
+      <AnimatePresence mode="wait">
         {isOpen && (
           <>
             {/* Blurred backdrop */}
@@ -109,20 +109,24 @@ export function MobileNav({ userEmail }: MobileNavProps) {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              transition={{ duration: 0.2 }}
+              transition={{ duration: 0.15 }}
               onClick={close}
               className="lg:hidden fixed inset-0 bg-black/60 backdrop-blur-sm z-[100]"
             />
 
             {/* Centered menu modal */}
-            <div className="lg:hidden fixed inset-0 z-[101] flex items-center justify-center p-4">
-              <motion.div
-                initial={{ opacity: 0, scale: 0.95 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.95 }}
-                transition={{ duration: 0.2 }}
-                className="bg-surface border border-border rounded-lg shadow-xl max-w-sm w-full max-h-[85vh] overflow-y-auto"
-              >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              transition={{ duration: 0.15 }}
+              className="lg:hidden fixed inset-0 z-[101] flex items-center justify-center p-4"
+              onClick={(e) => {
+                // Close only if clicking the overlay, not the modal
+                if (e.target === e.currentTarget) close()
+              }}
+            >
+              <div className="bg-surface border border-border rounded-lg shadow-xl max-w-sm w-full max-h-[85vh] overflow-y-auto">
                 {/* Menu header */}
                 <div className="flex items-center justify-between p-4 border-b border-border sticky top-0 bg-surface z-10">
                   <h2 className="text-lg font-semibold">Menu</h2>
@@ -187,8 +191,8 @@ export function MobileNav({ userEmail }: MobileNavProps) {
                     </div>
                   )}
                 </nav>
-              </motion.div>
-            </div>
+              </div>
+            </motion.div>
           </>
         )}
       </AnimatePresence>
