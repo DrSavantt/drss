@@ -83,11 +83,11 @@ export const scaleInVariant = {
   },
 }
 
-// Legacy exports for backward compatibility
-export const buttonHover = { scale: 1.02 }
-export const buttonTap = { scale: 0.98 }
-export const cardHover = { scale: 1.02, y: -2 }
-export const cardTap = { scale: 0.98 }
+// Legacy exports - scale animations removed for mobile performance
+export const buttonHover = {}
+export const buttonTap = {}
+export const cardHover = {}
+export const cardTap = {}
 
 // Premium smooth easing - feels luxurious on mobile
 const smoothEase: Easing = [0.25, 0.1, 0.25, 1] // Smooth cubic bezier
@@ -142,6 +142,5 @@ export const metroTileHover = {
 }
 
 export const metroTileTap = { 
-  scale: 0.98,
   transition: { duration: 0.15, ease: smoothEase }
 }

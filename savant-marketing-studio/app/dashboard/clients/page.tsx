@@ -106,9 +106,13 @@ export default function ClientsPage() {
                 )}
                 
                 <div className="relative">
-                  <div className="w-16 h-16 bg-gradient-to-br from-red-primary to-red-bright rounded-xl flex items-center justify-center mb-4 transition-transform duration-200 group-hover:scale-105">
+                  <motion.div
+                    className="w-16 h-16 bg-gradient-to-br from-red-primary to-red-bright rounded-xl flex items-center justify-center mb-4"
+                    whileHover={{ scale: 1.1, rotate: 5 }}
+                    transition={{ duration: 0.2 }}
+                  >
                     <Building2 size={28} className="text-pure-white" />
-                  </div>
+                  </motion.div>
 
                   <h3 className="text-xl font-bold text-foreground mb-2 group-hover:text-red-primary transition-colors">
                     {client.name}
@@ -129,9 +133,14 @@ export default function ClientsPage() {
                     )}
                   </div>
 
-                  <div className="absolute top-4 right-4">
-                    <ArrowRight className="text-red-primary opacity-0 group-hover:opacity-100 transition-all duration-200" size={20} />
-                  </div>
+                  <motion.div
+                    className="absolute top-4 right-4"
+                    initial={{ opacity: 0, x: -10 }}
+                    whileHover={{ opacity: 1, x: 0 }}
+                    transition={{ duration: 0.2 }}
+                  >
+                    <ArrowRight className="text-red-primary opacity-0 group-hover:opacity-100 transition-opacity" size={20} />
+                  </motion.div>
 
                   <p className="mt-4 text-xs text-slate">
                     Created {new Date(client.created_at).toLocaleDateString()}
