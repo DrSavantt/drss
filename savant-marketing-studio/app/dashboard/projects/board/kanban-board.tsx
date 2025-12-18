@@ -7,7 +7,6 @@ import {
   DragOverlay,
   DragStartEvent,
   PointerSensor,
-  TouchSensor,
   MouseSensor,
   useSensor,
   useSensors,
@@ -19,6 +18,7 @@ import { DroppableColumn } from './droppable-column'
 import { ProjectModal } from './project-modal'
 import { MoveProjectModal } from './move-project-modal'
 import { LoadingSpinner } from '@/components/loading-spinner'
+import { useMobile } from '@/hooks/use-mobile'
 
 interface Project {
   id: string
@@ -50,6 +50,7 @@ export function KanbanBoard({
   dueDateRange = 'all',
   sortBy = 'position'
 }: KanbanBoardProps) {
+  const isMobile = useMobile()
   const [projects, setProjects] = useState(initialProjects)
   const [activeId, setActiveId] = useState<string | null>(null)
   const [mounted, setMounted] = useState(false)
@@ -122,17 +123,12 @@ export function KanbanBoard({
         distance: 8, // 8px movement before drag starts
       },
     }),
-    useSensor(TouchSensor, {
-      activationConstraint: {
-        delay: 150, // 150ms long-press to drag (prevents scroll conflict)
-        tolerance: 8, // 8px tolerance during long-press
-      },
-    }),
     useSensor(PointerSensor, {
       activationConstraint: {
         distance: 8,
       },
     })
+    // NOTE: TouchSensor removed on mobile to prevent scroll conflicts
   )
 
   const columns = [
@@ -336,6 +332,150 @@ export function KanbanBoard({
     return priorityMap[priority] || priorityMap.medium
   }
 
+  // Don't render drag context on mobile - use tap-to-move instead
+  if (isMobile) {
+    return (
+      <>
+        {isUpdating && (
+          <div className="fixed top-4 right-4 bg-info text-foreground px-4 py-2 rounded-lg shadow-lg flex items-center gap-2 z-50">
+            <LoadingSpinner size="sm" />
+            <span>Updating...</span>
+          </div>
+        )}
+
+        {/* Mobile: Horizontal Scroll Columns with Tap-to-Move (no drag) */}
+        <div className="pb-20">
+          <div 
+            className="overflow-x-auto scrollbar-hide" 
+            style={{ WebkitOverflowScrolling: 'touch', scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+          >
+            <div className="flex gap-4 min-w-max px-4 py-4">
+              {columns.map((column) => {
+                const columnProjects = getProjectsByStatus(column.id)
+                
+                return (
+                  <div key={column.id} className="w-[85vw] flex-shrink-0">
+                    {/* Column Header */}
+                    <div className="bg-charcoal border border-mid-gray rounded-t-lg px-4 py-3">
+                      <div className="flex items-center justify-between">
+                        <h2 className="font-semibold text-foreground">{column.title}</h2>
+                        <span className="text-xs font-medium text-slate bg-mid-gray px-2 py-1 rounded-full">
+                          {columnProjects.length}
+                        </span>
+                      </div>
+                    </div>
+                    
+                    {/* Column Content */}
+                    <div className="bg-dark-gray border border-t-0 border-mid-gray rounded-b-lg p-3 space-y-3 min-h-[400px] max-h-[60vh] overflow-y-auto">
+                      {columnProjects.length === 0 ? (
+                        <div className="flex items-center justify-center h-32 text-sm text-slate">
+                          No projects
+                        </div>
+                      ) : (
+                        columnProjects.map((project) => (
+                          <div
+                            key={project.id}
+                            className="bg-charcoal border border-mid-gray rounded-lg overflow-hidden"
+                          >
+                            {/* Card Content - Tap to view details */}
+                            <button
+                              onClick={() => setSelectedProject(project)}
+                              className="w-full p-4 text-left active:bg-mid-gray/50 transition-colors"
+                            >
+                              <h3 className="font-semibold text-foreground mb-2 line-clamp-1">
+                                {project.name}
+                              </h3>
+                              {project.description && (
+                                <p className="text-sm text-silver mb-3 line-clamp-2">
+                                  {project.description}
+                                </p>
+                              )}
+                              <div className="mb-3">
+                                <span className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium rounded bg-info/20 text-info border border-info/30">
+                                  {project.clients?.name || 'Unknown Client'}
+                                </span>
+                              </div>
+                              <div className="flex items-center justify-between text-xs gap-2">
+                                <span className={`px-2 py-1 rounded font-medium ${
+                                  project.priority === 'urgent' ? 'bg-red-primary/20 text-red-light border border-red-primary/30' :
+                                  project.priority === 'high' ? 'bg-red-bright/20 text-red-bright border border-red-bright/30' :
+                                  project.priority === 'medium' ? 'bg-warning/20 text-warning border border-warning/30' :
+                                  'bg-slate/50 text-light-gray'
+                                }`}>
+                                  {project.priority}
+                                </span>
+                                {project.due_date && (
+                                  <span className="text-slate">
+                                    {new Date(project.due_date).toLocaleDateString('en-US', {
+                                      month: 'short',
+                                      day: 'numeric'
+                                    })}
+                                  </span>
+                                )}
+                              </div>
+                            </button>
+                            
+                            {/* Move Button - Always visible on mobile */}
+                            <button
+                              onClick={() => setMoveProject(project)}
+                              className="w-full px-4 py-3 border-t border-mid-gray bg-mid-gray/30 flex items-center justify-center gap-2 text-sm font-medium text-silver hover:text-foreground active:bg-mid-gray transition-colors"
+                            >
+                              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+                              </svg>
+                              Move to...
+                            </button>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+        </div>
+
+        {/* Project Modal */}
+        {selectedProject && (
+          <ProjectModal
+            project={selectedProject}
+            onClose={() => setSelectedProject(null)}
+            onUpdate={(updatedProject) => {
+              setProjects(prevProjects =>
+                prevProjects.map(p =>
+                  p.id === updatedProject.id ? { ...p, ...updatedProject } : p
+                )
+              )
+              setSelectedProject(selectedProject ? { ...selectedProject, ...updatedProject } : updatedProject)
+            }}
+            onDelete={(projectId) => {
+              setProjects(prevProjects =>
+                prevProjects.filter(p => p.id !== projectId)
+              )
+            }}
+          />
+        )}
+
+        {/* Move Project Modal */}
+        {moveProject && (
+          <MoveProjectModal
+            project={moveProject}
+            onClose={() => setMoveProject(null)}
+            onMoved={(projectId, newStatus) => {
+              setProjects(prevProjects =>
+                prevProjects.map(p =>
+                  p.id === projectId ? { ...p, status: newStatus } : p
+                )
+              )
+              setIsUpdating(false)
+            }}
+          />
+        )}
+      </>
+    )
+  }
+
   return (
     <>
       {isUpdating && (
@@ -422,98 +562,6 @@ export function KanbanBoard({
         </DndContext>
       </div>
 
-      {/* Mobile: Horizontal Scroll Columns with Tap-to-Move (no drag) */}
-      <div className="lg:hidden pb-20">
-        <div 
-          className="overflow-x-auto scrollbar-hide" 
-          style={{ WebkitOverflowScrolling: 'touch', scrollbarWidth: 'none', msOverflowStyle: 'none' }}
-        >
-          <div className="flex gap-4 min-w-max px-4 py-4">
-            {columns.map((column) => {
-              const columnProjects = getProjectsByStatus(column.id)
-              
-              return (
-                <div key={column.id} className="w-[85vw] flex-shrink-0">
-                  {/* Column Header */}
-                  <div className="bg-charcoal border border-mid-gray rounded-t-lg px-4 py-3">
-                    <div className="flex items-center justify-between">
-                      <h2 className="font-semibold text-foreground">{column.title}</h2>
-                      <span className="text-xs font-medium text-slate bg-mid-gray px-2 py-1 rounded-full">
-                        {columnProjects.length}
-                      </span>
-                    </div>
-                  </div>
-                  
-                  {/* Column Content */}
-                  <div className="bg-dark-gray border border-t-0 border-mid-gray rounded-b-lg p-3 space-y-3 min-h-[400px] max-h-[60vh] overflow-y-auto">
-                    {columnProjects.length === 0 ? (
-                      <div className="flex items-center justify-center h-32 text-sm text-slate">
-                        No projects
-                      </div>
-                    ) : (
-                      columnProjects.map((project) => (
-                        <div
-                          key={project.id}
-                          className="bg-charcoal border border-mid-gray rounded-lg overflow-hidden"
-                        >
-                          {/* Card Content - Tap to view details */}
-                          <button
-                            onClick={() => setSelectedProject(project)}
-                            className="w-full p-4 text-left active:bg-mid-gray/50 transition-colors"
-                          >
-                            <h3 className="font-semibold text-foreground mb-2 line-clamp-1">
-                              {project.name}
-                            </h3>
-                            {project.description && (
-                              <p className="text-sm text-silver mb-3 line-clamp-2">
-                                {project.description}
-                              </p>
-                            )}
-                            <div className="mb-3">
-                              <span className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium rounded bg-info/20 text-info border border-info/30">
-                                {project.clients?.name || 'Unknown Client'}
-                              </span>
-                            </div>
-                            <div className="flex items-center justify-between text-xs gap-2">
-                              <span className={`px-2 py-1 rounded font-medium ${
-                                project.priority === 'urgent' ? 'bg-red-primary/20 text-red-light border border-red-primary/30' :
-                                project.priority === 'high' ? 'bg-red-bright/20 text-red-bright border border-red-bright/30' :
-                                project.priority === 'medium' ? 'bg-warning/20 text-warning border border-warning/30' :
-                                'bg-slate/50 text-light-gray'
-                              }`}>
-                                {project.priority}
-                              </span>
-                              {project.due_date && (
-                                <span className="text-slate">
-                                  {new Date(project.due_date).toLocaleDateString('en-US', {
-                                    month: 'short',
-                                    day: 'numeric'
-                                  })}
-                                </span>
-                              )}
-                            </div>
-                          </button>
-                          
-                          {/* Move Button - Always visible on mobile */}
-                          <button
-                            onClick={() => setMoveProject(project)}
-                            className="w-full px-4 py-3 border-t border-mid-gray bg-mid-gray/30 flex items-center justify-center gap-2 text-sm font-medium text-silver hover:text-foreground active:bg-mid-gray transition-colors"
-                          >
-                            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
-                            </svg>
-                            Move to...
-                          </button>
-                        </div>
-                      ))
-                    )}
-                  </div>
-                </div>
-              )
-            })}
-          </div>
-        </div>
-      </div>
 
       {/* Project Modal */}
       {selectedProject && (
@@ -521,32 +569,27 @@ export function KanbanBoard({
           project={selectedProject}
           onClose={() => setSelectedProject(null)}
           onUpdate={(updatedProject) => {
-            // Update local state immediately
             setProjects(prevProjects =>
               prevProjects.map(p =>
                 p.id === updatedProject.id ? { ...p, ...updatedProject } : p
               )
             )
-            // Update the selected project so modal shows new data
             setSelectedProject(selectedProject ? { ...selectedProject, ...updatedProject } : updatedProject)
           }}
           onDelete={(projectId) => {
-            // Remove project from local state immediately
             setProjects(prevProjects =>
               prevProjects.filter(p => p.id !== projectId)
             )
-            // Modal will close automatically via onClose in handleDelete
           }}
         />
       )}
 
-      {/* Move Project Modal (Mobile tap-to-move) */}
+      {/* Move Project Modal */}
       {moveProject && (
         <MoveProjectModal
           project={moveProject}
           onClose={() => setMoveProject(null)}
           onMoved={(projectId, newStatus) => {
-            // Update local state immediately
             setProjects(prevProjects =>
               prevProjects.map(p =>
                 p.id === projectId ? { ...p, status: newStatus } : p
