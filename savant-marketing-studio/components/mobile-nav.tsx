@@ -29,12 +29,6 @@ export function MobileNav({ userEmail }: MobileNavProps) {
   const { isOpen, close, toggle } = useMobileMenuStore()
   const pathname = usePathname()
 
-  // #region agent log - track state changes (kept for verification)
-  useEffect(() => {
-    console.log('[MobileNav Debug] isOpen changed:', isOpen, 'at', Date.now())
-  }, [isOpen])
-  // #endregion agent log
-
   const navItems = [
     { href: '/dashboard', icon: Home, label: 'Dashboard' },
     { href: '/dashboard/analytics', icon: BarChart3, label: 'Analytics' },
