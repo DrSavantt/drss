@@ -391,9 +391,10 @@ export default async function ClientDetailPage({
         ) : (
           <div className="space-y-3">
             {content.slice(0, 5).map((item) => (
-              <div
+              <Link
                 key={item.id}
-                className="border border-mid-gray rounded-lg p-5 hover:border-red-bright/50 transition-all duration-200"
+                href={`/dashboard/content/${item.id}`}
+                className="block border border-mid-gray rounded-lg p-5 hover:border-red-bright/50 hover:bg-surface-highlight/50 transition-all duration-200 active:bg-surface-highlight"
               >
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
@@ -421,14 +422,9 @@ export default async function ClientDetailPage({
                       )}
                     </div>
                   </div>
-                      <Link
-                        href={`/dashboard/content/${item.id}`}
-                        className="text-sm text-red-primary hover:text-red-bright font-medium transition-colors"
-                      >
-                        View →
-                      </Link>
+                  <span className="text-silver">→</span>
                 </div>
-              </div>
+              </Link>
             ))}
 
             {content.length > 5 && (

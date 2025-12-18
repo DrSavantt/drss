@@ -143,7 +143,7 @@ export function ProjectModal({ project, onClose, onUpdate, onDelete }: ProjectMo
         open={true}
         onOpenChange={(val) => { if (!val) onClose() }}
         title={isEditing ? 'Edit Project' : 'Project Details'}
-        className="max-w-2xl"
+        className="max-w-md"
       >
         <div className="space-y-6">
           {error && (
