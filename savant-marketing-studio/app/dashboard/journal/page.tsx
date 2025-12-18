@@ -1,17 +1,21 @@
 import { getOrCreateInbox, getJournalChats, getJournalEntries } from '@/app/actions/journal'
 import { getClients } from '@/app/actions/clients'
 import { getAllProjects, getAllContentAssets } from '@/app/actions/content'
+import { getJournalFolders, getUnifiedJournalTimeline, getJournalCounts } from '@/app/actions/journal-folders'
 import { JournalPageClient } from './journal-page-client'
 
 export default async function JournalPage() {
   try {
     // Get or create default inbox and fetch all data in parallel
-    const [inboxId, chats, clients, projects, content] = await Promise.all([
+    const [inboxId, chats, clients, projects, content, folders, timeline, counts] = await Promise.all([
       getOrCreateInbox(),
       getJournalChats(),
       getClients(),
       getAllProjects(),
-      getAllContentAssets()
+      getAllContentAssets(),
+      getJournalFolders().catch(() => []), // Folders might not exist yet
+      getUnifiedJournalTimeline().catch(() => []), // Timeline
+      getJournalCounts().catch(() => ({ totalChats: 0, totalEntries: 0 }))
     ])
     
     // Get entries for the inbox by default
@@ -45,6 +49,9 @@ export default async function JournalPage() {
         projects={simpleProjects}
         content={simpleContent}
         defaultChatId={inboxId}
+        initialFolders={folders}
+        initialTimeline={timeline}
+        initialCounts={counts}
       />
     )
   } catch (error) {
