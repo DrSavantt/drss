@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Roboto, Geist_Mono } from "next/font/google";
 import { ThemeProvider } from "@/lib/theme-provider";
 import "./globals.css";
@@ -15,22 +15,24 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
+// Separate viewport export (required in Next.js 14+)
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
+  viewportFit: "cover",
+  themeColor: "#fb7185",
+};
+
 export const metadata: Metadata = {
   title: "DRSS Marketing Studio",
   description: "Internal marketing agency management",
   manifest: "/manifest.json",
-  themeColor: "#fb7185",
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
     title: "DRSS",
-  },
-  viewport: {
-    width: "device-width",
-    initialScale: 1,
-    maximumScale: 1,
-    userScalable: false,
-    viewportFit: "cover",
   },
   formatDetection: {
     telephone: false,
@@ -51,12 +53,6 @@ export default function RootLayout({
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
         <meta name="apple-mobile-web-app-title" content="DRSS" />
         <meta name="theme-color" content="#fb7185" />
-        
-        {/* Viewport - SIMPLE VERSION */}
-        <meta
-          name="viewport"
-          content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover"
-        />
         
         {/* Prevent FOUC - set dark mode immediately */}
         <script
