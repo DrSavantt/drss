@@ -41,8 +41,32 @@ body {
 /* Prevent iOS zoom on input focus */
 input,
 textarea,
-select {
+select,
+.ProseMirror {
   font-size: 16px !important;
+}
+
+/* Tiptap editor specific mobile styles */
+.ProseMirror {
+  min-height: 200px;
+  outline: none;
+}
+
+.ProseMirror p {
+  margin: 0.75em 0;
+}
+
+/* Ensure Tiptap paragraphs are readable on mobile */
+@media (max-width: 768px) {
+  .ProseMirror {
+    font-size: 16px !important;
+    line-height: 1.6;
+  }
+  
+  .ProseMirror p,
+  .ProseMirror li {
+    font-size: 16px !important;
+  }
 }
 
 /* Prevent text selection on mobile (optional) */
