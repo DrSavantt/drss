@@ -4,11 +4,16 @@ import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 
-// Single user credentials
-const SINGLE_USER_EMAIL = 'drss.admin@gmail.com'
-const SINGLE_USER_PASSWORD = 'drss-admin-2025-secure'
+// Load credentials from environment variables (never hardcode)
+const SINGLE_USER_EMAIL = process.env.ADMIN_EMAIL
+const SINGLE_USER_PASSWORD = process.env.ADMIN_PASSWORD
 
 export async function autoLogin() {
+  // Validate credentials exist before attempting login
+  if (!SINGLE_USER_EMAIL || !SINGLE_USER_PASSWORD) {
+    console.error('Missing ADMIN_EMAIL or ADMIN_PASSWORD environment variables')
+    return { error: 'Server configuration error. Admin credentials not configured.' }
+  }
   const supabase = await createClient()
 
   if (!supabase) {
