@@ -57,6 +57,13 @@ export function KanbanBoard({
   const [isUpdating, setIsUpdating] = useState(false)
   const [selectedProject, setSelectedProject] = useState<Project | null>(null)
   const [moveProject, setMoveProject] = useState<Project | null>(null)
+  // Mobile view toggle: 'list' or 'board'
+  const [mobileView, setMobileView] = useState<'list' | 'board'>(() => {
+    if (typeof window !== 'undefined') {
+      return (localStorage.getItem('kanban-mobile-view') as 'list' | 'board') || 'list'
+    }
+    return 'list'
+  })
 
   // Apply filters and sorting
   const filteredAndSortedProjects = useMemo(() => {
@@ -112,10 +119,17 @@ export function KanbanBoard({
     })
   }, [projects, filterClient, filterPriority, dueDateRange, sortBy])
 
-  // Only render drag & drop after client-side mount
+  // Only render drag & drop after client-side mount (desktop only)
   useEffect(() => {
     setMounted(true)
   }, [])
+
+  // Save mobile view preference
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('kanban-mobile-view', mobileView)
+    }
+  }, [mobileView])
 
   const sensors = useSensors(
     useSensor(MouseSensor, {
@@ -332,7 +346,7 @@ export function KanbanBoard({
     return priorityMap[priority] || priorityMap.medium
   }
 
-  // Don't render drag context on mobile - use tap-to-move instead
+  // Mobile view - render instantly (no mounted check needed)
   if (isMobile) {
     return (
       <>
@@ -343,98 +357,196 @@ export function KanbanBoard({
           </div>
         )}
 
-        {/* Mobile: Horizontal Scroll Columns with Tap-to-Move (no drag) */}
-        <div className="pb-20">
-          <div 
-            className="overflow-x-auto scrollbar-hide" 
-            style={{ WebkitOverflowScrolling: 'touch', scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+        {/* View Toggle */}
+        <div className="flex items-center justify-end gap-2 px-4 mb-4">
+          <span className="text-xs text-silver mr-2">View:</span>
+          <button
+            onClick={() => setMobileView('list')}
+            className={`p-2 rounded-lg transition-colors ${
+              mobileView === 'list' 
+                ? 'bg-red-primary text-white' 
+                : 'bg-surface text-silver hover:text-foreground'
+            }`}
+            aria-label="List view"
           >
-            <div className="flex gap-4 min-w-max px-4 py-4">
-              {columns.map((column) => {
-                const columnProjects = getProjectsByStatus(column.id)
-                
-                return (
-                  <div key={column.id} className="w-[85vw] flex-shrink-0">
-                    {/* Column Header */}
-                    <div className="bg-charcoal border border-mid-gray rounded-t-lg px-4 py-3">
-                      <div className="flex items-center justify-between">
-                        <h2 className="font-semibold text-foreground">{column.title}</h2>
-                        <span className="text-xs font-medium text-slate bg-mid-gray px-2 py-1 rounded-full">
-                          {columnProjects.length}
-                        </span>
-                      </div>
-                    </div>
-                    
-                    {/* Column Content */}
-                    <div className="bg-dark-gray border border-t-0 border-mid-gray rounded-b-lg p-3 space-y-3 min-h-[400px] max-h-[60vh] overflow-y-auto">
-                      {columnProjects.length === 0 ? (
-                        <div className="flex items-center justify-center h-32 text-sm text-slate">
-                          No projects
-                        </div>
-                      ) : (
-                        columnProjects.map((project) => (
-                          <div
-                            key={project.id}
-                            className="bg-charcoal border border-mid-gray rounded-lg overflow-hidden"
-                          >
-                            {/* Card Content - Tap to view details */}
-                            <button
-                              onClick={() => setSelectedProject(project)}
-                              className="w-full p-4 text-left active:bg-mid-gray/50 transition-colors"
-                            >
-                              <h3 className="font-semibold text-foreground mb-2 line-clamp-1">
+            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 10h16M4 14h16M4 18h16" />
+            </svg>
+          </button>
+          <button
+            onClick={() => setMobileView('board')}
+            className={`p-2 rounded-lg transition-colors ${
+              mobileView === 'board' 
+                ? 'bg-red-primary text-white' 
+                : 'bg-surface text-silver hover:text-foreground'
+            }`}
+            aria-label="Board view"
+          >
+            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7m0 10a2 2 0 002 2h2a2 2 0 002-2V7a2 2 0 00-2-2h-2a2 2 0 00-2 2" />
+            </svg>
+          </button>
+        </div>
+
+        {/* List View */}
+        {mobileView === 'list' && (
+          <div className="px-4 pb-20 space-y-6">
+            {columns.map((column) => {
+              const columnProjects = getProjectsByStatus(column.id)
+              if (columnProjects.length === 0) return null
+              
+              return (
+                <div key={column.id}>
+                  {/* Section Header */}
+                  <div className="flex items-center gap-2 mb-3">
+                    <h2 className="font-semibold text-foreground">{column.title}</h2>
+                    <span className="text-xs font-medium text-slate bg-mid-gray px-2 py-1 rounded-full">
+                      {columnProjects.length}
+                    </span>
+                  </div>
+                  
+                  {/* Project Cards */}
+                  <div className="space-y-3">
+                    {columnProjects.map((project) => (
+                      <div
+                        key={project.id}
+                        className="bg-surface border border-border rounded-lg overflow-hidden"
+                      >
+                        <button
+                          onClick={() => setSelectedProject(project)}
+                          className="w-full p-4 text-left active:bg-surface-highlight transition-colors"
+                        >
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="flex-1 min-w-0">
+                              <h3 className="font-semibold text-foreground mb-1 line-clamp-1">
                                 {project.name}
                               </h3>
-                              {project.description && (
-                                <p className="text-sm text-silver mb-3 line-clamp-2">
-                                  {project.description}
-                                </p>
-                              )}
-                              <div className="mb-3">
-                                <span className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium rounded bg-info/20 text-info border border-info/30">
-                                  {project.clients?.name || 'Unknown Client'}
-                                </span>
-                              </div>
-                              <div className="flex items-center justify-between text-xs gap-2">
-                                <span className={`px-2 py-1 rounded font-medium ${
-                                  project.priority === 'urgent' ? 'bg-red-primary/20 text-red-light border border-red-primary/30' :
-                                  project.priority === 'high' ? 'bg-red-bright/20 text-red-bright border border-red-bright/30' :
-                                  project.priority === 'medium' ? 'bg-warning/20 text-warning border border-warning/30' :
-                                  'bg-slate/50 text-light-gray'
-                                }`}>
-                                  {project.priority}
-                                </span>
-                                {project.due_date && (
-                                  <span className="text-slate">
-                                    {new Date(project.due_date).toLocaleDateString('en-US', {
-                                      month: 'short',
-                                      day: 'numeric'
-                                    })}
-                                  </span>
-                                )}
-                              </div>
-                            </button>
-                            
-                            {/* Move Button - Always visible on mobile */}
-                            <button
-                              onClick={() => setMoveProject(project)}
-                              className="w-full px-4 py-3 border-t border-mid-gray bg-mid-gray/30 flex items-center justify-center gap-2 text-sm font-medium text-silver hover:text-foreground active:bg-mid-gray transition-colors"
-                            >
-                              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
-                              </svg>
-                              Move to...
-                            </button>
+                              <p className="text-sm text-silver line-clamp-1">
+                                {project.clients?.name || 'Unknown Client'}
+                              </p>
+                            </div>
+                            <span className={`px-2 py-1 rounded text-xs font-medium flex-shrink-0 ${
+                              project.priority === 'urgent' ? 'bg-red-primary/20 text-red-light' :
+                              project.priority === 'high' ? 'bg-red-bright/20 text-red-bright' :
+                              project.priority === 'medium' ? 'bg-warning/20 text-warning' :
+                              'bg-slate/50 text-light-gray'
+                            }`}>
+                              {project.priority}
+                            </span>
                           </div>
-                        ))
-                      )}
-                    </div>
+                          {project.due_date && (
+                            <p className="text-xs text-slate mt-2">
+                              Due {new Date(project.due_date).toLocaleDateString('en-US', {
+                                month: 'short',
+                                day: 'numeric'
+                              })}
+                            </p>
+                          )}
+                        </button>
+                        <button
+                          onClick={() => setMoveProject(project)}
+                          className="w-full px-4 py-2 border-t border-border bg-surface-highlight/50 flex items-center justify-center gap-2 text-xs font-medium text-silver active:bg-surface-highlight transition-colors"
+                        >
+                          <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+                          </svg>
+                          Move
+                        </button>
+                      </div>
+                    ))}
                   </div>
-                )
-              })}
+                </div>
+              )
+            })}
+            
+            {filteredAndSortedProjects.length === 0 && (
+              <div className="flex flex-col items-center justify-center py-12 text-center">
+                <div className="text-4xl mb-3">📋</div>
+                <p className="text-silver">No projects yet</p>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Board View - Horizontal Scroll */}
+        {mobileView === 'board' && (
+          <div className="pb-20">
+            <div 
+              className="overflow-x-auto scrollbar-hide touch-pan-x" 
+              style={{ WebkitOverflowScrolling: 'touch' }}
+            >
+              <div className="flex gap-4 min-w-max px-4 py-2">
+                {columns.map((column) => {
+                  const columnProjects = getProjectsByStatus(column.id)
+                  
+                  return (
+                    <div key={column.id} className="w-[80vw] flex-shrink-0">
+                      <div className="bg-charcoal border border-mid-gray rounded-t-lg px-4 py-3">
+                        <div className="flex items-center justify-between">
+                          <h2 className="font-semibold text-foreground">{column.title}</h2>
+                          <span className="text-xs font-medium text-slate bg-mid-gray px-2 py-1 rounded-full">
+                            {columnProjects.length}
+                          </span>
+                        </div>
+                      </div>
+                      
+                      <div className="bg-dark-gray border border-t-0 border-mid-gray rounded-b-lg p-3 space-y-3 min-h-[300px] max-h-[55vh] overflow-y-auto">
+                        {columnProjects.length === 0 ? (
+                          <div className="flex items-center justify-center h-24 text-sm text-slate">
+                            No projects
+                          </div>
+                        ) : (
+                          columnProjects.map((project) => (
+                            <div
+                              key={project.id}
+                              className="bg-charcoal border border-mid-gray rounded-lg overflow-hidden"
+                            >
+                              <button
+                                onClick={() => setSelectedProject(project)}
+                                className="w-full p-3 text-left active:bg-mid-gray/50 transition-colors"
+                              >
+                                <h3 className="font-semibold text-foreground mb-1 text-sm line-clamp-1">
+                                  {project.name}
+                                </h3>
+                                <p className="text-xs text-silver mb-2">
+                                  {project.clients?.name || 'Unknown'}
+                                </p>
+                                <div className="flex items-center justify-between text-xs">
+                                  <span className={`px-2 py-0.5 rounded font-medium ${
+                                    project.priority === 'urgent' ? 'bg-red-primary/20 text-red-light' :
+                                    project.priority === 'high' ? 'bg-red-bright/20 text-red-bright' :
+                                    project.priority === 'medium' ? 'bg-warning/20 text-warning' :
+                                    'bg-slate/50 text-light-gray'
+                                  }`}>
+                                    {project.priority}
+                                  </span>
+                                  {project.due_date && (
+                                    <span className="text-slate">
+                                      {new Date(project.due_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                                    </span>
+                                  )}
+                                </div>
+                              </button>
+                              <button
+                                onClick={() => setMoveProject(project)}
+                                className="w-full px-3 py-2 border-t border-mid-gray bg-mid-gray/30 flex items-center justify-center gap-1.5 text-xs font-medium text-silver active:bg-mid-gray transition-colors"
+                              >
+                                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+                                </svg>
+                                Move
+                              </button>
+                            </div>
+                          ))
+                        )}
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
             </div>
           </div>
-        </div>
+        )}
 
         {/* Project Modal */}
         {selectedProject && (
