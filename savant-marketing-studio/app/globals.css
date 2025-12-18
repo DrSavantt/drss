@@ -6,19 +6,32 @@
    MOBILE VIEWPORT - FILL SCREEN, PREVENT ZOOM
    ======================================== */
 
-/* Mobile viewport - fill screen like native app */
+/* Mobile-specific viewport fixes */
 @media (max-width: 768px) {
-  html, body {
+  html {
+    width: 100vw;
+    min-height: -webkit-fill-available;
+    overflow-x: hidden;
+  }
+  
+  body {
     width: 100vw;
     min-height: 100vh;
-    min-height: 100dvh; /* iOS safe */
+    min-height: -webkit-fill-available;
     overflow-x: hidden;
     overscroll-behavior: none;
   }
   
-  /* Prevent zoom, keep scroll */
+  /* Prevent zoom */
   * {
     touch-action: manipulation;
+  }
+  
+  /* Main container */
+  main {
+    width: 100vw;
+    min-height: 100vh;
+    min-height: 100dvh;
   }
   
   /* Allow scrollable containers */
