@@ -72,17 +72,11 @@ export function MobileNav({ userEmail }: MobileNavProps) {
   useEffect(() => {
     if (isOpen) {
       document.body.style.overflow = 'hidden'
-      document.body.style.position = 'fixed'
-      document.body.style.width = '100%'
     } else {
       document.body.style.overflow = ''
-      document.body.style.position = ''
-      document.body.style.width = ''
     }
     return () => {
       document.body.style.overflow = ''
-      document.body.style.position = ''
-      document.body.style.width = ''
     }
   }, [isOpen])
 
@@ -119,122 +113,93 @@ export function MobileNav({ userEmail }: MobileNavProps) {
         </div>
       </header>
 
-      {/* Centered Blur Modal Menu */}
-      <AnimatePresence mode="wait">
-        {isOpen && (
-          <>
-            {/* #region agent log - backdrop render */}
-            {(() => {
-              const logData = {
-                sessionId: 'debug-session',
-                runId: 'run1',
-                hypothesisId: 'H1,H3',
-                location: 'mobile-nav.tsx:105',
-                message: 'backdrop rendering',
-                data: { isOpen },
-                timestamp: Date.now()
-              }
-              fetch('http://127.0.0.1:7243/ingest/de6f83dd-b5e0-4c9a-99d4-d76568bc937c', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(logData)
-              }).catch(() => {})
-              return null
-            })()}
-            {/* #endregion agent log */}
+      {/* Centered Blur Modal Menu - Keep in DOM, animate opacity */}
+      {/* Blurred backdrop - always in DOM */}
+      <motion.div
+        initial={false}
+        animate={{ opacity: isOpen ? 1 : 0, pointerEvents: isOpen ? 'auto' : 'none' }}
+        transition={{ duration: 0.2 }}
+        onClick={close}
+        className="lg:hidden fixed inset-0 bg-black/60 backdrop-blur-sm z-[100]"
+      />
 
-            {/* Blurred backdrop */}
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.15 }}
+      {/* Centered menu modal - always in DOM */}
+      <motion.div
+        initial={false}
+        animate={{ opacity: isOpen ? 1 : 0, scale: isOpen ? 1 : 0.95, pointerEvents: isOpen ? 'auto' : 'none' }}
+        transition={{ duration: 0.2 }}
+        className="lg:hidden fixed inset-0 z-[101] flex items-center justify-center p-4"
+        onClick={(e) => {
+          if (e.target === e.currentTarget) close()
+        }}
+      >
+        <div className="bg-surface border border-border rounded-lg shadow-xl max-w-sm w-full max-h-[85vh] overflow-y-auto">
+          {/* Menu header */}
+          <div className="flex items-center justify-between p-4 border-b border-border sticky top-0 bg-surface z-10">
+            <h2 className="text-lg font-semibold">Menu</h2>
+            <button
               onClick={close}
-              className="lg:hidden fixed inset-0 bg-black/60 backdrop-blur-sm z-[100]"
-            />
-
-            {/* Centered menu modal */}
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              transition={{ duration: 0.15 }}
-              className="lg:hidden fixed inset-0 z-[101] flex items-center justify-center p-4"
-              onClick={(e) => {
-                // Close only if clicking the overlay, not the modal
-                if (e.target === e.currentTarget) close()
-              }}
+              className="p-2 hover:bg-surface-highlight rounded-lg transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center"
+              aria-label="Close menu"
             >
-              <div className="bg-surface border border-border rounded-lg shadow-xl max-w-sm w-full max-h-[85vh] overflow-y-auto">
-                {/* Menu header */}
-                <div className="flex items-center justify-between p-4 border-b border-border sticky top-0 bg-surface z-10">
-                  <h2 className="text-lg font-semibold">Menu</h2>
-                  <button
-                    onClick={close}
-                    className="p-2 hover:bg-surface-highlight rounded-lg transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center"
-                    aria-label="Close menu"
-                  >
-                    <X className="w-5 h-5 text-silver hover:text-foreground" />
-                  </button>
-                </div>
+              <X className="w-5 h-5 text-silver hover:text-foreground" />
+            </button>
+          </div>
 
-                {/* Menu items */}
-                <nav className="p-2">
-                  {navItems.map((item) => {
-                    const Icon = item.icon
-                    const isActive = isActiveRoute(item.href)
-                    return (
-                      <Link
-                        key={item.href}
-                        href={item.href}
-                        onClick={close}
-                        className={`
-                          flex items-center gap-3 px-4 py-3 rounded-lg transition-colors min-h-[48px]
-                          ${isActive
-                            ? 'bg-red-primary/10 text-red-primary font-medium border border-red-primary/20'
-                            : 'text-foreground hover:bg-surface-highlight'
-                          }
-                        `}
-                      >
-                        <Icon size={20} />
-                        <span>{item.label}</span>
-                      </Link>
-                    )
-                  })}
+          {/* Menu items */}
+          <nav className="p-2">
+            {navItems.map((item) => {
+              const Icon = item.icon
+              const isActive = isActiveRoute(item.href)
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  onClick={close}
+                  className={`
+                    flex items-center gap-3 px-4 py-3 rounded-lg transition-colors min-h-[48px]
+                    ${isActive
+                      ? 'bg-red-primary/10 text-red-primary font-medium border border-red-primary/20'
+                      : 'text-foreground hover:bg-surface-highlight'
+                    }
+                  `}
+                >
+                  <Icon size={20} />
+                  <span>{item.label}</span>
+                </Link>
+              )
+            })}
 
-                  {/* Theme Toggle */}
-                  <div className="mt-4 pt-4 border-t border-border">
-                    <p className="text-xs text-silver uppercase tracking-wide mb-2 px-4">Appearance</p>
-                    <div className="flex items-center justify-between px-4 py-3 rounded-lg hover:bg-surface-highlight min-h-[48px]">
-                      <span className="text-sm text-foreground">Theme</span>
-                      <ThemeToggle />
-                    </div>
-                  </div>
-
-                  {/* User & Logout */}
-                  {userEmail && (
-                    <div className="mt-4 pt-4 border-t border-border">
-                      <p className="text-xs text-silver uppercase tracking-wide mb-2 px-4">Account</p>
-                      <p className="text-sm text-foreground px-4 mb-3 truncate">{userEmail}</p>
-                      <form action={logout}>
-                        <button
-                          type="submit"
-                          className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-red-primary hover:bg-surface-highlight transition-colors min-h-[48px]"
-                        >
-                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-                          </svg>
-                          <span>Logout</span>
-                        </button>
-                      </form>
-                    </div>
-                  )}
-                </nav>
+            {/* Theme Toggle */}
+            <div className="mt-4 pt-4 border-t border-border">
+              <p className="text-xs text-silver uppercase tracking-wide mb-2 px-4">Appearance</p>
+              <div className="flex items-center justify-between px-4 py-3 rounded-lg hover:bg-surface-highlight min-h-[48px]">
+                <span className="text-sm text-foreground">Theme</span>
+                <ThemeToggle />
               </div>
-            </motion.div>
-          </>
-        )}
-      </AnimatePresence>
+            </div>
+
+            {/* User & Logout */}
+            {userEmail && (
+              <div className="mt-4 pt-4 border-t border-border">
+                <p className="text-xs text-silver uppercase tracking-wide mb-2 px-4">Account</p>
+                <p className="text-sm text-foreground px-4 mb-3 truncate">{userEmail}</p>
+                <form action={logout}>
+                  <button
+                    type="submit"
+                    className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-red-primary hover:bg-surface-highlight transition-colors min-h-[48px]"
+                  >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                    </svg>
+                    <span>Logout</span>
+                  </button>
+                </form>
+              </div>
+            )}
+          </nav>
+        </div>
+      </motion.div>
     </>
   )
 }
