@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { useMobile } from '@/hooks/use-mobile'
 import { Download, ZoomIn, ZoomOut, Maximize2, Minimize2, ExternalLink } from 'lucide-react'
 
@@ -21,27 +21,12 @@ export function ResponsiveFilePreview({
   const [zoom, setZoom] = useState(1)
   const [isFullscreen, setIsFullscreen] = useState(false)
   
-  // Debug logging
-  useEffect(() => {
-    console.log('FilePreview - URL:', fileUrl)
-    console.log('FilePreview - Type:', fileType)
-    console.log('FilePreview - Name:', fileName)
-  }, [fileUrl, fileType, fileName])
-  
   const isPDF = fileType === 'application/pdf' || fileName.endsWith('.pdf')
   const isImage = fileType?.startsWith('image/')
   const isVideo = fileType?.startsWith('video/')
   const isWordDoc = fileType?.includes('wordprocessingml') || 
                     fileType?.includes('msword') ||
                     fileName.match(/\.(doc|docx)$/i)
-  
-  // More debug logging
-  useEffect(() => {
-    console.log('FilePreview - Is PDF:', isPDF)
-    console.log('FilePreview - Is Image:', isImage)
-    console.log('FilePreview - Is Video:', isVideo)
-    console.log('FilePreview - Is Word Doc:', isWordDoc)
-  }, [isPDF, isImage, isVideo, isWordDoc])
 
   return (
     <div className={`flex flex-col ${className}`}>
@@ -187,32 +172,68 @@ export function ResponsiveFilePreview({
             </video>
           </div>
         ) : isWordDoc ? (
-          <div className="w-full max-w-4xl mx-auto">
-            {/* Google Docs Viewer for Word documents */}
-            <iframe
-              src={`https://docs.google.com/viewer?url=${encodeURIComponent(fileUrl)}&embedded=true`}
-              className="w-full border-0"
-              style={{ height: '800px', backgroundColor: 'white' }}
-              title={fileName}
-            />
-            
-            {/* Fallback download if viewer fails */}
-            <div className="mt-4 text-center p-4 bg-surface rounded-lg">
-              <p className="text-sm text-muted-foreground mb-2">
-                Having trouble viewing?
+          isMobile ? (
+            // Mobile: Download-only card (iframe doesn't work well on mobile)
+            <div className="flex flex-col items-center justify-center p-8 text-center min-h-[300px] bg-background">
+              <div className="w-20 h-20 bg-blue-500/10 rounded-2xl flex items-center justify-center mb-6">
+                <svg className="w-10 h-10 text-blue-500" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6zm4 18H6V4h7v5h5v11z"/>
+                  <path d="M8 12h8v2H8zm0 4h8v2H8zm0-8h3v2H8z"/>
+                </svg>
+              </div>
+              <h3 className="text-lg font-semibold text-foreground mb-2">
+                Word Document
+              </h3>
+              <p className="text-sm text-muted-foreground mb-6 max-w-[280px]">
+                {fileName}
+              </p>
+              <p className="text-xs text-muted-foreground mb-6">
+                Document previews aren&apos;t available on mobile. Download to view in your preferred app.
               </p>
               <a
                 href={fileUrl}
                 download={fileName}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-red-primary hover:underline inline-flex items-center gap-2"
+                className="w-full max-w-[280px] px-6 py-4 bg-blue-600 hover:bg-blue-700 text-white 
+                  rounded-xl font-semibold transition-colors inline-flex items-center justify-center gap-3
+                  active:scale-[0.98] shadow-lg"
               >
-                <Download className="w-4 h-4" />
-                Download document →
+                <Download className="w-5 h-5" />
+                Download Document
               </a>
+              <p className="text-xs text-muted-foreground mt-4">
+                Opens in Microsoft Word, Google Docs, or Pages
+              </p>
             </div>
-          </div>
+          ) : (
+            // Desktop: Google Docs Viewer
+            <div className="w-full max-w-4xl mx-auto">
+              <iframe
+                src={`https://docs.google.com/viewer?url=${encodeURIComponent(fileUrl)}&embedded=true`}
+                className="w-full border-0"
+                style={{ height: '800px', backgroundColor: 'white' }}
+                title={fileName}
+              />
+              
+              {/* Fallback download if viewer fails */}
+              <div className="mt-4 text-center p-4 bg-surface rounded-lg">
+                <p className="text-sm text-muted-foreground mb-2">
+                  Having trouble viewing?
+                </p>
+                <a
+                  href={fileUrl}
+                  download={fileName}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-red-primary hover:underline inline-flex items-center gap-2"
+                >
+                  <Download className="w-4 h-4" />
+                  Download document →
+                </a>
+              </div>
+            </div>
+          )
         ) : (
           <div className="flex flex-col items-center justify-center p-12 text-center min-h-[400px]">
             <div className="text-6xl mb-4">📄</div>
