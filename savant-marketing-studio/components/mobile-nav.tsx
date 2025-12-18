@@ -7,7 +7,6 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { logout } from '@/app/actions/auth'
 import { ThemeToggle } from '@/components/theme-toggle'
-import { AnimatePresence, motion } from 'framer-motion'
 
 interface MobileNavProps {
   userEmail: string | null
@@ -30,22 +29,9 @@ export function MobileNav({ userEmail }: MobileNavProps) {
   const { isOpen, close, toggle } = useMobileMenuStore()
   const pathname = usePathname()
 
-  // #region agent log - track state changes
+  // #region agent log - track state changes (kept for verification)
   useEffect(() => {
-    const logData = {
-      sessionId: 'debug-session',
-      runId: 'run1',
-      hypothesisId: 'H5',
-      location: 'mobile-nav.tsx:30',
-      message: 'isOpen state changed',
-      data: { isOpen, timestamp: Date.now() },
-      timestamp: Date.now()
-    }
-    fetch('http://127.0.0.1:7243/ingest/de6f83dd-b5e0-4c9a-99d4-d76568bc937c', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(logData)
-    }).catch(() => {})
+    console.log('[MobileNav Debug] isOpen changed:', isOpen, 'at', Date.now())
   }, [isOpen])
   // #endregion agent log
 
@@ -113,27 +99,37 @@ export function MobileNav({ userEmail }: MobileNavProps) {
         </div>
       </header>
 
-      {/* Centered Blur Modal Menu - Keep in DOM, animate opacity */}
-      {/* Blurred backdrop - always in DOM */}
-      <motion.div
-        initial={false}
-        animate={{ opacity: isOpen ? 1 : 0, pointerEvents: isOpen ? 'auto' : 'none' }}
-        transition={{ duration: 0.2 }}
+      {/* Centered Blur Modal Menu - Pure CSS transitions (no Framer Motion) */}
+      {/* Blurred backdrop - always in DOM, CSS transition */}
+      <div
         onClick={close}
-        className="lg:hidden fixed inset-0 bg-black/60 backdrop-blur-sm z-[100]"
+        className={`
+          lg:hidden fixed inset-0 bg-black/60 backdrop-blur-sm z-[100]
+          transition-opacity duration-200 ease-out
+          ${isOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}
+        `}
+        style={{ willChange: 'opacity' }}
       />
 
-      {/* Centered menu modal - always in DOM */}
-      <motion.div
-        initial={false}
-        animate={{ opacity: isOpen ? 1 : 0, scale: isOpen ? 1 : 0.95, pointerEvents: isOpen ? 'auto' : 'none' }}
-        transition={{ duration: 0.2 }}
-        className="lg:hidden fixed inset-0 z-[101] flex items-center justify-center p-4"
+      {/* Centered menu modal - always in DOM, CSS transition */}
+      <div
+        className={`
+          lg:hidden fixed inset-0 z-[101] flex items-center justify-center p-4
+          transition-all duration-200 ease-out
+          ${isOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}
+        `}
         onClick={(e) => {
           if (e.target === e.currentTarget) close()
         }}
       >
-        <div className="bg-surface border border-border rounded-lg shadow-xl max-w-sm w-full max-h-[85vh] overflow-y-auto">
+        <div 
+          className={`
+            bg-surface border border-border rounded-lg shadow-xl max-w-sm w-full max-h-[85vh] overflow-y-auto
+            transition-transform duration-200 ease-out
+            ${isOpen ? 'scale-100' : 'scale-95'}
+          `}
+          style={{ willChange: 'transform' }}
+        >
           {/* Menu header */}
           <div className="flex items-center justify-between p-4 border-b border-border sticky top-0 bg-surface z-10">
             <h2 className="text-lg font-semibold">Menu</h2>
@@ -199,7 +195,7 @@ export function MobileNav({ userEmail }: MobileNavProps) {
             )}
           </nav>
         </div>
-      </motion.div>
+      </div>
     </>
   )
 }
