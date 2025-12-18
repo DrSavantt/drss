@@ -121,8 +121,6 @@ export function MetricCards({ autoExpand }: MetricCardsProps) {
             transition-all duration-300
             ${activeCard === 'clientHealth' ? 'ring-2 ring-active-ring shadow-xl shadow-active-shadow' : ''}
           `}
-          whileHover={{ scale: 1.005 }}
-          whileTap={{ scale: 0.995 }}
         >
           {/* Spotlight on active */}
           <AnimatePresence>
@@ -209,8 +207,6 @@ export function MetricCards({ autoExpand }: MetricCardsProps) {
             transition-all duration-300
             ${activeCard === 'projectVelocity' ? 'ring-2 ring-active-ring shadow-xl shadow-active-shadow' : ''}
           `}
-          whileHover={{ scale: 1.005 }}
-          whileTap={{ scale: 0.995 }}
         >
           <AnimatePresence>
             {activeCard === 'projectVelocity' && (
@@ -294,8 +290,6 @@ export function MetricCards({ autoExpand }: MetricCardsProps) {
             transition-all duration-300
             ${activeCard === 'contentOutput' ? 'ring-2 ring-active-ring shadow-xl shadow-active-shadow' : ''}
           `}
-          whileHover={{ scale: 1.005 }}
-          whileTap={{ scale: 0.995 }}
         >
           <AnimatePresence>
             {activeCard === 'contentOutput' && (
@@ -374,8 +368,6 @@ export function MetricCards({ autoExpand }: MetricCardsProps) {
             transition-all duration-300
             ${activeCard === 'storage' ? 'ring-2 ring-active-ring shadow-xl shadow-active-shadow' : ''}
           `}
-          whileHover={{ scale: 1.005 }}
-          whileTap={{ scale: 0.995 }}
         >
           <AnimatePresence>
             {activeCard === 'storage' && (
@@ -445,8 +437,6 @@ export function MetricCards({ autoExpand }: MetricCardsProps) {
             transition-all duration-300
             ${activeCard === 'capacity' ? 'ring-2 ring-active-ring shadow-xl shadow-active-shadow' : ''}
           `}
-          whileHover={{ scale: 1.005 }}
-          whileTap={{ scale: 0.995 }}
         >
           <AnimatePresence>
             {activeCard === 'capacity' && (

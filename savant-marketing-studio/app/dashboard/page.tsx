@@ -6,7 +6,7 @@ import Link from 'next/link';
 import { Users, FolderKanban, FileText, BookOpen } from 'lucide-react';
 import { MetricCards } from '@/components/dashboard/metric-cards';
 import { RecentActivity } from '@/components/dashboard/recent-activity';
-import { metroItemVariants, metroTileHover, metroContainerVariants } from '@/lib/animations';
+import { metroItemVariants, metroContainerVariants } from '@/lib/animations';
 
 export default function DashboardPage() {
   const [counts, setCounts] = useState({
@@ -54,11 +54,9 @@ export default function DashboardPage() {
           <Link href="/dashboard/clients/new">
             <motion.div
               variants={metroItemVariants}
-              whileHover={metroTileHover}
-              whileTap={{ scale: 0.97 }}
               className="relative overflow-hidden group cursor-pointer"
             >
-              <div className="bg-glass-bg backdrop-blur-xl border border-glass-border rounded-xl p-4 md:p-6 h-28 md:h-32 flex flex-col justify-between transition-all active:bg-surface-highlight">
+              <div className="bg-glass-bg backdrop-blur-xl border border-glass-border rounded-xl p-4 md:p-6 h-28 md:h-32 flex flex-col justify-between transition-all hover:border-red-primary/50 active:bg-surface-highlight">
                 <div className="flex items-center justify-between">
                   <Users className="w-6 h-6 md:w-8 md:h-8 text-red-primary" />
                   {counts.clients > 0 && (
@@ -77,11 +75,9 @@ export default function DashboardPage() {
           <Link href="/dashboard/projects/board">
             <motion.div
               variants={metroItemVariants}
-              whileHover={metroTileHover}
-              whileTap={{ scale: 0.97 }}
               className="relative overflow-hidden group cursor-pointer"
             >
-              <div className="bg-glass-bg backdrop-blur-xl border border-glass-border rounded-xl p-4 md:p-6 h-28 md:h-32 flex flex-col justify-between transition-all active:bg-surface-highlight">
+              <div className="bg-glass-bg backdrop-blur-xl border border-glass-border rounded-xl p-4 md:p-6 h-28 md:h-32 flex flex-col justify-between transition-all hover:border-red-primary/50 active:bg-surface-highlight">
                 <div className="flex items-center justify-between">
                   <FolderKanban className="w-6 h-6 md:w-8 md:h-8 text-red-primary" />
                   {counts.projects > 0 && (
@@ -100,11 +96,9 @@ export default function DashboardPage() {
           <Link href="/dashboard/content">
             <motion.div
               variants={metroItemVariants}
-              whileHover={metroTileHover}
-              whileTap={{ scale: 0.97 }}
               className="relative overflow-hidden group cursor-pointer"
             >
-              <div className="bg-glass-bg backdrop-blur-xl border border-glass-border rounded-xl p-4 md:p-6 h-28 md:h-32 flex flex-col justify-between transition-all active:bg-surface-highlight">
+              <div className="bg-glass-bg backdrop-blur-xl border border-glass-border rounded-xl p-4 md:p-6 h-28 md:h-32 flex flex-col justify-between transition-all hover:border-red-primary/50 active:bg-surface-highlight">
                 <div className="flex items-center justify-between">
                   <FileText className="w-6 h-6 md:w-8 md:h-8 text-red-primary" />
                   {counts.content > 0 && (
@@ -123,11 +117,9 @@ export default function DashboardPage() {
           <Link href="/dashboard/journal">
             <motion.div
               variants={metroItemVariants}
-              whileHover={metroTileHover}
-              whileTap={{ scale: 0.97 }}
               className="relative overflow-hidden group cursor-pointer"
             >
-              <div className="bg-glass-bg backdrop-blur-xl border border-glass-border rounded-xl p-4 md:p-6 h-28 md:h-32 flex flex-col justify-between transition-all active:bg-surface-highlight">
+              <div className="bg-glass-bg backdrop-blur-xl border border-glass-border rounded-xl p-4 md:p-6 h-28 md:h-32 flex flex-col justify-between transition-all hover:border-red-primary/50 active:bg-surface-highlight">
                 <div className="flex items-center justify-between">
                   <BookOpen className="w-6 h-6 md:w-8 md:h-8 text-red-primary" />
                 </div>
