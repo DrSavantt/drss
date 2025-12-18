@@ -1,10 +1,12 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { motion } from 'framer-motion';
 import Link from 'next/link';
 import { Users, FolderKanban, FileText, BookOpen } from 'lucide-react';
 import { MetricCards } from '@/components/dashboard/metric-cards';
 import { RecentActivity } from '@/components/dashboard/recent-activity';
+import { metroItemVariants, metroTileHover, metroContainerVariants } from '@/lib/animations';
 
 export default function DashboardPage() {
   const [counts, setCounts] = useState({
@@ -42,10 +44,20 @@ export default function DashboardPage() {
       
       {/* Quick Create Metro Tiles */}
       <section>
-        <div className="grid grid-cols-2 gap-3 md:gap-4 md:grid-cols-4">
+        <motion.div 
+          className="grid grid-cols-2 gap-3 md:gap-4 md:grid-cols-4"
+          variants={metroContainerVariants}
+          initial="hidden"
+          animate="visible"
+        >
           {/* CLIENT TILE */}
           <Link href="/dashboard/clients/new">
-            <div className="relative overflow-hidden group cursor-pointer transition-all duration-200 hover:shadow-lg active:opacity-90">
+            <motion.div
+              variants={metroItemVariants}
+              whileHover={metroTileHover}
+              whileTap={{ scale: 0.97 }}
+              className="relative overflow-hidden group cursor-pointer"
+            >
               <div className="bg-glass-bg backdrop-blur-xl border border-glass-border rounded-xl p-4 md:p-6 h-28 md:h-32 flex flex-col justify-between transition-all active:bg-surface-highlight">
                 <div className="flex items-center justify-between">
                   <Users className="w-6 h-6 md:w-8 md:h-8 text-red-primary" />
@@ -58,12 +70,17 @@ export default function DashboardPage() {
                   <p className="text-xs text-muted-foreground hidden sm:block">Create new</p>
                 </div>
               </div>
-            </div>
+            </motion.div>
           </Link>
 
           {/* PROJECT TILE */}
           <Link href="/dashboard/projects/board">
-            <div className="relative overflow-hidden group cursor-pointer transition-all duration-200 hover:shadow-lg active:opacity-90">
+            <motion.div
+              variants={metroItemVariants}
+              whileHover={metroTileHover}
+              whileTap={{ scale: 0.97 }}
+              className="relative overflow-hidden group cursor-pointer"
+            >
               <div className="bg-glass-bg backdrop-blur-xl border border-glass-border rounded-xl p-4 md:p-6 h-28 md:h-32 flex flex-col justify-between transition-all active:bg-surface-highlight">
                 <div className="flex items-center justify-between">
                   <FolderKanban className="w-6 h-6 md:w-8 md:h-8 text-red-primary" />
@@ -76,12 +93,17 @@ export default function DashboardPage() {
                   <p className="text-xs text-muted-foreground hidden sm:block">Create new</p>
                 </div>
               </div>
-            </div>
+            </motion.div>
           </Link>
 
           {/* CONTENT TILE */}
           <Link href="/dashboard/content">
-            <div className="relative overflow-hidden group cursor-pointer transition-all duration-200 hover:shadow-lg active:opacity-90">
+            <motion.div
+              variants={metroItemVariants}
+              whileHover={metroTileHover}
+              whileTap={{ scale: 0.97 }}
+              className="relative overflow-hidden group cursor-pointer"
+            >
               <div className="bg-glass-bg backdrop-blur-xl border border-glass-border rounded-xl p-4 md:p-6 h-28 md:h-32 flex flex-col justify-between transition-all active:bg-surface-highlight">
                 <div className="flex items-center justify-between">
                   <FileText className="w-6 h-6 md:w-8 md:h-8 text-red-primary" />
@@ -94,12 +116,17 @@ export default function DashboardPage() {
                   <p className="text-xs text-muted-foreground hidden sm:block">Create new</p>
                 </div>
               </div>
-            </div>
+            </motion.div>
           </Link>
 
           {/* NOTE TILE */}
           <Link href="/dashboard/journal">
-            <div className="relative overflow-hidden group cursor-pointer transition-all duration-200 hover:shadow-lg active:opacity-90">
+            <motion.div
+              variants={metroItemVariants}
+              whileHover={metroTileHover}
+              whileTap={{ scale: 0.97 }}
+              className="relative overflow-hidden group cursor-pointer"
+            >
               <div className="bg-glass-bg backdrop-blur-xl border border-glass-border rounded-xl p-4 md:p-6 h-28 md:h-32 flex flex-col justify-between transition-all active:bg-surface-highlight">
                 <div className="flex items-center justify-between">
                   <BookOpen className="w-6 h-6 md:w-8 md:h-8 text-red-primary" />
@@ -109,9 +136,9 @@ export default function DashboardPage() {
                   <p className="text-xs text-muted-foreground hidden sm:block">Quick capture</p>
                 </div>
               </div>
-            </div>
+            </motion.div>
           </Link>
-        </div>
+        </motion.div>
       </section>
       
       {/* Key Metrics - The new collapsible cards */}
