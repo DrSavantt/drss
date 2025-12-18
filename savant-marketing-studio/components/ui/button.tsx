@@ -1,7 +1,6 @@
 'use client'
 
 import { forwardRef } from 'react'
-import { motion } from 'framer-motion'
 import { Loader2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -24,6 +23,7 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(
       focus-visible:ring-offset-2 focus-visible:ring-offset-background
       disabled:opacity-50 disabled:pointer-events-none
       h-11 md:h-10 px-4 py-2
+      active:opacity-80
     `
 
     const variants = {
@@ -34,13 +34,10 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(
     }
 
     return (
-      <motion.button
+      <button
         ref={ref}
         type={type}
         onClick={onClick}
-        whileHover={{ scale: 1.02 }}
-        whileTap={{ scale: 0.98 }}
-        transition={{ type: "spring", stiffness: 400, damping: 17 }}
         disabled={isLoading || disabled}
         className={cn(baseStyles, variants[variant], className)}
       >
@@ -55,7 +52,7 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(
         ) : (
           children
         )}
-      </motion.button>
+      </button>
     )
   }
 )

@@ -7,7 +7,7 @@ import {
   Users, FolderKanban, FileText, CheckCircle, 
   Upload, Edit
 } from 'lucide-react';
-import { springTransitions, metroItemVariants, metroContainerVariants } from '@/lib/animations';
+import { metroItemVariants, metroContainerVariants } from '@/lib/animations';
 
 interface Activity {
   id: string;
@@ -147,8 +147,6 @@ export function RecentActivity() {
           <motion.div 
             key={activity.id}
             variants={metroItemVariants}
-            whileHover={{ x: 4 }}
-            transition={springTransitions.springMicro}
             className="flex items-start gap-3 p-3 rounded-lg hover:bg-hover-bg transition-colors cursor-default"
           >
             <div className="text-muted-foreground mt-0.5">
