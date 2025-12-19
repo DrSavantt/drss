@@ -1,19 +1,16 @@
 'use client'
 
 import { useState, useCallback, useMemo } from 'react'
-import { Search, Folder, ChevronDown, X, Plus } from 'lucide-react'
-import { useMobile } from '@/hooks/use-mobile'
+import { X } from 'lucide-react'
 import { JournalCapture } from '@/components/journal-capture'
-import { JournalFeed } from '@/components/journal-feed'
 import { JournalBulkActionBar } from '@/app/components/journal-bulk-action-bar'
 import { ConfirmationModal } from '@/app/components/confirmation-modal'
 import { TagModal } from '@/app/components/tag-modal'
 import { ToastContainer } from '@/app/components/toast'
 import { NoteEditorModal } from '@/app/components/note-editor-modal'
-import { JournalInputBar } from '@/components/journal-input-bar'
-import { JournalTimelineItem } from '@/components/journal-timeline-item'
 import { JournalFolderModal } from '@/components/journal-folder-modal'
 import { JournalSearchModal } from '@/components/journal-search-modal'
+import { JournalSidebar, JournalList, JournalContent, JournalMobile } from '@/components/journal'
 import { 
   getJournalEntries,
   bulkDeleteJournalEntries,
@@ -104,7 +101,6 @@ export function JournalPageClient({
   initialTimeline = [],
   initialCounts = { totalChats: 0, totalEntries: 0 }
 }: Props) {
-  const isMobile = useMobile()
   const [entries, setEntries] = useState<Entry[]>(initialEntries)
   const [currentChatId, setCurrentChatId] = useState(defaultChatId)
   const [isLoading, setIsLoading] = useState(false)
@@ -113,6 +109,9 @@ export function JournalPageClient({
   const [folders, setFolders] = useState<JournalFolder[]>(initialFolders)
   const [timeline, setTimeline] = useState<TimelineItem[]>(initialTimeline)
   const [selectedFolder, setSelectedFolder] = useState<string | null>(null)
+  
+  // Selected item for 3-column view
+  const [selectedItem, setSelectedItem] = useState<TimelineItem | null>(null)
   
   // Modal states
   const [folderModalOpen, setFolderModalOpen] = useState(false)
@@ -156,6 +155,7 @@ export function JournalPageClient({
   // Handle folder selection
   const handleFolderSelect = useCallback(async (folderId: string | null) => {
     setSelectedFolder(folderId)
+    setSelectedItem(null) // Clear selected item when changing folders
     try {
       const newTimeline = await getUnifiedJournalTimeline(folderId)
       setTimeline(newTimeline)
@@ -188,9 +188,10 @@ export function JournalPageClient({
     }
   }, [currentChatId, selectedFolder])
 
-  // Remove entry from local state after delete
-  const handleEntryDeleted = useCallback((deletedId: string) => {
-    setEntries(prev => prev.filter(e => e.id !== deletedId))
+  // Handle item selection in 3-column view
+  const handleSelectItem = useCallback((item: TimelineItem) => {
+    setSelectedItem(item)
+    setCurrentChatId(item.id)
   }, [])
 
   // Toast helper
@@ -207,18 +208,6 @@ export function JournalPageClient({
   }, [removeToast])
 
   // Selection handlers
-  const toggleSelection = useCallback((id: string) => {
-    setSelectedIds(prev => {
-      const newSet = new Set(prev)
-      if (newSet.has(id)) {
-        newSet.delete(id)
-      } else {
-        newSet.add(id)
-      }
-      return newSet
-    })
-  }, [])
-
   const cancelSelection = useCallback(() => {
     setSelectedIds(new Set())
   }, [])
@@ -312,91 +301,67 @@ export function JournalPageClient({
     addToast('Note created successfully', 'success')
   }, [addToast])
 
-  const handleConvertToNote = useCallback((entry: Entry) => {
-    const title = entry.content.substring(0, 50).replace(/@[^\s]+/g, '').trim()
-    const clientId = entry.mentioned_clients && entry.mentioned_clients.length > 0 
-      ? entry.mentioned_clients[0] 
-      : ''
-    
-    setNoteInitialData({
-      title,
-      content: entry.content,
-      clientId,
-      projectId: ''
-    })
-    setIsNoteModalOpen(true)
-  }, [])
-
+  // Render both layouts - CSS will show/hide based on screen size
   return (
-    <div className="min-h-screen flex flex-col bg-background">
-      {/* Header */}
-      <header className="sticky top-0 z-40 bg-background/95 backdrop-blur-sm border-b border-border">
-        <div className="flex items-center justify-between px-4 md:px-6 py-3">
-          <h1 className="text-xl md:text-2xl font-bold text-foreground">Journal</h1>
-          <div className="flex items-center gap-2">
-            <button 
-              onClick={() => setSearchOpen(true)}
-              className="p-2 text-silver hover:text-foreground hover:bg-surface-highlight rounded-lg transition-colors"
-            >
-              <Search className="w-5 h-5" />
-            </button>
-            {/* Desktop only: Quick capture button in header */}
-            <button 
-              onClick={() => setCaptureModalOpen(true)}
-              className="hidden md:flex items-center gap-2 px-4 py-2 bg-red-primary hover:bg-red-bright text-white rounded-lg transition-colors"
-            >
-              <Plus className="w-4 h-4" />
-              <span className="text-sm font-medium">New</span>
-            </button>
-          </div>
-        </div>
-      </header>
-
-      {/* Folder selector button */}
-      <button
-        onClick={() => setFolderModalOpen(true)}
-        className="flex items-center gap-2 px-4 md:px-6 py-3 border-b border-border hover:bg-surface-highlight transition-colors"
-      >
-        <Folder className="w-4 h-4 text-red-primary" />
-        <span className="text-sm md:text-base font-medium text-foreground">
-          {selectedFolderData?.name || 'All Items'}
-        </span>
-        <span className="text-xs md:text-sm text-silver">
-          ({timeline.length})
-        </span>
-        <ChevronDown className="w-4 h-4 ml-auto text-silver" />
-      </button>
-
-      {/* Timeline */}
-      <div className={`flex-1 overflow-y-auto ${isMobile ? 'pb-24' : 'pb-8'}`}>
-        {timeline.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-16 px-4 text-center">
-            <div className="w-16 h-16 bg-surface-highlight rounded-full flex items-center justify-center mb-4">
-              <Folder className="w-8 h-8 text-silver" />
-            </div>
-            <h3 className="text-lg font-medium text-foreground mb-2">No captures yet</h3>
-            <p className="text-sm text-silver mb-4">
-              {isMobile ? 'Tap below to start capturing' : 'Click "New" to start capturing'}
-            </p>
-          </div>
-        ) : (
-          timeline.map(item => (
-            <JournalTimelineItem
-              key={item.id}
-              item={item}
-              folderName={folders.find(f => f.id === item.folder_id)?.name}
-              onClick={() => handleChatChange(item.id)}
-            />
-          ))
-        )}
+    <>
+      {/* Mobile Layout - shown on screens < 1024px */}
+      <div className="lg:hidden">
+        <JournalMobile
+          timeline={timeline}
+          folders={folders}
+          selectedFolder={selectedFolder}
+          onSelectFolder={handleFolderSelect}
+          onCapture={() => setCaptureModalOpen(true)}
+          onFoldersChange={handleFoldersChange}
+          totalCount={initialCounts.totalChats}
+          clients={clients}
+          projects={projects}
+          defaultChatId={defaultChatId}
+          onEntryCreated={handleEntryCreated}
+        />
       </div>
 
-      {/* Mobile: Bottom input bar */}
-      {isMobile && (
-        <JournalInputBar onFocus={() => setCaptureModalOpen(true)} />
-      )}
+      {/* Desktop 3-column layout - shown on screens >= 1024px */}
+      <div 
+        className="hidden lg:flex overflow-hidden bg-background" 
+        style={{ height: 'calc(100dvh - 3.5rem)' }}
+      >
+        {/* LEFT: Sidebar Navigation (240px fixed) */}
+        <div className="w-60 flex-shrink-0 h-full">
+          <JournalSidebar 
+            selectedFolder={selectedFolder}
+            onSelectFolder={handleFolderSelect}
+            onCapture={() => setCaptureModalOpen(true)}
+            onSearch={() => setSearchOpen(true)}
+            folders={folders}
+            totalCount={initialCounts.totalChats}
+            onCreateFolder={() => setFolderModalOpen(true)}
+          />
+        </div>
+        
+        {/* MIDDLE: Items List (320px fixed) */}
+        <div className="w-80 flex-shrink-0 h-full">
+          <JournalList 
+            timeline={timeline}
+            selectedItem={selectedItem}
+            onSelectItem={handleSelectItem}
+            folderName={selectedFolderData?.name}
+            isLoading={isLoading}
+          />
+        </div>
+        
+        {/* RIGHT: Content View (flex-1) */}
+        <div className="flex-1 min-w-0 h-full">
+          <JournalContent 
+            item={selectedItem}
+            onCapture={() => setCaptureModalOpen(true)}
+          />
+        </div>
+      </div>
 
-      {/* Folder Modal (desktop: centered, mobile: bottom sheet) */}
+      {/* Modals - shared between mobile and desktop */}
+      
+      {/* Folder Modal */}
       <JournalFolderModal
         isOpen={folderModalOpen}
         onClose={() => setFolderModalOpen(false)}
@@ -412,7 +377,11 @@ export function JournalPageClient({
         isOpen={searchOpen}
         onClose={() => setSearchOpen(false)}
         items={timeline}
-        onItemClick={handleChatChange}
+        onItemClick={(id) => {
+          const item = timeline.find(i => i.id === id)
+          if (item) handleSelectItem(item)
+          setSearchOpen(false)
+        }}
       />
 
       {/* Quick Capture Modal */}
@@ -422,13 +391,7 @@ export function JournalPageClient({
             className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100]"
             onClick={() => setCaptureModalOpen(false)}
           />
-          <div 
-            className={`fixed z-[101] bg-surface border border-border shadow-xl ${
-              isMobile 
-                ? 'inset-x-4 top-1/4 rounded-2xl max-h-[60vh] overflow-hidden'
-                : 'left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-xl w-full max-w-xl'
-            }`}
-          >
+          <div className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-[101] bg-surface border border-border shadow-xl rounded-xl w-full max-w-xl mx-4">
             <div className="flex items-center justify-between p-4 border-b border-border">
               <h2 className="text-lg font-semibold text-foreground">Quick Capture</h2>
               <button 
@@ -464,7 +427,7 @@ export function JournalPageClient({
         hasPinnedItems={hasPinnedItems}
       />
 
-      {/* Modals */}
+      {/* Delete Confirmation Modal */}
       <ConfirmationModal
         isOpen={isDeleteModalOpen}
         title="Delete Entries"
@@ -476,6 +439,7 @@ export function JournalPageClient({
         isDanger
       />
 
+      {/* Tag Modal */}
       <TagModal
         isOpen={isTagModalOpen}
         onClose={() => setIsTagModalOpen(false)}
@@ -497,6 +461,6 @@ export function JournalPageClient({
 
       {/* Toast Notifications */}
       <ToastContainer toasts={toasts} removeToast={removeToast} />
-    </div>
+    </>
   )
 }
