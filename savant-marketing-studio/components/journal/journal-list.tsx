@@ -3,6 +3,7 @@
 import { useMemo } from 'react'
 import { MessageCircle, Inbox, User, FolderKanban, Clock, FileText, MoreVertical } from 'lucide-react'
 import { formatDistanceToNow, format } from 'date-fns'
+import { useMentionNames, getMentionDisplayName } from '@/lib/hooks/use-mention-names'
 
 interface TimelineItem {
   id: string
@@ -17,6 +18,7 @@ interface TimelineItem {
     content: string
     tags: string[]
     created_at: string
+    mentioned_clients?: string[]
   } | null
 }
 
@@ -68,9 +70,9 @@ export function JournalList({
   }, [timeline])
 
   return (
-    <div className="h-full border-r border-border/50 flex flex-col bg-[#0A0A0A]">
+    <div className="h-full border-r border-border/50 flex flex-col bg-background">
       {/* Header with shadow */}
-      <div className="px-5 py-4 border-b border-border/50 bg-gradient-to-b from-background to-background/50">
+      <div className="px-5 py-4 border-b border-border/50 bg-gradient-to-b from-background to-background/95">
         <div className="flex items-center justify-between mb-1">
           <h2 className="text-base font-semibold text-foreground">
             {folderName || 'All Items'}
@@ -110,7 +112,7 @@ export function JournalList({
                     <div className="w-full h-px bg-gradient-to-r from-transparent via-border/30 to-transparent" />
                   </div>
                   <div className="relative flex justify-center">
-                    <span className="px-3 py-1 bg-[#0A0A0A] text-xs font-bold text-silver/50 uppercase tracking-wider">
+                    <span className="px-3 py-1 bg-background text-xs font-bold text-silver/50 uppercase tracking-wider">
                       {month}
                     </span>
                   </div>
@@ -144,6 +146,10 @@ interface ItemCardProps {
 }
 
 function ItemCard({ item, isSelected, onClick }: ItemCardProps) {
+  // Get mention names for any UUIDs
+  const mentionIds = item.latest_entry?.mentioned_clients || []
+  const { names: mentionNames } = useMentionNames(mentionIds)
+
   // Get icon based on type
   const getIcon = (type: string) => {
     switch (type) {
@@ -228,6 +234,13 @@ function ItemCard({ item, isSelected, onClick }: ItemCardProps) {
             {item.latest_entry?.tags && item.latest_entry.tags.slice(0, 2).map((tag: string) => (
               <span key={tag} className="px-2 py-0.5 bg-surface-highlight/50 text-[10px] font-medium text-silver/60 rounded-full">
                 #{tag}
+              </span>
+            ))}
+            
+            {/* Mentions - show names not UUIDs */}
+            {mentionIds.slice(0, 2).map((mentionId: string) => (
+              <span key={mentionId} className="px-2 py-0.5 bg-red-primary/10 text-[10px] font-medium text-red-primary/80 rounded-full">
+                @{getMentionDisplayName(mentionId, mentionNames)}
               </span>
             ))}
           </div>

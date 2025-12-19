@@ -14,6 +14,7 @@ import {
 } from 'lucide-react'
 import { format } from 'date-fns'
 import { getJournalEntries } from '@/app/actions/journal'
+import { useMentionNames, getMentionDisplayName } from '@/lib/hooks/use-mention-names'
 
 interface TimelineItem {
   id: string
@@ -76,7 +77,7 @@ export function JournalContent({ item, onCapture }: Props) {
 
   if (!item) {
     return (
-      <div className="h-full flex items-center justify-center bg-[#0A0A0A]">
+      <div className="h-full flex items-center justify-center bg-background">
         <div className="text-center max-w-sm">
           <div className="w-24 h-24 mx-auto mb-6 rounded-2xl bg-surface/30 flex items-center justify-center">
             <Inbox className="w-12 h-12 text-silver/20" />
@@ -119,9 +120,9 @@ export function JournalContent({ item, onCapture }: Props) {
   }
 
   return (
-    <div className="h-full flex flex-col bg-[#0A0A0A]">
+    <div className="h-full flex flex-col bg-background">
       {/* Header with gradient */}
-      <div className="px-8 py-5 border-b border-border/50 bg-gradient-to-b from-background to-background/50">
+      <div className="px-8 py-5 border-b border-border/50 bg-gradient-to-b from-background to-background/95">
         <div className="flex items-start justify-between">
           <div className="flex items-start gap-4">
             {/* Icon */}
@@ -194,7 +195,7 @@ export function JournalContent({ item, onCapture }: Props) {
             </p>
           </div>
         ) : (
-          <EntriesView entries={entries} itemType={item.type} />
+          <EntriesView entries={entries} />
         )}
       </div>
     </div>
@@ -204,129 +205,76 @@ export function JournalContent({ item, onCapture }: Props) {
 // Entries view component
 interface EntriesViewProps {
   entries: Entry[]
-  itemType: string
 }
 
-function EntriesView({ entries, itemType }: EntriesViewProps) {
-  // Check if entries look like chat messages (have role-like structure)
-  const isChat = entries.some(e => e.content.includes('User:') || e.content.includes('Assistant:'))
+function EntriesView({ entries }: EntriesViewProps) {
+  // Collect all mention IDs from all entries
+  const allMentionIds = entries.flatMap(e => e.mentioned_clients || [])
+  const { names: mentionNames } = useMentionNames(allMentionIds)
 
-  if (isChat) {
-    return <ChatView entries={entries} />
-  }
-
-  return <NoteView entries={entries} />
-}
-
-// Chat view component
-function ChatView({ entries }: { entries: Entry[] }) {
   return (
-    <div className="max-w-3xl space-y-4">
-      {entries.map((entry, i) => {
-        // Try to parse if it's a structured message
-        const isUser = entry.content.includes('User:') || i % 2 === 0
-        
-        return (
-          <div 
-            key={entry.id}
-            className={`p-5 rounded-xl border ${
-              isUser
-                ? 'bg-surface/50 border-border/30 ml-12'
-                : 'bg-red-primary/5 border-red-primary/10 mr-12'
-            }`}
-          >
-            <div className="flex items-center gap-2 mb-3">
-              <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${
-                isUser
-                  ? 'bg-surface-highlight text-foreground'
-                  : 'bg-red-primary/20 text-red-primary'
-              }`}>
-                {isUser ? 'Y' : 'AI'}
-              </div>
-              <span className="text-xs font-semibold text-silver/70">
-                {isUser ? 'You' : 'Assistant'}
-              </span>
-              <span className="text-xs text-silver/40">
-                {format(new Date(entry.created_at), 'h:mm a')}
-              </span>
-            </div>
-            <p className="text-sm text-foreground/90 leading-relaxed whitespace-pre-wrap">
-              {entry.content.replace(/^(User:|Assistant:)\s*/, '')}
-            </p>
-            
-            {/* Tags */}
-            {entry.tags && entry.tags.length > 0 && (
-              <div className="flex items-center gap-2 mt-3 flex-wrap">
-                {entry.tags.map((tag: string) => (
-                  <span key={tag} className="px-2 py-0.5 bg-surface-highlight/50 text-[10px] font-medium text-silver/60 rounded-full">
-                    #{tag}
-                  </span>
-                ))}
-              </div>
-            )}
-          </div>
-        )
-      })}
+    <div className="max-w-3xl space-y-6">
+      {entries.map((entry) => (
+        <EntryCard key={entry.id} entry={entry} mentionNames={mentionNames} />
+      ))}
     </div>
   )
 }
 
-// Note view component
-function NoteView({ entries }: { entries: Entry[] }) {
+// Entry card component
+interface EntryCardProps {
+  entry: Entry
+  mentionNames: Record<string, string>
+}
+
+function EntryCard({ entry, mentionNames }: EntryCardProps) {
   return (
-    <div className="max-w-3xl space-y-6">
-      {entries.map((entry) => (
-        <div 
-          key={entry.id}
-          className="p-6 rounded-xl border border-border/30 bg-surface/30 hover:bg-surface/40 transition-colors"
-        >
-          {/* Entry header */}
-          <div className="flex items-center justify-between mb-4 pb-3 border-b border-border/20">
-            <div className="flex items-center gap-2 text-xs text-silver/60">
-              <Calendar className="w-3 h-3" />
-              <span>{format(new Date(entry.created_at), 'PPP')}</span>
-              <span>·</span>
-              <span>{format(new Date(entry.created_at), 'h:mm a')}</span>
-            </div>
-            
-            {entry.is_pinned && (
-              <div className="flex items-center gap-1 text-xs text-amber-500">
-                <Star className="w-3 h-3 fill-amber-500" />
-                <span>Pinned</span>
-              </div>
-            )}
-          </div>
-          
-          {/* Entry content */}
-          <div className="prose prose-invert prose-sm max-w-none
-            prose-headings:text-foreground prose-headings:font-bold prose-headings:mb-2
-            prose-p:text-foreground/80 prose-p:leading-relaxed prose-p:mb-3
-            prose-a:text-red-primary prose-a:no-underline hover:prose-a:underline
-            prose-strong:text-foreground prose-strong:font-semibold
-            prose-code:text-red-primary/90 prose-code:bg-surface/50 prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded prose-code:text-xs
-            prose-ul:my-2 prose-ol:my-2
-            prose-li:text-foreground/80 prose-li:my-1
-          ">
-            <p className="whitespace-pre-wrap">{entry.content}</p>
-          </div>
-          
-          {/* Tags and mentions */}
-          {((entry.tags && entry.tags.length > 0) || (entry.mentioned_clients && entry.mentioned_clients.length > 0)) && (
-            <div className="flex items-center gap-2 mt-4 pt-3 border-t border-border/20 flex-wrap">
-              {entry.tags?.map((tag: string) => (
-                <span key={tag} className="px-3 py-1 bg-surface/50 border border-border/30 text-xs font-medium text-silver/70 rounded-lg">
-                  #{tag}
-                </span>
-              ))}
-              {entry.mentioned_clients?.map((client: string) => (
-                <span key={client} className="px-3 py-1 bg-red-primary/10 border border-red-primary/20 text-xs font-medium text-red-primary/90 rounded-lg">
-                  @{client}
-                </span>
-              ))}
-            </div>
-          )}
+    <div className="p-6 rounded-xl border border-border/30 bg-surface/30 hover:bg-surface/40 transition-colors">
+      {/* Entry header */}
+      <div className="flex items-center justify-between mb-4 pb-3 border-b border-border/20">
+        <div className="flex items-center gap-2 text-xs text-silver/60">
+          <Calendar className="w-3 h-3" />
+          <span>{format(new Date(entry.created_at), 'PPP')}</span>
+          <span>·</span>
+          <span>{format(new Date(entry.created_at), 'h:mm a')}</span>
         </div>
-      ))}
+        
+        {entry.is_pinned && (
+          <div className="flex items-center gap-1 text-xs text-amber-500">
+            <Star className="w-3 h-3 fill-amber-500" />
+            <span>Pinned</span>
+          </div>
+        )}
+      </div>
+      
+      {/* Entry content */}
+      <div className="prose prose-sm max-w-none dark:prose-invert
+        prose-headings:text-foreground prose-headings:font-bold prose-headings:mb-2
+        prose-p:text-foreground/80 prose-p:leading-relaxed prose-p:mb-3
+        prose-a:text-red-primary prose-a:no-underline hover:prose-a:underline
+        prose-strong:text-foreground prose-strong:font-semibold
+        prose-code:text-red-primary/90 prose-code:bg-surface/50 prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded prose-code:text-xs
+        prose-ul:my-2 prose-ol:my-2
+        prose-li:text-foreground/80 prose-li:my-1
+      ">
+        <p className="whitespace-pre-wrap">{entry.content}</p>
+      </div>
+      
+      {/* Tags and mentions */}
+      {((entry.tags && entry.tags.length > 0) || (entry.mentioned_clients && entry.mentioned_clients.length > 0)) && (
+        <div className="flex items-center gap-2 mt-4 pt-3 border-t border-border/20 flex-wrap">
+          {entry.tags?.map((tag: string) => (
+            <span key={tag} className="px-3 py-1 bg-surface/50 border border-border/30 text-xs font-medium text-silver/70 rounded-lg">
+              #{tag}
+            </span>
+          ))}
+          {entry.mentioned_clients?.map((mentionId: string) => (
+            <span key={mentionId} className="px-3 py-1 bg-red-primary/10 border border-red-primary/20 text-xs font-medium text-red-primary/90 rounded-lg">
+              @{getMentionDisplayName(mentionId, mentionNames)}
+            </span>
+          ))}
+        </div>
+      )}
     </div>
   )
 }
