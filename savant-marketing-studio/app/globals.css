@@ -92,6 +92,52 @@ main {
   min-height: 100dvh;
 }
 
+/* ========================================
+   POLISH UTILITIES - SMOOTH SCROLLBARS
+   ======================================== */
+
+/* Desktop smooth scrollbar */
+@media (min-width: 1024px) {
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: rgb(255 255 255 / 0.1) transparent;
+  }
+
+  *::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  *::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  *::-webkit-scrollbar-thumb {
+    background: rgb(255 255 255 / 0.1);
+    border-radius: 3px;
+  }
+
+  *::-webkit-scrollbar-thumb:hover {
+    background: rgb(255 255 255 / 0.15);
+  }
+}
+
+/* Better text rendering */
+body {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+/* Focus rings */
+button:focus-visible,
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible {
+  outline: 2px solid rgb(239 68 68 / 0.5);
+  outline-offset: 2px;
+}
+
 /* Prevent iOS zoom on input focus - 16px minimum */
 input,
 textarea,

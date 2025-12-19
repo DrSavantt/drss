@@ -1,7 +1,7 @@
 'use client'
 
 import { useMemo } from 'react'
-import { MessageCircle, Inbox, User, FolderKanban } from 'lucide-react'
+import { MessageCircle, Inbox, User, FolderKanban, Clock, FileText, MoreVertical } from 'lucide-react'
 import { formatDistanceToNow, format } from 'date-fns'
 
 interface TimelineItem {
@@ -67,6 +67,83 @@ export function JournalList({
     return groupByMonth(timeline)
   }, [timeline])
 
+  return (
+    <div className="h-full border-r border-border/50 flex flex-col bg-[#0A0A0A]">
+      {/* Header with shadow */}
+      <div className="px-5 py-4 border-b border-border/50 bg-gradient-to-b from-background to-background/50">
+        <div className="flex items-center justify-between mb-1">
+          <h2 className="text-base font-semibold text-foreground">
+            {folderName || 'All Items'}
+          </h2>
+          <button className="p-1.5 hover:bg-surface/40 rounded-lg transition-colors">
+            <MoreVertical className="w-4 h-4 text-silver/60" />
+          </button>
+        </div>
+        <p className="text-xs text-silver/60">
+          {timeline.length || 0} items · Last updated today
+        </p>
+      </div>
+      
+      {/* Scrollable list with better spacing */}
+      <div className="flex-1 overflow-y-auto">
+        {isLoading ? (
+          <div className="flex items-center justify-center h-64">
+            <div className="animate-spin rounded-full h-8 w-8 border-2 border-red-primary border-t-transparent" />
+          </div>
+        ) : timeline.length === 0 ? (
+          <div className="flex flex-col items-center justify-center h-64 px-6 text-center">
+            <div className="w-16 h-16 rounded-full bg-surface/50 flex items-center justify-center mb-4">
+              <Inbox className="w-8 h-8 text-silver/30" />
+            </div>
+            <h3 className="text-sm font-semibold text-foreground mb-1">No items yet</h3>
+            <p className="text-xs text-silver/60 max-w-[200px]">
+              Start capturing your ideas and they'll appear here
+            </p>
+          </div>
+        ) : (
+          <div className="p-3 space-y-6">
+            {Object.entries(groupedItems).map(([month, monthItems]) => (
+              <div key={month}>
+                {/* Month header with gradient line */}
+                <div className="relative mb-3">
+                  <div className="absolute inset-0 flex items-center">
+                    <div className="w-full h-px bg-gradient-to-r from-transparent via-border/30 to-transparent" />
+                  </div>
+                  <div className="relative flex justify-center">
+                    <span className="px-3 py-1 bg-[#0A0A0A] text-xs font-bold text-silver/50 uppercase tracking-wider">
+                      {month}
+                    </span>
+                  </div>
+                </div>
+                
+                {/* Items as cards */}
+                <div className="space-y-2">
+                  {monthItems.map((item) => (
+                    <ItemCard
+                      key={`${item.type}-${item.id}`}
+                      item={item}
+                      isSelected={selectedItem?.id === item.id && selectedItem?.type === item.type}
+                      onClick={() => onSelectItem(item)}
+                    />
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
+// Polished item card
+interface ItemCardProps {
+  item: TimelineItem
+  isSelected: boolean
+  onClick: () => void
+}
+
+function ItemCard({ item, isSelected, onClick }: ItemCardProps) {
   // Get icon based on type
   const getIcon = (type: string) => {
     switch (type) {
@@ -85,123 +162,77 @@ export function JournalList({
   const getIconColor = (type: string) => {
     switch (type) {
       case 'inbox':
-        return 'text-red-primary'
+        return 'bg-red-primary/10 text-red-primary'
       case 'client':
-        return 'text-info'
+        return 'bg-blue-500/10 text-blue-500'
       case 'project':
-        return 'text-warning'
+        return 'bg-amber-500/10 text-amber-500'
       default:
-        return 'text-silver'
+        return 'bg-surface-highlight text-silver/70'
     }
   }
 
   return (
-    <div className="h-full border-r border-border flex flex-col bg-background">
-      {/* Header */}
-      <div className="px-4 py-4 border-b border-border">
-        <h2 className="font-semibold text-foreground">
-          {folderName || 'All Items'}
-        </h2>
-        <p className="text-xs text-silver mt-0.5">
-          {timeline.length} {timeline.length === 1 ? 'item' : 'items'}
-        </p>
-      </div>
-      
-      {/* Items list (scrollable) */}
-      <div className="flex-1 overflow-y-auto">
-        {isLoading ? (
-          <div className="p-8 text-center">
-            <div className="w-6 h-6 border-2 border-red-primary border-t-transparent rounded-full animate-spin mx-auto mb-3" />
-            <p className="text-sm text-silver">Loading...</p>
-          </div>
-        ) : timeline.length === 0 ? (
-          <div className="p-8 text-center text-silver">
-            <Inbox className="w-10 h-10 mx-auto mb-3 opacity-30" />
-            <p className="text-sm font-medium">No items yet</p>
-            <p className="text-xs mt-1">Create your first capture to get started</p>
-          </div>
-        ) : (
-          Object.entries(groupedItems).map(([month, monthItems]) => (
-            <div key={month}>
-              {/* Month header */}
-              <div className="px-4 py-2 bg-surface/50 sticky top-0 z-10 border-b border-border/50">
-                <span className="text-xs font-medium text-silver uppercase tracking-wider">{month}</span>
-              </div>
-              
-              {/* Items in this month */}
-              <div>
-                {monthItems.map((item) => (
-                  <button
-                    key={item.id}
-                    type="button"
-                    onClick={(e) => {
-                      e.preventDefault()
-                      e.stopPropagation()
-                      onSelectItem(item)
-                    }}
-                    className={`w-full text-left px-4 py-3 hover:bg-surface-highlight transition-colors border-b border-border/50 cursor-pointer ${
-                      selectedItem?.id === item.id 
-                        ? 'bg-surface-highlight border-l-2 border-l-red-primary' 
-                        : ''
-                    }`}
-                  >
-                    <div className="flex items-start gap-3">
-                      {/* Icon */}
-                      <div className={`mt-0.5 ${getIconColor(item.type)}`}>
-                        {getIcon(item.type)}
-                      </div>
-                      
-                      {/* Content */}
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2">
-                          <h3 className="text-sm font-medium text-foreground truncate">
-                            {item.name || 'Untitled'}
-                          </h3>
-                          {item.entry_count > 0 && (
-                            <span className="text-xs text-silver bg-surface-highlight px-1.5 py-0.5 rounded flex-shrink-0">
-                              {item.entry_count}
-                            </span>
-                          )}
-                        </div>
-                        
-                        {item.latest_entry?.content && (
-                          <p className="text-xs text-silver line-clamp-2 mt-1">
-                            {item.latest_entry.content.length > 80 
-                              ? item.latest_entry.content.substring(0, 80) + '...' 
-                              : item.latest_entry.content}
-                          </p>
-                        )}
-                        
-                        {/* Tags */}
-                        {item.latest_entry?.tags && item.latest_entry.tags.length > 0 && (
-                          <div className="flex flex-wrap gap-1 mt-1.5">
-                            {item.latest_entry.tags.slice(0, 2).map((tag: string) => (
-                              <span key={tag} className="text-xs text-red-primary">
-                                #{tag}
-                              </span>
-                            ))}
-                            {item.latest_entry.tags.length > 2 && (
-                              <span className="text-xs text-silver">
-                                +{item.latest_entry.tags.length - 2}
-                              </span>
-                            )}
-                          </div>
-                        )}
-                        
-                        {/* Time */}
-                        <span className="text-xs text-slate mt-1.5 block">
-                          {formatRelativeTime(item.updated_at || item.created_at)}
-                        </span>
-                      </div>
-                    </div>
-                  </button>
-                ))}
-              </div>
+    <button
+      type="button"
+      onClick={(e) => {
+        e.preventDefault()
+        e.stopPropagation()
+        onClick()
+      }}
+      className={`w-full text-left p-4 rounded-xl border transition-all group cursor-pointer ${
+        isSelected
+          ? 'bg-surface/80 border-red-primary/50 shadow-lg shadow-red-primary/10'
+          : 'bg-surface/30 border-border/30 hover:bg-surface/50 hover:border-border/50 hover:shadow-md'
+      }`}
+    >
+      <div className="flex items-start gap-3">
+        {/* Icon with background */}
+        <div className={`mt-0.5 w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${getIconColor(item.type)}`}>
+          {getIcon(item.type)}
+        </div>
+        
+        {/* Content */}
+        <div className="flex-1 min-w-0">
+          {/* Title */}
+          <h3 className="text-sm font-semibold text-foreground mb-1 line-clamp-1 group-hover:text-red-primary/90 transition-colors">
+            {item.name || 'Untitled'}
+          </h3>
+          
+          {/* Preview */}
+          {item.latest_entry?.content && (
+            <p className="text-xs text-silver/70 line-clamp-2 mb-2 leading-relaxed">
+              {item.latest_entry.content.length > 100 
+                ? item.latest_entry.content.substring(0, 100) + '...' 
+                : item.latest_entry.content}
+            </p>
+          )}
+          
+          {/* Meta row */}
+          <div className="flex items-center gap-2 flex-wrap">
+            {/* Time */}
+            <div className="flex items-center gap-1.5 text-[11px] text-silver/50">
+              <Clock className="w-3 h-3" />
+              <span>{formatRelativeTime(item.updated_at || item.created_at)}</span>
             </div>
-          ))
-        )}
+            
+            {/* Entry count */}
+            {item.entry_count > 0 && (
+              <div className="flex items-center gap-1.5 text-[11px] text-silver/50">
+                <FileText className="w-3 h-3" />
+                <span>{item.entry_count}</span>
+              </div>
+            )}
+            
+            {/* Tags */}
+            {item.latest_entry?.tags && item.latest_entry.tags.slice(0, 2).map((tag: string) => (
+              <span key={tag} className="px-2 py-0.5 bg-surface-highlight/50 text-[10px] font-medium text-silver/60 rounded-full">
+                #{tag}
+              </span>
+            ))}
+          </div>
+        </div>
       </div>
-    </div>
+    </button>
   )
 }
-
