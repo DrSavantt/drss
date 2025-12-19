@@ -97,7 +97,7 @@ export function JournalList({
             </div>
             <h3 className="text-sm font-semibold text-foreground mb-1">No items yet</h3>
             <p className="text-xs text-silver/60 max-w-[200px]">
-              Start capturing your ideas and they'll appear here
+              Start capturing your ideas and they&apos;ll appear here
             </p>
           </div>
         ) : (
