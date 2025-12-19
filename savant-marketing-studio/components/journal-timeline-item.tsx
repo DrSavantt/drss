@@ -1,6 +1,6 @@
 'use client'
 
-import { MessageCircle, FileText, Inbox, User, FolderKanban } from 'lucide-react'
+import { MessageCircle, Inbox, User, FolderKanban } from 'lucide-react'
 import { formatDistanceToNow } from 'date-fns'
 
 interface TimelineItem {
@@ -30,13 +30,13 @@ export function JournalTimelineItem({ item, folderName, onClick }: JournalTimeli
   const getIcon = () => {
     switch (item.type) {
       case 'inbox':
-        return <Inbox className="w-5 h-5" />
+        return <Inbox className="w-4 h-4 md:w-5 md:h-5" />
       case 'client':
-        return <User className="w-5 h-5" />
+        return <User className="w-4 h-4 md:w-5 md:h-5" />
       case 'project':
-        return <FolderKanban className="w-5 h-5" />
+        return <FolderKanban className="w-4 h-4 md:w-5 md:h-5" />
       default:
-        return <MessageCircle className="w-5 h-5" />
+        return <MessageCircle className="w-4 h-4 md:w-5 md:h-5" />
     }
   }
   
@@ -67,7 +67,7 @@ export function JournalTimelineItem({ item, folderName, onClick }: JournalTimeli
   const getPreview = () => {
     if (!item.latest_entry?.content) return null
     const text = item.latest_entry.content
-    return text.length > 80 ? text.substring(0, 80) + '...' : text
+    return text.length > 100 ? text.substring(0, 100) + '...' : text
   }
   
   // Get tags from latest entry
@@ -78,11 +78,11 @@ export function JournalTimelineItem({ item, folderName, onClick }: JournalTimeli
   return (
     <button
       onClick={onClick}
-      className="w-full px-4 py-3 border-b border-border hover:bg-surface-highlight transition-colors text-left active:bg-surface-highlight"
+      className="w-full px-4 md:px-6 py-3 md:py-4 border-b border-border hover:bg-surface-highlight transition-colors text-left active:bg-surface-highlight"
     >
       <div className="flex items-start gap-3">
         {/* Icon */}
-        <div className={`mt-0.5 ${getIconColor()}`}>
+        <div className={`mt-1 ${getIconColor()}`}>
           {getIcon()}
         </div>
         
@@ -90,11 +90,11 @@ export function JournalTimelineItem({ item, folderName, onClick }: JournalTimeli
         <div className="flex-1 min-w-0">
           {/* Title row */}
           <div className="flex items-center gap-2">
-            <h3 className="font-medium text-foreground truncate">
+            <h3 className="font-medium text-foreground truncate text-sm md:text-base">
               {item.name || 'Untitled'}
             </h3>
             {item.entry_count > 0 && (
-              <span className="text-xs text-silver bg-surface-highlight px-1.5 py-0.5 rounded">
+              <span className="text-xs text-silver bg-surface-highlight px-1.5 py-0.5 rounded flex-shrink-0">
                 {item.entry_count}
               </span>
             )}
@@ -102,14 +102,14 @@ export function JournalTimelineItem({ item, folderName, onClick }: JournalTimeli
           
           {/* Preview text */}
           {getPreview() && (
-            <p className="text-sm text-silver mt-1 line-clamp-2">
+            <p className="text-xs md:text-sm text-silver mt-1 line-clamp-2">
               {getPreview()}
             </p>
           )}
           
           {/* Tags row */}
           {getTags().length > 0 && (
-            <div className="flex flex-wrap gap-1.5 mt-2">
+            <div className="flex flex-wrap gap-1 md:gap-2 mt-2">
               {getTags().slice(0, 3).map(tag => (
                 <span 
                   key={tag} 
@@ -133,7 +133,7 @@ export function JournalTimelineItem({ item, folderName, onClick }: JournalTimeli
             </span>
             {folderName && (
               <>
-                <span className="text-xs text-slate">•</span>
+                <span className="text-xs text-slate">·</span>
                 <span className="text-xs text-slate">{folderName}</span>
               </>
             )}
@@ -141,7 +141,7 @@ export function JournalTimelineItem({ item, folderName, onClick }: JournalTimeli
         </div>
         
         {/* Arrow indicator */}
-        <span className="text-silver mt-1">→</span>
+        <span className="text-silver mt-1 hidden md:block">→</span>
       </div>
     </button>
   )
