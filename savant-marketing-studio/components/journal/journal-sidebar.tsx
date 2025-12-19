@@ -9,9 +9,7 @@ import {
   ChevronRight, 
   Star, 
   Folder, 
-  Plus,
-  Zap,
-  MoreVertical
+  Plus
 } from 'lucide-react'
 import { JournalFolder } from '@/app/actions/journal-folders'
 
@@ -44,7 +42,7 @@ export function JournalSidebar({
     .slice(0, 2)
 
   return (
-    <aside className="h-full border-r border-border/50 flex flex-col bg-[#0A0A0A]">
+    <aside className="h-full border-r border-border/50 flex flex-col bg-background">
       {/* Top section with better spacing */}
       <div className="p-4 space-y-3">
         {/* Search with focus state */}
@@ -78,8 +76,7 @@ export function JournalSidebar({
         <NavItem 
           icon={MessageCircle} 
           label="Chat" 
-          badge="Soon" 
-          disabled
+          onClick={() => {/* TODO: Navigate to chat when implemented */}}
         />
         <NavItem 
           icon={Inbox} 
@@ -119,27 +116,6 @@ export function JournalSidebar({
           onSelect={onSelectFolder}
           onAdd={onCreateFolder}
         />
-      </div>
-      
-      {/* Bottom premium card */}
-      <div className="p-4 border-t border-border/50">
-        <div className="relative overflow-hidden bg-gradient-to-br from-surface/80 to-surface/40 rounded-xl p-4 border border-border/30">
-          {/* Gradient accent */}
-          <div className="absolute inset-0 bg-gradient-to-br from-red-primary/10 to-transparent" />
-          
-          <div className="relative">
-            <div className="flex items-center gap-2 mb-2">
-              <Zap className="w-4 h-4 text-red-primary" />
-              <span className="text-xs font-semibold text-foreground">Upgrade to Premium</span>
-            </div>
-            <p className="text-xs text-silver/80 mb-3 leading-relaxed">
-              Unlimited storage, AI features & more
-            </p>
-            <button className="w-full py-2 bg-red-primary hover:bg-red-primary/90 text-white rounded-lg text-xs font-semibold transition-colors">
-              Upgrade Now
-            </button>
-          </div>
-        </div>
       </div>
     </aside>
   )

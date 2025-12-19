@@ -326,8 +326,8 @@ export function JournalPageClient({
         className="hidden lg:flex overflow-hidden bg-background" 
         style={{ height: 'calc(100dvh - 3.5rem)' }}
       >
-        {/* LEFT: Sidebar Navigation (240px fixed) */}
-        <div className="w-60 flex-shrink-0 h-full">
+        {/* LEFT: Sidebar Navigation (256px fixed) */}
+        <div className="w-64 flex-shrink-0 h-full">
           <JournalSidebar 
             selectedFolder={selectedFolder}
             onSelectFolder={handleFolderSelect}
@@ -339,8 +339,8 @@ export function JournalPageClient({
           />
         </div>
         
-        {/* MIDDLE: Items List (320px fixed) */}
-        <div className="w-80 flex-shrink-0 h-full">
+        {/* MIDDLE: Items List (384px fixed) */}
+        <div className="w-96 flex-shrink-0 h-full">
           <JournalList 
             timeline={timeline}
             selectedItem={selectedItem}
@@ -351,7 +351,7 @@ export function JournalPageClient({
         </div>
         
         {/* RIGHT: Content View (flex-1) */}
-        <div className="flex-1 min-w-0 h-full">
+        <div className="flex-1 min-w-0 h-full overflow-hidden">
           <JournalContent 
             item={selectedItem}
             onCapture={() => setCaptureModalOpen(true)}
