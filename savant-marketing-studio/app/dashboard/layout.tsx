@@ -148,16 +148,28 @@ export default function DashboardLayout({
       </header>
 
       {/* Instant page loads - no transitions */}
-      <main 
-        className="lg:pt-0 px-4 lg:px-0 py-6 lg:py-8"
-        style={{
-          paddingTop: 'calc(4rem + env(safe-area-inset-top))'
-        }}
-      >
-        <div className="max-w-7xl mx-auto lg:px-4">
+      {/* Journal page gets special full-width treatment for 3-column layout */}
+      {pathname.startsWith('/dashboard/journal') ? (
+        <main 
+          className="lg:pt-0"
+          style={{
+            paddingTop: 'calc(4rem + env(safe-area-inset-top))'
+          }}
+        >
           {children}
-        </div>
-      </main>
+        </main>
+      ) : (
+        <main 
+          className="lg:pt-0 px-4 lg:px-0 py-6 lg:py-8"
+          style={{
+            paddingTop: 'calc(4rem + env(safe-area-inset-top))'
+          }}
+        >
+          <div className="max-w-7xl mx-auto lg:px-4">
+            {children}
+          </div>
+        </main>
+      )}
       
       {/* Performance monitor for development */}
       <PerfMonitor />
