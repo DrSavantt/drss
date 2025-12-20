@@ -185,14 +185,14 @@ export function JournalInputBar({
       {showMentions && filteredMentions.length > 0 && (
         <div className="absolute bottom-full left-0 right-0 mb-0 mx-3 bg-surface border border-border rounded-t-lg shadow-xl max-h-48 overflow-y-auto">
           {filteredMentions.map((item) => (
-            <button
+      <button
               key={`${item.type}-${item.id}`}
               onClick={() => handleSelectMention(item.name)}
               className="w-full flex items-center gap-2 px-4 py-3 hover:bg-surface-highlight text-left text-sm border-b border-border/50 last:border-b-0"
-            >
+      >
               <span className={item.type === 'client' ? 'text-red-primary' : 'text-silver'}>
                 @
-              </span>
+        </span>
               <span className="text-foreground">{item.name}</span>
               <span className="ml-auto text-xs text-silver capitalize">{item.type}</span>
             </button>
@@ -264,7 +264,7 @@ export function JournalInputBar({
                 ) : (
                   <Send className="w-4 h-4" />
                 )}
-              </button>
+      </button>
             )}
           </div>
         </div>
