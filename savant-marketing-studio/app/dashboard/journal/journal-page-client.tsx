@@ -337,7 +337,7 @@ export function JournalPageClient({
             totalCount={initialCounts.totalChats}
             onCreateFolder={() => setFolderModalOpen(true)}
           />
-        </div>
+          </div>
         
         {/* MIDDLE: Items List (384px fixed) */}
         <div className="w-96 flex-shrink-0 h-full">
@@ -356,11 +356,11 @@ export function JournalPageClient({
             item={selectedItem}
             onCapture={() => setCaptureModalOpen(true)}
           />
-        </div>
+          </div>
       </div>
 
       {/* Modals - shared between mobile and desktop */}
-      
+
       {/* Folder Modal */}
       <JournalFolderModal
         isOpen={folderModalOpen}
