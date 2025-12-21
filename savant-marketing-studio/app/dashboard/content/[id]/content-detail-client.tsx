@@ -1,12 +1,13 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
-import { updateContentAsset, deleteContentAsset } from '@/app/actions/content'
+import { updateContentAsset, deleteContentAsset, getContentRelatedCounts } from '@/app/actions/content'
 import { getJournalEntriesByContent } from '@/app/actions/journal'
 import { highlightMentions } from '@/lib/utils/mentions'
 import { TiptapEditor } from '@/components/tiptap-editor'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import { DeleteConfirmationModal, type RelatedCounts } from '@/components/delete-confirmation-modal'
 
 interface Content {
   id: string
@@ -49,6 +50,8 @@ export function ContentDetailClient({ content }: ContentDetailClientProps) {
   const [loadingJournal, setLoadingJournal] = useState(false)
   const [isExpanded, setIsExpanded] = useState(false)
   const titleInputRef = useRef<HTMLInputElement>(null)
+  const [showDeleteModal, setShowDeleteModal] = useState(false)
+  const [relatedCounts, setRelatedCounts] = useState<RelatedCounts | null>(null)
 
 
   // Fetch journal entries - ONLY captures that @mention this specific content
@@ -157,18 +160,20 @@ export function ContentDetailClient({ content }: ContentDetailClientProps) {
     }
   }
 
-  async function handleDelete() {
-    if (!confirm('Are you sure you want to delete this content? This action cannot be undone.')) {
-      return
-    }
+  async function handleDeleteClick() {
+    // Fetch related counts
+    const counts = await getContentRelatedCounts(content.id)
+    setRelatedCounts(counts)
+    setShowDeleteModal(true)
+  }
 
-    setLoading(true)
+  async function handleDeleteConfirm(deleteOption: 'all' | 'preserve') {
     try {
-      await deleteContentAsset(content.id, content.client_id)
+      await deleteContentAsset(content.id, content.client_id, deleteOption, content.title)
       router.push(`/dashboard/clients/${content.client_id}`)
     } catch {
       setError('Failed to delete content')
-      setLoading(false)
+      setShowDeleteModal(false)
     }
   }
 
@@ -189,7 +194,7 @@ export function ContentDetailClient({ content }: ContentDetailClientProps) {
 
           {/* Delete Button - Simple trash icon */}
           <button
-            onClick={handleDelete}
+            onClick={handleDeleteClick}
             disabled={loading}
             className="p-1.5 text-silver/40 hover:text-red-primary transition-colors disabled:opacity-50"
             title="Delete"
@@ -199,6 +204,15 @@ export function ContentDetailClient({ content }: ContentDetailClientProps) {
             </svg>
           </button>
         </div>
+
+        {/* Delete Confirmation Modal */}
+        <DeleteConfirmationModal
+          isOpen={showDeleteModal}
+          onClose={() => setShowDeleteModal(false)}
+          item={{ type: 'content', name: content.title }}
+          relatedCounts={relatedCounts}
+          onConfirm={handleDeleteConfirm}
+        />
 
         {/* Error Message */}
         {error && (

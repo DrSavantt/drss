@@ -139,7 +139,39 @@ export async function updateClient(id: string, formData: FormData) {
   return { success: true }
 }
 
-export async function deleteClient(id: string, clientName?: string) {
+export async function getRelatedCounts(clientId: string) {
+  const supabase = await createSupabaseClient()
+  
+  if (!supabase) {
+    return { projects: 0, content: 0, captures: 0 }
+  }
+  
+  // Count projects
+  const { count: projectsCount } = await supabase
+    .from('projects')
+    .select('*', { count: 'exact', head: true })
+    .eq('client_id', clientId)
+  
+  // Count content
+  const { count: contentCount } = await supabase
+    .from('content_assets')
+    .select('*', { count: 'exact', head: true })
+    .eq('client_id', clientId)
+  
+  // Count journal entries mentioning this client
+  const { count: capturesCount } = await supabase
+    .from('journal_entries')
+    .select('*', { count: 'exact', head: true })
+    .contains('mentioned_clients', [clientId])
+  
+  return {
+    projects: projectsCount ?? 0,
+    content: contentCount ?? 0,
+    captures: capturesCount ?? 0
+  }
+}
+
+export async function deleteClient(id: string, deleteOption: 'all' | 'preserve' = 'preserve', clientName?: string) {
   const supabase = await createSupabaseClient()
   
   if (!supabase) {
@@ -157,6 +189,43 @@ export async function deleteClient(id: string, clientName?: string) {
     name = client?.name
   }
   
+  if (deleteOption === 'preserve') {
+    // Remove client from journal captures (remove from mentioned_clients array)
+    const { data: entries } = await supabase
+      .from('journal_entries')
+      .select('id, mentioned_clients')
+      .contains('mentioned_clients', [id])
+    
+    if (entries && entries.length > 0) {
+      for (const entry of entries) {
+        const updatedClients = (entry.mentioned_clients || []).filter((cid: string) => cid !== id)
+        await supabase
+          .from('journal_entries')
+          .update({ mentioned_clients: updatedClients })
+          .eq('id', entry.id)
+      }
+    }
+  } else if (deleteOption === 'all') {
+    // Delete all journal entries mentioning this client
+    await supabase
+      .from('journal_entries')
+      .delete()
+      .contains('mentioned_clients', [id])
+  }
+  
+  // Delete projects (will cascade to content if FK constraints are set)
+  await supabase
+    .from('projects')
+    .delete()
+    .eq('client_id', id)
+  
+  // Delete content
+  await supabase
+    .from('content_assets')
+    .delete()
+    .eq('client_id', id)
+  
+  // Delete client
   const { error } = await supabase
     .from('clients')
     .delete()
