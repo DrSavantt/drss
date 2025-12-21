@@ -147,7 +147,25 @@ export async function updateContentAsset(id: string, formData: FormData) {
   return { success: true }
 }
 
-export async function deleteContentAsset(id: string, clientId: string, contentTitle?: string) {
+export async function getContentRelatedCounts(contentId: string) {
+  const supabase = await createSupabaseClient()
+  
+  if (!supabase) {
+    return { captures: 0 }
+  }
+  
+  // Count journal entries mentioning this content
+  const { count: capturesCount } = await supabase
+    .from('journal_entries')
+    .select('*', { count: 'exact', head: true })
+    .contains('mentioned_content', [contentId])
+  
+  return {
+    captures: capturesCount ?? 0
+  }
+}
+
+export async function deleteContentAsset(id: string, clientId: string, deleteOption: 'all' | 'preserve' = 'preserve', contentTitle?: string) {
   const supabase = await createSupabaseClient()
   
   if (!supabase) {
@@ -163,6 +181,30 @@ export async function deleteContentAsset(id: string, clientId: string, contentTi
       .eq('id', id)
       .single()
     title = content?.title
+  }
+  
+  if (deleteOption === 'preserve') {
+    // Remove content from journal captures (remove from mentioned_content array)
+    const { data: entries } = await supabase
+      .from('journal_entries')
+      .select('id, mentioned_content')
+      .contains('mentioned_content', [id])
+    
+    if (entries && entries.length > 0) {
+      for (const entry of entries) {
+        const updatedContent = (entry.mentioned_content || []).filter((cid: string) => cid !== id)
+        await supabase
+          .from('journal_entries')
+          .update({ mentioned_content: updatedContent })
+          .eq('id', entry.id)
+      }
+    }
+  } else if (deleteOption === 'all') {
+    // Delete all journal entries mentioning this content
+    await supabase
+      .from('journal_entries')
+      .delete()
+      .contains('mentioned_content', [id])
   }
   
   const { error } = await supabase

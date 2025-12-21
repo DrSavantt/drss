@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
-import { MentionModal } from './mention-modal'
+import { MentionAutocomplete } from './mention-autocomplete'
 import { ChatSelector } from './chat-selector'
 import { createJournalEntry } from '@/app/actions/journal'
 import { parseMentions } from '@/lib/utils/mentions'
@@ -51,9 +51,9 @@ export function JournalCapture({
 }: Props) {
   const [content, setContent] = useState('')
   const [selectedChatId, setSelectedChatId] = useState(defaultChatId)
-  const [showMentionModal, setShowMentionModal] = useState(false)
+  const [showMentions, setShowMentions] = useState(false)
+  const [mentionQuery, setMentionQuery] = useState('')
   const [showChatSelector, setShowChatSelector] = useState(false)
-  const [mentionPosition, setMentionPosition] = useState({ top: 0, left: 0 })
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
@@ -74,7 +74,7 @@ export function JournalCapture({
   useEffect(() => {
     function handleEsc(e: KeyboardEvent) {
       if (e.key === 'Escape') {
-        setShowMentionModal(false)
+        setShowMentions(false)
         setShowChatSelector(false)
       }
     }
@@ -95,17 +95,22 @@ export function JournalCapture({
     setContent(value)
     setError(null)
 
-    // Check for @ mention trigger
-    const lastChar = value[value.length - 1]
-    if (lastChar === '@') {
-      // Get cursor position to show modal near it
-      const rect = e.target.getBoundingClientRect()
-      setMentionPosition({
-        top: rect.top + 80,
-        left: rect.left + 20
-      })
-      setShowMentionModal(true)
+    // Detect @ mentions as user types
+    const cursorPos = e.target.selectionStart || 0
+    const textBeforeCursor = value.slice(0, cursorPos)
+    const lastAtIndex = textBeforeCursor.lastIndexOf('@')
+    
+    if (lastAtIndex !== -1) {
+      const afterAt = textBeforeCursor.slice(lastAtIndex + 1)
+      // Show mentions if we're typing after @ without spaces or newlines
+      if (!afterAt.includes(' ') && !afterAt.includes('\n')) {
+        setMentionQuery(afterAt)
+        setShowMentions(true)
+        return
+      }
     }
+    
+    setShowMentions(false)
   }
 
   function handleKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {
@@ -116,12 +121,31 @@ export function JournalCapture({
     }
   }
 
-  function insertMention(item: { name: string }) {
-    // Remove the @ that triggered the modal
-    const newContent = content.slice(0, -1) + '@' + item.name + ' '
+  function handleMentionSelect(item: { name: string }) {
+    if (!textareaRef.current) return
+    
+    const cursorPos = textareaRef.current.selectionStart || 0
+    const textBeforeCursor = content.slice(0, cursorPos)
+    const textAfterCursor = content.slice(cursorPos)
+    const lastAtIndex = textBeforeCursor.lastIndexOf('@')
+    
+    // Replace from @ to cursor with the mention
+    const beforeMention = textBeforeCursor.slice(0, lastAtIndex)
+    const mention = `@${item.name} `
+    const newContent = beforeMention + mention + textAfterCursor
+    
     setContent(newContent)
-    setShowMentionModal(false)
-    textareaRef.current?.focus()
+    setShowMentions(false)
+    setMentionQuery('')
+    
+    // Focus back on textarea and position cursor after mention
+    setTimeout(() => {
+      if (textareaRef.current) {
+        const newCursorPos = beforeMention.length + mention.length
+        textareaRef.current.focus()
+        textareaRef.current.setSelectionRange(newCursorPos, newCursorPos)
+      }
+    }, 0)
   }
 
   function handleChatSelect(chatId: string) {
@@ -168,7 +192,7 @@ export function JournalCapture({
 
   return (
     <>
-      <form onSubmit={handleSubmit} className="bg-charcoal rounded-lg border border-mid-gray p-4 shadow-sm">
+      <form onSubmit={handleSubmit} className="bg-charcoal rounded-lg border border-mid-gray p-4 shadow-sm relative">
         {/* Chat Selector Button */}
         <div className="flex items-center gap-2 mb-3">
           <button
@@ -188,6 +212,18 @@ export function JournalCapture({
             </svg>
           </button>
         </div>
+
+        {/* Mention Autocomplete - positioned above textarea */}
+        {showMentions && (
+          <div className="absolute left-4 right-4 bottom-[calc(100%-3.5rem)] mb-2 z-10">
+            <MentionAutocomplete
+              items={allMentionables}
+              query={mentionQuery}
+              onSelect={handleMentionSelect}
+              onClose={() => setShowMentions(false)}
+            />
+          </div>
+        )}
 
         {/* Text Input */}
         <textarea
@@ -229,11 +265,10 @@ export function JournalCapture({
             <button
               type="button"
               onClick={() => {
-                const rect = textareaRef.current?.getBoundingClientRect()
-                if (rect) {
-                  setMentionPosition({ top: rect.top + 80, left: rect.left + 20 })
-                }
-                setShowMentionModal(true)
+                setContent(prev => prev + '@')
+                setMentionQuery('')
+                setShowMentions(true)
+                textareaRef.current?.focus()
               }}
               className="p-2 hover:bg-dark-gray rounded-md transition-colors flex items-center gap-1 text-xs text-silver hover:text-foreground"
               title="Insert mention"
@@ -274,16 +309,6 @@ export function JournalCapture({
           </div>
         </div>
       </form>
-
-      {/* Mention Modal */}
-      {showMentionModal && (
-        <MentionModal
-          items={allMentionables}
-          onSelect={insertMention}
-          onClose={() => setShowMentionModal(false)}
-          position={mentionPosition}
-        />
-      )}
 
       {/* Chat Selector Modal */}
       {showChatSelector && (

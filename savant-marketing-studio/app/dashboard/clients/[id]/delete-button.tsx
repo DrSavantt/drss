@@ -1,7 +1,8 @@
 'use client'
 
-import { deleteClient } from '@/app/actions/clients'
-import { useState } from 'react'
+import { deleteClient, getRelatedCounts } from '@/app/actions/clients'
+import { useState, useEffect } from 'react'
+import { DeleteConfirmationModal, type RelatedCounts } from '@/components/delete-confirmation-modal'
 
 export function DeleteClientButton({
   clientId,
@@ -10,51 +11,37 @@ export function DeleteClientButton({
   clientId: string
   clientName: string
 }) {
-  const [showConfirm, setShowConfirm] = useState(false)
+  const [showModal, setShowModal] = useState(false)
+  const [relatedCounts, setRelatedCounts] = useState<RelatedCounts | null>(null)
   const [loading, setLoading] = useState(false)
 
-  async function handleDelete() {
-    setLoading(true)
-    await deleteClient(clientId)
-  }
+  useEffect(() => {
+    if (showModal && !relatedCounts) {
+      // Fetch related counts when modal opens
+      getRelatedCounts(clientId).then(setRelatedCounts)
+    }
+  }, [showModal, clientId, relatedCounts])
 
-  if (showConfirm) {
-    return (
-      <div className="fixed inset-0 bg-pure-black/80 flex items-center justify-center p-4 z-50">
-        <div className="bg-charcoal rounded-lg border border-mid-gray p-6 max-w-md w-full">
-          <h3 className="text-lg font-semibold text-foreground mb-2">
-            Delete {clientName}?
-          </h3>
-          <p className="text-sm text-silver mb-6">
-            This will permanently delete this client and all associated projects and content. This action cannot be undone.
-          </p>
-          <div className="flex gap-4">
-            <button
-              onClick={handleDelete}
-              disabled={loading}
-              className="flex-1 rounded-md bg-error px-4 py-2 text-sm font-semibold text-foreground hover:bg-red-dark disabled:bg-mid-gray transition-colors"
-            >
-              {loading ? 'Deleting...' : 'Delete'}
-            </button>
-            <button
-              onClick={() => setShowConfirm(false)}
-              disabled={loading}
-              className="flex-1 rounded-md bg-dark-gray px-4 py-2 text-sm font-semibold text-silver hover:bg-mid-gray transition-colors"
-            >
-              Cancel
-            </button>
-          </div>
-        </div>
-      </div>
-    )
+  async function handleDeleteConfirm(deleteOption: 'all' | 'preserve') {
+    await deleteClient(clientId, deleteOption, clientName)
   }
 
   return (
-    <button
-      onClick={() => setShowConfirm(true)}
-      className="rounded-md bg-error px-4 py-2 text-sm font-semibold text-foreground hover:bg-red-dark transition-colors"
-    >
-      Delete
-    </button>
+    <>
+      <button
+        onClick={() => setShowModal(true)}
+        className="rounded-md bg-error px-4 py-2 text-sm font-semibold text-foreground hover:bg-red-dark transition-colors"
+      >
+        Delete
+      </button>
+
+      <DeleteConfirmationModal
+        isOpen={showModal}
+        onClose={() => setShowModal(false)}
+        item={{ type: 'client', name: clientName }}
+        relatedCounts={relatedCounts}
+        onConfirm={handleDeleteConfirm}
+      />
+    </>
   )
 }
