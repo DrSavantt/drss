@@ -97,14 +97,14 @@ export function DeleteConfirmationModal({
                   ? 'bg-charcoal border-red-primary/50' 
                   : 'bg-dark-gray hover:bg-charcoal border-mid-gray'
               }`}>
-                <input
-                  type="radio"
-                  name="deleteOption"
-                  value="preserve"
-                  checked={deleteOption === 'preserve'}
-                  onChange={(e) => setDeleteOption(e.target.value as any)}
-                  className="mt-0.5 accent-red-primary"
-                />
+              <input
+                type="radio"
+                name="deleteOption"
+                value="preserve"
+                checked={deleteOption === 'preserve'}
+                onChange={(e) => setDeleteOption(e.target.value as 'all' | 'preserve')}
+                className="mt-0.5 accent-red-primary"
+              />
                 <div className="flex-1">
                   <div className="text-sm font-medium text-foreground">Preserve Journal Captures</div>
                   <div className="text-xs text-silver/60">Delete {item.type} but keep associated journal entries</div>
@@ -116,14 +116,14 @@ export function DeleteConfirmationModal({
                   ? 'bg-charcoal border-red-primary/50' 
                   : 'bg-dark-gray hover:bg-charcoal border-mid-gray'
               }`}>
-                <input
-                  type="radio"
-                  name="deleteOption"
-                  value="all"
-                  checked={deleteOption === 'all'}
-                  onChange={(e) => setDeleteOption(e.target.value as any)}
-                  className="mt-0.5 accent-red-primary"
-                />
+              <input
+                type="radio"
+                name="deleteOption"
+                value="all"
+                checked={deleteOption === 'all'}
+                onChange={(e) => setDeleteOption(e.target.value as 'all' | 'preserve')}
+                className="mt-0.5 accent-red-primary"
+              />
                 <div className="flex-1">
                   <div className="text-sm font-medium text-foreground">Delete Everything</div>
                   <div className="text-xs text-silver/60">Delete {item.type} and all related items (projects, content, captures)</div>
