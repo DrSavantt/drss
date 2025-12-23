@@ -42,28 +42,23 @@ export function FilePreviewClient({ content }: Props) {
     async function fetchJournalEntries() {
       setLoadingJournal(true)
       try {
-        console.log('[FilePreview] Fetching entries for content:', content.id, 'title:', content.title)
-        
         // Get entries from content chat
         const contentEntries = await getJournalEntriesByContent(content.id)
-        console.log('[FilePreview] Content entries:', contentEntries.length)
-        
+
         // Get entries mentioning the client
         const clientEntries = await getJournalEntriesByClient(content.client_id)
-        console.log('[FilePreview] Client entries:', clientEntries.length)
-        
+
         // Combine and dedupe by id
         const allEntries = [...contentEntries, ...clientEntries]
         const uniqueEntries = Array.from(
           new Map(allEntries.map(entry => [entry.id, entry])).values()
         )
-        
+
         // Sort by created_at descending
-        uniqueEntries.sort((a, b) => 
+        uniqueEntries.sort((a, b) =>
           new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
         )
-        
-        console.log('[FilePreview] Total unique entries:', uniqueEntries.length)
+
         setJournalEntries(uniqueEntries)
       } catch (error) {
         console.error('Failed to load journal entries:', error)
@@ -244,7 +239,7 @@ export function FilePreviewClient({ content }: Props) {
       {/* File Preview Section */}
       <div className="bg-charcoal border border-mid-gray rounded-xl p-4 md:p-8 hover:border-red-bright/50 transition-all duration-200">
         <h2 className="text-xl md:text-2xl font-semibold text-foreground mb-4 md:mb-6">Preview</h2>
-        
+
         <ResponsiveFilePreview
           fileUrl={content.file_url || ''}
           fileName={content.title}

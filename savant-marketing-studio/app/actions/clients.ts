@@ -18,7 +18,6 @@ export async function getClients() {
     .order('created_at', { ascending: false })
   
   if (error) {
-    console.error('Error fetching clients:', error)
     return []
   }
   
@@ -39,7 +38,6 @@ export async function getClient(id: string) {
     .single()
   
   if (error) {
-    console.error('Error fetching client:', error)
     return null
   }
   
@@ -81,7 +79,6 @@ export async function createClient(formData: FormData) {
     .single()
   
   if (error) {
-    console.error('Error creating client:', error)
     return { error: 'Failed to create client' }
   }
   
@@ -122,7 +119,6 @@ export async function updateClient(id: string, formData: FormData) {
     .eq('id', id)
   
   if (error) {
-    console.error('Error updating client:', error)
     return { error: 'Failed to update client' }
   }
   
@@ -232,7 +228,6 @@ export async function deleteClient(id: string, deleteOption: 'all' | 'preserve' 
     .eq('id', id)
   
   if (error) {
-    console.error('Error deleting client:', error)
     return { error: 'Failed to delete client' }
   }
   

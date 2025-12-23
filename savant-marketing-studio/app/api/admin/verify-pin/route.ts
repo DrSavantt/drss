@@ -9,7 +9,6 @@ export async function POST(req: Request) {
     
     // If no PIN is set, deny access
     if (!adminPin) {
-      console.error('ADMIN_PIN environment variable is not set');
       return NextResponse.json({ success: false }, { status: 500 });
     }
     

@@ -39,7 +39,6 @@ export function ResetButton({ clientId }: ResetButtonProps) {
         // Redirect to blank questionnaire
         router.push(`/dashboard/clients/onboarding/${clientId}`);
       } else {
-        console.error('Failed to reset:', result.error);
         alert(result.error || 'Failed to reset questionnaire');
         setLoading(false);
         setOpen(false);

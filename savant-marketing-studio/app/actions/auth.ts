@@ -11,7 +11,6 @@ const SINGLE_USER_PASSWORD = process.env.ADMIN_PASSWORD
 export async function autoLogin() {
   // Validate credentials exist before attempting login
   if (!SINGLE_USER_EMAIL || !SINGLE_USER_PASSWORD) {
-    console.error('Missing ADMIN_EMAIL or ADMIN_PASSWORD environment variables')
     return { error: 'Server configuration error. Admin credentials not configured.' }
   }
   const supabase = await createClient()
@@ -37,7 +36,6 @@ export async function autoLogin() {
     })
 
     if (signupError) {
-      console.error('Signup error:', signupError)
       return { error: `Signup failed: ${signupError.message}` }
     }
 
@@ -48,11 +46,9 @@ export async function autoLogin() {
     })
 
     if (loginError) {
-      console.error('Login after signup error:', loginError)
       return { error: `Login failed after signup: ${loginError.message}` }
     }
   } else if (error) {
-    console.error('Initial login error:', error)
     return { error: `Login failed: ${error.message}` }
   }
 

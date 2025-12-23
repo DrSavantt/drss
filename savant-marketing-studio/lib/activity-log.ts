@@ -38,7 +38,6 @@ export async function logActivity({
     const supabase = await createClient();
     
     if (!supabase) {
-      console.error('[ACTIVITY LOG] No database connection');
       return;
     }
     
@@ -46,7 +45,6 @@ export async function logActivity({
     const { data: { user } } = await supabase.auth.getUser();
     
     if (!user) {
-      console.error('[ACTIVITY LOG] No authenticated user');
       return;
     }
     
@@ -60,7 +58,7 @@ export async function logActivity({
     });
     
     if (error) {
-      console.error('[ACTIVITY LOG] Failed to log:', error);
+      // Failed to log activity
     }
   } catch (error) {
     console.error('[ACTIVITY LOG] Error:', error);

@@ -35,7 +35,6 @@ export async function getJournalFolders(): Promise<JournalFolder[]> {
     .order('position', { ascending: true })
   
   if (error) {
-    console.error('Error fetching folders:', error)
     return []
   }
   
@@ -95,7 +94,6 @@ export async function createJournalFolder(name: string, color: string = '#EF4444
     .single()
   
   if (error) {
-    console.error('Error creating folder:', error)
     throw new Error('Failed to create folder')
   }
   
@@ -120,7 +118,6 @@ export async function updateJournalFolder(folderId: string, name: string, color?
     .eq('id', folderId)
   
   if (error) {
-    console.error('Error updating folder:', error)
     throw new Error('Failed to update folder')
   }
   
@@ -141,7 +138,6 @@ export async function deleteJournalFolder(folderId: string) {
     .eq('id', folderId)
   
   if (error) {
-    console.error('Error deleting folder:', error)
     throw new Error('Failed to delete folder')
   }
   
@@ -162,7 +158,6 @@ export async function moveChatToFolder(chatId: string, folderId: string | null) 
     .eq('id', chatId)
   
   if (error) {
-    console.error('Error moving chat to folder:', error)
     throw new Error('Failed to move chat')
   }
   
@@ -205,7 +200,6 @@ export async function getUnifiedJournalTimeline(folderId?: string | null) {
   const { data: chats, error } = await query
   
   if (error) {
-    console.error('Error fetching timeline:', error)
     return []
   }
   

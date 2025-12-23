@@ -1,6 +1,6 @@
 'use client'
 
-import { AlertTriangle } from 'lucide-react'
+import { AlertTriangle, Loader2 } from 'lucide-react'
 import { useState } from 'react'
 
 export interface DeleteOption {
@@ -145,8 +145,9 @@ export function DeleteConfirmationModal({
             <button
               onClick={handleConfirm}
               disabled={loading}
-              className="flex-1 px-4 py-2 bg-error hover:bg-red-dark text-foreground rounded-lg text-sm font-semibold transition-colors disabled:opacity-50"
+              className="flex-1 px-4 py-2 bg-error hover:bg-red-dark text-foreground rounded-lg text-sm font-semibold transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
             >
+              {loading && <Loader2 className="h-4 w-4 animate-spin" />}
               {loading ? 'Deleting...' : `Delete ${deleteOption === 'all' && hasRelatedItems ? 'All' : item.type}`}
             </button>
           </div>

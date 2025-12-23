@@ -6,9 +6,10 @@ import { FilePreviewClient } from './file-preview-client'
 export default async function ContentDetailPage({
   params,
 }: {
-  params: { id: string }
+  params: Promise<{ id: string }>
 }) {
-  const content = await getContentAsset(params.id)
+  const { id } = await params
+  const content = await getContentAsset(id)
 
   if (!content) {
     notFound()

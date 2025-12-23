@@ -12,11 +12,12 @@ import { FolderKanban, FileText, Calendar, Building2, Check } from 'lucide-react
 export default async function ClientDetailPage({
   params,
 }: {
-  params: { id: string }
+  params: Promise<{ id: string }>
 }) {
-  const client = await getClient(params.id)
-  const projects = await getProjects(params.id)
-  const content = await getContentAssets(params.id)
+  const { id } = await params
+  const client = await getClient(id)
+  const projects = await getProjects(id)
+  const content = await getContentAssets(id)
 
   if (!client) {
     notFound()

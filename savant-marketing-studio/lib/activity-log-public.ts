@@ -16,7 +16,6 @@ export async function logPublicActivity(
     const supabase = await createClient();
     
     if (!supabase) {
-      console.error('[PUBLIC ACTIVITY LOG] No database connection');
       return;
     }
     
@@ -33,7 +32,6 @@ export async function logPublicActivity(
     
     if (error) {
       // Log but don't throw - activity logging is non-critical
-      console.error('[PUBLIC ACTIVITY LOG] Failed to log:', error);
     }
   } catch (error) {
     console.error('[PUBLIC ACTIVITY LOG] Error:', error);

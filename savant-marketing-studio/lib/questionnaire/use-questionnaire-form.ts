@@ -43,7 +43,6 @@ export function useQuestionnaireForm(
   // Initialize with existing data in edit mode (takes priority over localStorage)
   useEffect(() => {
     if (isEditMode && existingData && !hasInitializedEditDataRef.current) {
-      console.log('[EDIT MODE] Initializing with existing data from database');
       setFormData(existingData);
       
       // Mark all questions that have values as completed
@@ -73,7 +72,6 @@ export function useQuestionnaireForm(
       setCompletedQuestions(completed);
       hasInitializedEditDataRef.current = true;
       hasRestoredRef.current = true; // Skip localStorage restore since we have existing data
-      console.log('[EDIT MODE] ✓ Initialized with', completed.size, 'completed questions');
     }
   }, [isEditMode, existingData]);
 
@@ -83,21 +81,13 @@ export function useQuestionnaireForm(
     if (sessionStorage.getItem('skipRestore') === 'true') {
       sessionStorage.removeItem('skipRestore');
       hasRestoredRef.current = true;
-      console.log('[RESTORE] Skipping - form was just reset');
       return;
     }
     
     // Skip if in edit mode or already restored
     if (isEditMode || hasRestoredRef.current) {
-      if (isEditMode) {
-        console.log('[RESTORE] Skipping - in edit mode, using existing data instead');
-      } else {
-      console.log('[RESTORE] Skipping - already restored');
-      }
       return;
     }
-
-    console.log('[RESTORE] First mount - checking localStorage for draft, clientId:', clientId);
     
     try {
       const draftKey = `questionnaire_draft_${clientId}`;
@@ -108,18 +98,14 @@ export function useQuestionnaireForm(
       const savedDraft = localStorage.getItem(draftKey);
       if (savedDraft) {
         const parsed = JSON.parse(savedDraft);
-        console.log('[RESTORE] ✓ Found draft, restoring formData:', Object.keys(parsed));
         setFormData(parsed);
         setIsDraft(true);
-      } else {
-        console.log('[RESTORE] No draft found');
       }
         
       // Restore completedQuestions
       const savedCompleted = localStorage.getItem(completedKey);
       if (savedCompleted) {
         const parsed = JSON.parse(savedCompleted);
-        console.log('[RESTORE] ✓ Found completedQuestions:', parsed);
         setCompletedQuestions(new Set(parsed));
         }
 
@@ -127,13 +113,11 @@ export function useQuestionnaireForm(
       const savedSection = localStorage.getItem(sectionKey);
       if (savedSection) {
         const sectionNum = parseInt(savedSection, 10);
-        console.log('[RESTORE] ✓ Found saved section:', sectionNum);
         setCurrentSection(sectionNum);
       }
       
       // Mark as restored so this never runs again
       hasRestoredRef.current = true;
-      console.log('[RESTORE] ✓ Restoration complete, will not run again');
       
       } catch (error) {
       console.error('[RESTORE] ❌ FAILED:', error);
@@ -143,15 +127,8 @@ export function useQuestionnaireForm(
   // Auto-save to localStorage - immediate, no debounce
   useEffect(() => {
     if (!formData) {
-      console.log('[AUTO-SAVE] Skipping - no formData');
       return;
     }
-
-    console.log('[AUTO-SAVE] Saving formData to localStorage:', {
-      clientId,
-      formDataKeys: Object.keys(formData),
-      timestamp: new Date().toISOString()
-    });
 
     try {
       const draftKey = `questionnaire_draft_${clientId}`;
@@ -159,15 +136,12 @@ export function useQuestionnaireForm(
       
       // Save formData
       localStorage.setItem(draftKey, JSON.stringify(formData));
-      console.log('[AUTO-SAVE] ✓ FormData saved to', draftKey);
       
       // Save completedQuestions
       localStorage.setItem(completedKey, JSON.stringify(Array.from(completedQuestions)));
-      console.log('[AUTO-SAVE] ✓ CompletedQuestions saved to', completedKey);
       
       // Save current section
       localStorage.setItem(`questionnaire_section_${clientId}`, String(currentSection));
-      console.log('[AUTO-SAVE] ✓ Current section saved:', currentSection);
       
       setSaveStatus('saved');
       setIsDraft(true);
@@ -238,7 +212,6 @@ export function useQuestionnaireForm(
 
   // Update question value
   const updateQuestion = useCallback((questionId: string, value: string | string[] | UploadedFile[]) => {
-    console.log(`[updateQuestion] ${questionId}:`, { value, type: typeof value });
     setFormData(prev => {
       const updated = { ...prev };
       
@@ -305,7 +278,6 @@ export function useQuestionnaireForm(
         };
       }
 
-      console.log(`[updateQuestion] Updated formData for ${questionId}:`, updated);
       return updated;
     });
   }, []);
@@ -314,43 +286,32 @@ export function useQuestionnaireForm(
   const validateQuestion = useCallback((questionId: string): string | undefined => {
     const schema = questionSchemas[questionId];
     if (!schema) {
-      console.log(`[validateQuestion] No schema found for ${questionId}`);
       return undefined;
     }
 
     // Get the value from formData
     const value = getQuestionValue(questionId, formData);
-    const valueStr = Array.isArray(value) ? `Array[${value.length}]` : `"${value}"`;
-    const valueLen = typeof value === 'string' ? value.length : Array.isArray(value) ? value.length : 'N/A';
-    console.log(`[validateQuestion] ${questionId}: value=${valueStr}, length=${valueLen}`);
 
     try {
       schema.parse(value);
-      console.log(`[validateQuestion] ${questionId}: VALID ✓`);
       return undefined;
     } catch (error: unknown) {
       if (error && typeof error === 'object' && 'errors' in error) {
         const zodError = error as { errors: Array<{ message: string }> };
         const errorMsg = zodError.errors?.[0]?.message || 'Invalid input';
-        console.log(`[validateQuestion] ${questionId}: INVALID ✗ - ${errorMsg}`);
-        console.error('Full Zod error:', error);
         return errorMsg;
       }
-      console.log(`[validateQuestion] ${questionId}: INVALID ✗ (unknown error)`);
-      console.error('Unknown validation error:', error);
       return 'Invalid input';
     }
   }, [formData]);
 
   // Mark question as completed - no validation gate
   const markQuestionCompleted = useCallback((questionId: string) => {
-    console.log(`[markQuestionCompleted] Marking ${questionId} as complete (no validation)`);
     setCompletedQuestions(prev => new Set(prev).add(questionId));
   }, []);
 
   // Validate entire section - actually validates content, not just Set membership
   const validateSection = useCallback((sectionNumber: number): { isValid: boolean; error?: string } => {
-    console.log(`[validateSection] Validating section ${sectionNumber}`);
     const sectionQuestionMap: Record<number, string[]> = {
       1: ['q1', 'q2', 'q3', 'q4', 'q5'],
       2: ['q6', 'q7', 'q8', 'q9', 'q10'],
@@ -363,17 +324,13 @@ export function useQuestionnaireForm(
     };
 
     const requiredQuestions = sectionQuestionMap[sectionNumber] || [];
-    console.log(`[validateSection] Required questions for section ${sectionNumber}:`, requiredQuestions);
     
     // Actually validate content, not just check Set membership
     const invalidQuestions = requiredQuestions.filter(q => {
       const error = validateQuestion(q);
       const isInvalid = error !== undefined;
-      console.log(`[validateSection]   ${q}: ${isInvalid ? 'INVALID ✗' : 'VALID ✓'}`);
       return isInvalid;
     });
-
-    console.log(`[validateSection] Section ${sectionNumber} invalid questions:`, invalidQuestions);
     
     if (invalidQuestions.length > 0) {
       return {
@@ -382,13 +339,11 @@ export function useQuestionnaireForm(
       };
     }
 
-    console.log(`[validateSection] Section ${sectionNumber}: VALID ✓`);
     return { isValid: true };
   }, [validateQuestion]);
 
   // Navigate to section - no validation
   const goToSection = useCallback((sectionNumber: number) => {
-    console.log('[goToSection] Navigating to section:', sectionNumber);
     if (sectionNumber >= 1 && sectionNumber <= 8) {
     setCurrentSection(sectionNumber);
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -405,33 +360,24 @@ export function useQuestionnaireForm(
   }, [currentSection]);
 
   const goToNextStep = useCallback((): boolean => {
-    console.log('[goToNextStep] Called, current section:', currentSection);
-    
     if (currentSection < 8) {
-      console.log('[goToNextStep] Moving to section:', currentSection + 1);
       setCurrentSection(prev => prev + 1);
       window.scrollTo({ top: 0, behavior: 'smooth' });
       return true;
     }
     
-    console.log('[goToNextStep] Already on last section');
     return false;
   }, [currentSection]);
 
   const goToPreviousStep = useCallback(() => {
-    console.log('[goToPreviousStep] Called, current section:', currentSection);
     if (currentSection > 1) {
-      console.log('[goToPreviousStep] Moving to section:', currentSection - 1);
       setCurrentSection(prev => prev - 1);
       window.scrollTo({ top: 0, behavior: 'smooth' });
-    } else {
-      console.log('[goToPreviousStep] Already on first section');
     }
   }, [currentSection]);
 
   // Manual save
   const manualSave = useCallback(() => {
-    console.log('[MANUAL-SAVE] User clicked Save Draft button');
     try {
       localStorage.setItem(
         `questionnaire_draft_${clientId}`,
@@ -445,7 +391,6 @@ export function useQuestionnaireForm(
         `questionnaire_section_${clientId}`,
         currentSection.toString()
       );
-      console.log('[MANUAL-SAVE] ✓ Manual save completed successfully');
       setSaveStatus('saved');
       setIsDraft(true);
     } catch (error) {
@@ -518,7 +463,6 @@ function getQuestionKey(questionId: string): string {
 // Helper function to get question value from formData
 function getQuestionValue(questionId: string, formData: QuestionnaireData): string | string[] {
   const key = `${questionId}_${getQuestionKey(questionId)}`;
-  console.log(`[getQuestionValue] ${questionId} → key: ${key}`);
   
   // Skip file upload questions - they don't need validation
   if (questionId === 'q24' || questionId === 'q29') return '';
@@ -528,7 +472,6 @@ function getQuestionValue(questionId: string, formData: QuestionnaireData): stri
       questionId === 'q3' || questionId === 'q4' || 
       questionId === 'q5') {
     const value = (formData.avatar_definition as Record<string, string | string[]>)[key] || '';
-    console.log(`[getQuestionValue] ${questionId} found in avatar_definition[${key}]:`, value);
     return value;
   } else if (questionId === 'q6' || questionId === 'q7' || 
              questionId === 'q8' || questionId === 'q9' || 
@@ -554,10 +497,8 @@ function getQuestionValue(questionId: string, formData: QuestionnaireData): stri
     return (formData.faith_integration as Record<string, string>)[key] || '';
   } else if (questionId === 'q33' || questionId === 'q34') {
     const value = (formData.business_metrics as Record<string, string>)[key] || '';
-    console.log(`[getQuestionValue] ${questionId} found in business_metrics:`, value);
     return value;
   }
   
-  console.log(`[getQuestionValue] ${questionId}: NO MATCH, returning empty string`);
   return '';
 }

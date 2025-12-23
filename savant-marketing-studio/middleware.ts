@@ -65,7 +65,7 @@ export async function middleware(request: NextRequest) {
     return supabaseResponse
   } catch (error) {
     console.error('Middleware error:', error)
-    
+
     // FAIL CLOSED: If middleware fails, block protected routes
     // This prevents authentication bypass via middleware crashes
     if (request.nextUrl.pathname.startsWith('/dashboard')) {
@@ -73,7 +73,7 @@ export async function middleware(request: NextRequest) {
         new URL('/login?error=auth_failed', request.url)
       )
     }
-    
+
     // Allow public routes (landing, form, api) to continue
     // This prevents total site outage from middleware errors
     return NextResponse.next()

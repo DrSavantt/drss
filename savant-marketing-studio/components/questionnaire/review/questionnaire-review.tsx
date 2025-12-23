@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { Loader2 } from 'lucide-react';
 import { useQuestionnaireForm } from '@/lib/questionnaire/use-questionnaire-form';
 import { REQUIRED_QUESTIONS, QuestionnaireData } from '@/lib/questionnaire/types';
 import { saveQuestionnaire } from '@/app/actions/questionnaire';
@@ -94,7 +95,6 @@ export default function QuestionnaireReview({
               errorCount > 3 ? `\n\n...and ${errorCount - 3} more` : ''
             }`
           );
-          console.error('Validation errors:', result.validationErrors);
       } else {
         setError(result.error || 'Failed to save questionnaire');
         }
@@ -244,8 +244,9 @@ export default function QuestionnaireReview({
       <button
         onClick={handleSubmit}
         disabled={submitting || (!isPublic && progress < 100) || !!successMessage}
-        className="w-full bg-red-primary text-white py-4 px-6 rounded-lg font-bold text-lg hover:bg-red-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-all min-h-[56px]"
+        className="w-full bg-red-primary text-white py-4 px-6 rounded-lg font-bold text-lg hover:bg-red-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-all min-h-[56px] flex items-center justify-center gap-2"
       >
+        {submitting && <Loader2 className="h-5 w-5 animate-spin" />}
         {submitting 
           ? (isEditMode ? 'Saving Changes...' : 'Submitting...') 
           : (isEditMode ? 'Save Changes' : 'Submit Questionnaire')}

@@ -2,6 +2,7 @@
 
 import { createProject } from '@/app/actions/projects'
 import { useState } from 'react'
+import { Loader2 } from 'lucide-react'
 import Link from 'next/link'
 import { useParams } from 'next/navigation'
 
@@ -116,8 +117,9 @@ export default function NewProjectPage() {
           <button
             type="submit"
             disabled={loading}
-            className="flex-1 rounded-md bg-red-primary px-4 py-2 text-sm font-semibold text-foreground hover:bg-red-bright disabled:bg-mid-gray disabled:cursor-not-allowed transition-colors"
+            className="flex-1 rounded-md bg-red-primary px-4 py-2 text-sm font-semibold text-foreground hover:bg-red-bright disabled:bg-mid-gray disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
           >
+            {loading && <Loader2 className="h-4 w-4 animate-spin" />}
             {loading ? 'Creating...' : 'Create Project'}
           </button>
           <Link

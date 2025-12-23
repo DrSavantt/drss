@@ -7,7 +7,6 @@ export async function createClient() {
   // Check if env vars exist - return null instead of throwing
   // This allows pages to handle missing env vars gracefully
   if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
-    console.error('Missing Supabase environment variables');
     return null;
   }
 
