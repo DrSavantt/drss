@@ -100,7 +100,6 @@ async function uploadFiles(
         });
 
       if (uploadError) {
-        console.error('Upload error:', uploadError);
         continue;
       }
 
@@ -213,7 +212,6 @@ export async function saveQuestionnaire(
     const validation = validateQuestionnaireData(data);
 
     if (!validation.isValid) {
-      console.error('Server-side validation failed:', validation.errors);
       return {
         success: false,
         error: 'Please check your answers and try again.',
@@ -301,7 +299,6 @@ export async function saveQuestionnaire(
       .eq('id', clientId);
 
     if (error) {
-      console.error('Supabase error:', error);
       throw error;
     }
 
@@ -366,7 +363,6 @@ export async function resetQuestionnaire(
       .eq('id', clientId);
 
     if (error) {
-      console.error('Failed to reset questionnaire:', error);
       throw error;
     }
 
@@ -409,7 +405,6 @@ export async function submitPublicQuestionnaire(
       .single();
 
     if (clientError || !client) {
-      console.error('Invalid token:', clientError);
       return { success: false, error: 'Invalid or expired form link' };
     }
 
@@ -441,7 +436,6 @@ export async function submitPublicQuestionnaire(
       .eq('id', client.id);
 
     if (error) {
-      console.error('Failed to save questionnaire:', error);
       throw error;
     }
 
@@ -526,7 +520,6 @@ export async function savePublicQuestionnaireProgress(
       .eq('id', client.id);
 
     if (error) {
-      console.error('Failed to save progress:', error);
       throw error;
     }
 

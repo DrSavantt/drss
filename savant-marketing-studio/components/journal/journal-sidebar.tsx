@@ -4,7 +4,6 @@ import { useState } from 'react'
 import { 
   Search, 
   Edit3, 
-  MessageCircle, 
   Inbox, 
   ChevronRight, 
   Star, 
@@ -73,11 +72,6 @@ export function JournalSidebar({
       
       {/* Navigation items */}
       <div className="px-3 pb-3 space-y-1">
-        <NavItem 
-          icon={MessageCircle} 
-          label="Chat" 
-          onClick={() => {/* TODO: Navigate to chat when implemented */}}
-        />
         <NavItem 
           icon={Inbox} 
           label="All Items" 

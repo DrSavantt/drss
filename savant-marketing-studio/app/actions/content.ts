@@ -20,7 +20,6 @@ export async function getContentAssets(clientId: string) {
     .order('created_at', { ascending: false })
   
   if (error) {
-    console.error('Error fetching content:', error)
     return []
   }
   
@@ -41,7 +40,6 @@ export async function getContentAsset(id: string) {
     .single()
   
   if (error) {
-    console.error('Error fetching content:', error)
     return null
   }
   
@@ -90,7 +88,6 @@ export async function createContentAsset(clientId: string, formData: FormData) {
     .single()
   
   if (error) {
-    console.error('Error creating content:', error)
     return { error: 'Failed to create content' }
   }
   
@@ -132,7 +129,6 @@ export async function updateContentAsset(id: string, formData: FormData) {
     .eq('id', id)
   
   if (error) {
-    console.error('Error updating content:', error)
     return { error: 'Failed to update content' }
   }
   
@@ -213,7 +209,6 @@ export async function deleteContentAsset(id: string, clientId: string, deleteOpt
     .eq('id', id)
   
   if (error) {
-    console.error('Error deleting content:', error)
     return { error: 'Failed to delete content' }
   }
   
@@ -242,7 +237,6 @@ export async function getAllContentAssets() {
     .order('created_at', { ascending: false })
   
   if (error) {
-    console.error('Error fetching all content:', error)
     return []
   }
   
@@ -263,7 +257,6 @@ export async function getClientProjects(clientId: string) {
     .order('name', { ascending: true })
   
   if (error) {
-    console.error('Error fetching projects:', error)
     return []
   }
   
@@ -308,7 +301,6 @@ export async function createFileAsset(clientId: string, formData: FormData) {
     .single()
   
   if (error) {
-    console.error('Error creating file asset:', error)
     return { error: 'Failed to create file asset' }
   }
   
@@ -346,7 +338,6 @@ export async function getUploadUrl(fileName: string, clientId: string) {
     .createSignedUploadUrl(filePath)
   
   if (error) {
-    console.error('Error creating upload URL:', error)
     return { error: 'Failed to create upload URL' }
   }
   
@@ -374,7 +365,6 @@ export async function bulkDeleteContent(contentIds: string[]) {
     .in('id', contentIds)
   
   if (error) {
-    console.error('Error bulk deleting content:', error)
     return { error: 'Failed to delete content' }
   }
   
@@ -399,7 +389,6 @@ export async function bulkArchiveContent(contentIds: string[]) {
     .in('id', contentIds)
   
   if (error) {
-    console.error('Error bulk archiving content:', error)
     return { error: 'Failed to archive content' }
   }
   
@@ -424,7 +413,6 @@ export async function bulkUnarchiveContent(contentIds: string[]) {
     .in('id', contentIds)
   
   if (error) {
-    console.error('Error bulk unarchiving content:', error)
     return { error: 'Failed to unarchive content' }
   }
   
@@ -449,7 +437,6 @@ export async function bulkChangeProject(contentIds: string[], projectId: string 
     .in('id', contentIds)
   
   if (error) {
-    console.error('Error bulk changing project:', error)
     return { error: 'Failed to change project' }
   }
   
@@ -470,7 +457,6 @@ export async function getAllProjects() {
     .order('name', { ascending: true })
   
   if (error) {
-    console.error('Error fetching all projects:', error)
     return []
   }
   

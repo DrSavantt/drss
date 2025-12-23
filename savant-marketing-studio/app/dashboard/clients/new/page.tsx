@@ -2,6 +2,7 @@
 
 import { createClient } from '@/app/actions/clients'
 import { useState } from 'react'
+import { Loader2 } from 'lucide-react'
 import Link from 'next/link'
 
 export default function NewClientPage() {
@@ -99,8 +100,9 @@ export default function NewClientPage() {
           <button
             type="submit"
             disabled={loading}
-            className="flex-1 bg-red-primary text-foreground px-6 py-2.5 rounded-lg hover:bg-red-bright disabled:bg-mid-gray disabled:cursor-not-allowed transition-all duration-200 font-medium"
+            className="flex-1 bg-red-primary text-foreground px-6 py-2.5 rounded-lg hover:bg-red-bright disabled:bg-mid-gray disabled:cursor-not-allowed transition-all duration-200 font-medium flex items-center justify-center gap-2"
           >
+            {loading && <Loader2 className="h-4 w-4 animate-spin" />}
             {loading ? 'Creating...' : 'Create Client'}
           </button>
           <Link

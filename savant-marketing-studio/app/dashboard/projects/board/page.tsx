@@ -25,7 +25,7 @@ export default async function KanbanBoardPage() {
     .order('position', { ascending: true })
   
   if (error) {
-    console.error('Error fetching projects:', error)
+    // Error fetching projects
   }
 
   return (

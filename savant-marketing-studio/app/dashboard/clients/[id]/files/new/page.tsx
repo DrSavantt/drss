@@ -2,6 +2,7 @@
 
 import { createFileAsset, getUploadUrl, getClientProjects } from '@/app/actions/content'
 import { useState, useEffect } from 'react'
+import { Loader2 } from 'lucide-react'
 import Link from 'next/link'
 import { useParams } from 'next/navigation'
 
@@ -227,8 +228,9 @@ export default function NewFilePage() {
           <button
             type="submit"
             disabled={uploading || !file}
-            className="flex-1 rounded-md bg-red-primary px-4 py-2 text-sm font-semibold text-foreground hover:bg-red-bright disabled:bg-mid-gray disabled:cursor-not-allowed transition-colors"
+            className="flex-1 rounded-md bg-red-primary px-4 py-2 text-sm font-semibold text-foreground hover:bg-red-bright disabled:bg-mid-gray disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
           >
+            {uploading && <Loader2 className="h-4 w-4 animate-spin" />}
             {uploading ? 'Uploading...' : 'Upload File'}
           </button>
           <Link

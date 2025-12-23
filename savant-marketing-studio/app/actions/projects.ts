@@ -19,7 +19,6 @@ export async function getProjects(clientId: string) {
     .order('created_at', { ascending: false })
   
   if (error) {
-    console.error('Error fetching projects:', error)
     return []
   }
   
@@ -40,7 +39,6 @@ export async function getProject(id: string) {
     .single()
   
   if (error) {
-    console.error('Error fetching project:', error)
     return null
   }
   
@@ -77,7 +75,6 @@ export async function createProject(clientId: string, formData: FormData) {
     .single()
   
   if (error) {
-    console.error('Error creating project:', error)
     return { error: 'Failed to create project' }
   }
   
@@ -133,7 +130,6 @@ export async function updateProject(id: string, formData: FormData) {
     .eq('id', id)
   
   if (error) {
-    console.error('Error updating project:', error)
     return { error: 'Failed to update project' }
   }
   
@@ -182,7 +178,6 @@ export async function updateProjectStatus(
     .eq('id', projectId)
   
   if (error) {
-    console.error('Error updating project status:', error)
     return { error: 'Failed to update project' }
   }
   
@@ -229,7 +224,6 @@ export async function deleteProject(id: string, clientId: string, projectName?: 
     .eq('id', id)
   
   if (error) {
-    console.error('Error deleting project:', error)
     return { error: 'Failed to delete project' }
   }
   

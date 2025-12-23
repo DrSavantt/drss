@@ -7,9 +7,11 @@ import { PerfMonitor } from '@/components/perf-monitor'
 import { ThemeToggle } from '@/components/theme-toggle'
 import { CommandPalette } from '@/components/command-palette'
 import { InstallPrompt } from '@/components/install-prompt'
+import { ErrorBoundary } from '@/components/error-boundary'
 import Link from 'next/link'
 import { useState, useEffect } from 'react'
 import { usePathname } from 'next/navigation'
+import { Sparkles, FileText } from 'lucide-react'
 
 export default function DashboardLayout({
   children,
@@ -123,6 +125,32 @@ export default function DashboardLayout({
               >
                 Journal
               </Link>
+              <Link 
+                href="/dashboard/ai/generate" 
+                className={`
+                  text-sm font-medium transition-colors no-underline px-3 py-1.5 rounded-lg flex items-center gap-1.5
+                  ${pathname.startsWith('/dashboard/ai')
+                    ? 'text-red-primary bg-red-primary/10 font-semibold'
+                    : 'text-silver hover:text-foreground hover:bg-surface-highlight'
+                  }
+                `}
+              >
+                <Sparkles className="w-4 h-4" />
+                AI Studio
+              </Link>
+              <Link 
+                href="/dashboard/frameworks" 
+                className={`
+                  text-sm font-medium transition-colors no-underline px-3 py-1.5 rounded-lg flex items-center gap-1.5
+                  ${pathname.startsWith('/dashboard/frameworks')
+                    ? 'text-red-primary bg-red-primary/10 font-semibold'
+                    : 'text-silver hover:text-foreground hover:bg-surface-highlight'
+                  }
+                `}
+              >
+                <FileText className="w-4 h-4" />
+                Frameworks
+              </Link>
             </nav>
 
             <div className="hidden xl:block flex-1 max-w-sm mx-4">
@@ -149,27 +177,29 @@ export default function DashboardLayout({
 
       {/* Instant page loads - no transitions */}
       {/* Journal page gets special full-width treatment for 3-column layout */}
-      {pathname.startsWith('/dashboard/journal') ? (
+      <ErrorBoundary>
+        {pathname.startsWith('/dashboard/journal') ? (
+          <main 
+            className="lg:pt-0"
+            style={{
+              paddingTop: 'calc(4rem + env(safe-area-inset-top))'
+            }}
+          >
+            {children}
+          </main>
+        ) : (
         <main 
-          className="lg:pt-0"
+          className="lg:pt-0 px-4 lg:px-0 py-6 lg:py-8"
           style={{
             paddingTop: 'calc(4rem + env(safe-area-inset-top))'
           }}
         >
-          {children}
+          <div className="max-w-7xl mx-auto lg:px-4">
+            {children}
+          </div>
         </main>
-      ) : (
-      <main 
-        className="lg:pt-0 px-4 lg:px-0 py-6 lg:py-8"
-        style={{
-          paddingTop: 'calc(4rem + env(safe-area-inset-top))'
-        }}
-      >
-        <div className="max-w-7xl mx-auto lg:px-4">
-          {children}
-        </div>
-      </main>
-      )}
+        )}
+      </ErrorBoundary>
       
       {/* Performance monitor for development */}
       <PerfMonitor />
