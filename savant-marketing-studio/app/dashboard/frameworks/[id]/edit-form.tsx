@@ -1,10 +1,18 @@
 'use client';
 
-import { updateFramework, deleteFramework, getFrameworkCategories, Framework } from '@/app/actions/frameworks';
+import { updateFramework, deleteFramework, getFrameworkCategories } from '@/app/actions/frameworks';
 import { useRouter } from 'next/navigation';
 import { useState, useEffect } from 'react';
 import { Loader2, ArrowLeft, Trash2 } from 'lucide-react';
 import Link from 'next/link';
+
+interface Framework {
+  id: string;
+  name: string;
+  description: string | null;
+  category: string | null;
+  content: string;
+}
 
 export default function FrameworkEditForm({ framework }: { framework: Framework }) {
   const router = useRouter();
@@ -25,12 +33,13 @@ export default function FrameworkEditForm({ framework }: { framework: Framework 
     try {
       const result = await updateFramework(framework.id, formData);
       
-      if ('error' in result) {
+      if (result && 'error' in result) {
         alert(result.error);
         return;
       }
 
       router.push('/dashboard/frameworks');
+      router.refresh();
     } catch (error) {
       console.error('Failed to update framework:', error);
       alert('Failed to update framework');
@@ -46,12 +55,13 @@ export default function FrameworkEditForm({ framework }: { framework: Framework 
     try {
       const result = await deleteFramework(framework.id);
       
-      if ('error' in result) {
+      if (result && 'error' in result) {
         alert(result.error);
         return;
       }
 
       router.push('/dashboard/frameworks');
+      router.refresh();
     } catch (error) {
       console.error('Failed to delete framework:', error);
       alert('Failed to delete framework');
@@ -67,7 +77,7 @@ export default function FrameworkEditForm({ framework }: { framework: Framework 
         <div>
           <Link
             href="/dashboard/frameworks"
-            className="inline-flex items-center gap-2 text-silver hover:text-foreground text-sm mb-4"
+            className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground text-sm mb-4"
           >
             <ArrowLeft className="w-4 h-4" />
             Back to Frameworks
@@ -77,7 +87,7 @@ export default function FrameworkEditForm({ framework }: { framework: Framework 
         <button
           onClick={handleDelete}
           disabled={deleting}
-          className="px-4 py-2 border border-red-500 text-red-500 rounded-lg hover:bg-red-500/10 disabled:opacity-50 flex items-center gap-2"
+          className="px-4 py-2 border border-destructive text-destructive rounded-lg hover:bg-destructive/10 disabled:opacity-50 flex items-center gap-2"
         >
           {deleting ? (
             <Loader2 className="w-4 h-4 animate-spin" />
@@ -97,7 +107,7 @@ export default function FrameworkEditForm({ framework }: { framework: Framework 
             name="name"
             required
             defaultValue={framework.name}
-            className="w-full p-3 border border-border rounded-lg bg-surface"
+            className="w-full p-3 border border-border rounded-lg bg-background"
           />
         </div>
 
@@ -107,7 +117,7 @@ export default function FrameworkEditForm({ framework }: { framework: Framework 
             type="text"
             name="description"
             defaultValue={framework.description || ''}
-            className="w-full p-3 border border-border rounded-lg bg-surface"
+            className="w-full p-3 border border-border rounded-lg bg-background"
           />
         </div>
 
@@ -116,7 +126,7 @@ export default function FrameworkEditForm({ framework }: { framework: Framework 
           <select
             name="category"
             defaultValue={framework.category || ''}
-            className="w-full p-3 border border-border rounded-lg bg-surface"
+            className="w-full p-3 border border-border rounded-lg bg-background"
           >
             <option value="">Select category...</option>
             {categories.map(cat => (
@@ -127,6 +137,8 @@ export default function FrameworkEditForm({ framework }: { framework: Framework 
             <option value="funnel">funnel</option>
             <option value="ads">ads</option>
             <option value="email">email</option>
+            <option value="landing">landing</option>
+            <option value="social">social</option>
           </select>
         </div>
 
@@ -137,9 +149,9 @@ export default function FrameworkEditForm({ framework }: { framework: Framework 
             required
             rows={15}
             defaultValue={framework.content}
-            className="w-full p-3 border border-border rounded-lg bg-surface font-mono text-sm"
+            className="w-full p-3 border border-border rounded-lg bg-background font-mono text-sm"
           />
-          <p className="text-xs text-silver mt-2">
+          <p className="text-xs text-muted-foreground mt-2">
             Saving will regenerate embeddings for AI search.
           </p>
         </div>
@@ -148,7 +160,7 @@ export default function FrameworkEditForm({ framework }: { framework: Framework 
           <button
             type="submit"
             disabled={loading}
-            className="flex-1 px-6 py-3 bg-red-primary text-white rounded-lg hover:bg-red-primary/90 disabled:opacity-50 font-medium"
+            className="flex-1 px-6 py-3 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 disabled:opacity-50 font-medium"
           >
             {loading ? (
               <span className="flex items-center justify-center gap-2">
@@ -161,7 +173,7 @@ export default function FrameworkEditForm({ framework }: { framework: Framework 
           </button>
           <Link
             href="/dashboard/frameworks"
-            className="px-6 py-3 border border-border rounded-lg hover:bg-surface"
+            className="px-6 py-3 border border-border rounded-lg hover:bg-muted"
           >
             Cancel
           </Link>

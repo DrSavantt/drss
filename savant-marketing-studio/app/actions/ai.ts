@@ -12,6 +12,7 @@ export interface GenerateContentParams {
   complexity?: TaskComplexity;
   forceModel?: string;
   autoSave?: boolean; // NEW: Auto-save to content library
+  projectId?: string; // NEW: Link to specific project
 }
 
 export interface GenerateContentResult {
@@ -31,6 +32,7 @@ export async function generateContent(params: GenerateContentParams): Promise<Ge
     complexity = 'medium',
     forceModel,
     autoSave = false,
+    projectId,
   } = params;
 
   const supabase = await createClient();
@@ -100,6 +102,7 @@ Output ONLY the requested content, no explanations or meta-commentary.`;
       .from('content_assets')
       .insert({
         client_id: clientId,
+        project_id: projectId || null,
         title: `AI Generated: ${contentType} - ${new Date().toLocaleDateString()}`,
         asset_type: mapContentTypeToAssetType(contentType),
         content_json: {

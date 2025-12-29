@@ -5,25 +5,27 @@ export const metadata: Metadata = {
   description: 'Complete your onboarding questionnaire to help us serve you better.',
 }
 
+/**
+ * Public Form Layout
+ * 
+ * This layout provides the shell for the public questionnaire form.
+ * Theme control is handled independently by the PublicFormWrapper component,
+ * which applies its own dark/light mode classes. The layout itself is theme-agnostic
+ * to allow the form to control its own appearance.
+ */
 export default function PublicFormLayout({
   children
 }: {
   children: React.ReactNode
 }) {
   return (
-    <div className="min-h-screen bg-background">
-      {/* Minimal header */}
-      <header className="border-b border-border bg-surface sticky top-0 z-40 backdrop-blur-xl bg-surface/95">
-        <div className="max-w-4xl mx-auto px-4 py-4 safe-area-top">
-          <h1 className="text-xl font-bold text-red-primary">DRSS Marketing</h1>
-          <p className="text-sm text-silver">Client Onboarding</p>
-        </div>
-      </header>
-      
-      {/* Form content */}
-      <main className="max-w-4xl mx-auto px-4 py-6 md:py-8 pb-32 safe-area-bottom">
-        {children}
-      </main>
-    </div>
+    <>
+      {/* 
+        Note: The actual theming happens in PublicFormWrapper which wraps
+        its content in a div with the 'dark' class when in dark mode.
+        This layout is intentionally minimal and theme-agnostic.
+      */}
+      {children}
+    </>
   )
 }

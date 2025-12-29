@@ -1,0 +1,399 @@
+# DRSS / Savant Marketing Studio - Cursor AI Rules
+
+## 🎨 DESIGN SYSTEM ENFORCEMENT - CRITICAL
+
+### ❌ NEVER USE HARDCODED COLORS
+
+**FORBIDDEN COLOR CLASSES:**
+- `bg-zinc-*` (bg-zinc-950, bg-zinc-900, bg-zinc-800, etc.)
+- `bg-slate-*` (bg-slate-900, bg-slate-800, etc.)
+- `bg-gray-*` (bg-gray-900, bg-gray-800, etc.)
+- `text-zinc-*` (text-zinc-400, text-zinc-500, etc.)
+- `text-slate-*`, `text-gray-*`
+- `border-zinc-*`, `border-slate-*`, `border-gray-*`
+- `bg-black`, `bg-white` (use theme variables instead)
+- Any hardcoded hex colors (e.g., `#1a1a1a`)
+
+### ✅ ALWAYS USE THEME VARIABLES
+
+**Core Background Colors:**
+```tsx
+bg-background       // Main app background
+bg-card            // Card/panel backgrounds
+bg-popover         // Popovers, dropdowns
+bg-muted           // Muted/disabled backgrounds
+bg-accent          // Hover states, accents
+bg-secondary       // Secondary surfaces
+bg-surface         // Premium surface (legacy compat)
+```
+
+**Text Colors:**
+```tsx
+text-foreground          // Primary text
+text-card-foreground     // Text on cards
+text-muted-foreground    // Secondary/muted text
+text-primary            // Brand red text
+text-primary-foreground  // Text on primary buttons
+text-destructive        // Error text
+```
+
+**Border Colors:**
+```tsx
+border-border      // Default borders
+border-input       // Input field borders
+border            // Generic border utility
+```
+
+**Interactive Colors:**
+```tsx
+bg-primary              // Primary red (#dc2626)
+bg-destructive          // Destructive actions
+hover:bg-accent         // Hover states
+hover:bg-primary/90     // Button hover states
+focus:ring-ring         // Focus rings
+```
+
+**Status Colors (when needed):**
+```tsx
+text-success    // Green success states
+text-warning    // Warning states
+text-info       // Informational states
+text-error      // Error states (or use text-destructive)
+```
+
+## 📦 COMPONENT USAGE RULES
+
+### Always Use Existing shadcn/ui Components
+
+**Available Components:**
+- `alert-dialog` - For confirmation dialogs
+- `avatar` - User avatars
+- `badge` - Status badges, tags
+- `button` - All buttons (see variants below)
+- `card` - Content cards
+- `checkbox` - Checkboxes
+- `collapsible` - Collapsible sections
+- `dialog` - Modal dialogs
+- `drawer` - Side drawers/sheets
+- `dropdown-menu` - Dropdown menus
+- `input` - Text inputs
+- `label` - Form labels
+- `progress` - Progress bars
+- `radio-group` - Radio buttons
+- `select` - Select dropdowns
+- `sheet` - Side sheets
+- `spotlight-card` - Special cards with effects
+- `stat-card` - Statistics cards
+- `switch` - Toggle switches
+- `tabs` - Tab navigation
+- `textarea` - Multi-line text inputs
+
+### Button Patterns
+
+```tsx
+import { Button } from "@/components/ui/button"
+
+// Primary action
+<Button variant="default">Save</Button>
+
+// Secondary action
+<Button variant="secondary">Cancel</Button>
+
+// Destructive action
+<Button variant="destructive">Delete</Button>
+
+// Subtle action
+<Button variant="ghost">Edit</Button>
+
+// Outlined
+<Button variant="outline">More Options</Button>
+
+// Link style
+<Button variant="link">Learn more</Button>
+
+// Sizes
+<Button size="sm">Small</Button>
+<Button size="default">Default</Button>
+<Button size="lg">Large</Button>
+<Button size="icon"><Icon /></Button>
+```
+
+### Dialog Patterns
+
+```tsx
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog"
+
+<Dialog open={open} onOpenChange={setOpen}>
+  <DialogContent>
+    <DialogHeader>
+      <DialogTitle>Dialog Title</DialogTitle>
+      <DialogDescription>
+        Description text here
+      </DialogDescription>
+    </DialogHeader>
+    
+    {/* Dialog content */}
+    
+    <DialogFooter>
+      <Button variant="ghost" onClick={onCancel}>Cancel</Button>
+      <Button onClick={onConfirm}>Confirm</Button>
+    </DialogFooter>
+  </DialogContent>
+</Dialog>
+```
+
+### Card Patterns
+
+```tsx
+import {
+  Card,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+  CardContent,
+  CardFooter,
+} from "@/components/ui/card"
+
+<Card>
+  <CardHeader>
+    <CardTitle>Card Title</CardTitle>
+    <CardDescription>Card description</CardDescription>
+  </CardHeader>
+  <CardContent>
+    {/* Card content */}
+  </CardContent>
+  <CardFooter>
+    {/* Footer actions */}
+  </CardFooter>
+</Card>
+```
+
+### Form Input Patterns
+
+```tsx
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Textarea } from "@/components/ui/textarea"
+import { Checkbox } from "@/components/ui/checkbox"
+import { Select } from "@/components/ui/select"
+
+// Text input
+<div>
+  <Label htmlFor="name">Name</Label>
+  <Input id="name" placeholder="Enter name" />
+</div>
+
+// Textarea
+<div>
+  <Label htmlFor="description">Description</Label>
+  <Textarea id="description" />
+</div>
+
+// Checkbox
+<div className="flex items-center space-x-2">
+  <Checkbox id="terms" />
+  <Label htmlFor="terms">Accept terms</Label>
+</div>
+```
+
+## 📁 FILE ORGANIZATION
+
+### Component Placement
+
+```
+components/
+├── ui/                    # shadcn/ui components (DO NOT MODIFY)
+├── [feature]/            # Feature-specific components
+│   ├── feature-card.tsx
+│   └── feature-list.tsx
+├── layout/               # Layout components
+└── shared/               # Shared utility components
+```
+
+### Documentation Placement
+
+```
+docs/                     # ✅ All documentation goes here
+├── api-docs/
+├── feature-d-plus/
+├── implementation-notes/
+├── migration-guides/
+└── quick-reference/
+
+_docs/                    # ✅ Archived/reference docs
+app/                      # ❌ NO .md files here
+components/              # ❌ NO .md files here
+lib/                     # ❌ NO .md files here
+```
+
+### API Route Patterns
+
+```
+app/
+└── api/
+    └── [resource]/
+        ├── route.ts           # GET, POST /api/resource
+        ├── [id]/
+        │   ├── route.ts       # GET, PUT, DELETE /api/resource/[id]
+        │   └── [action]/
+        │       └── route.ts   # POST /api/resource/[id]/[action]
+        └── ...
+```
+
+## 🎯 CODING STANDARDS
+
+### TypeScript
+
+- Use TypeScript strict mode
+- Always define proper types/interfaces
+- Avoid `any` - use `unknown` or proper types
+- Use type imports: `import type { Type } from './types'`
+
+### React Patterns
+
+```tsx
+// ✅ Use 'use client' directive when needed
+'use client'
+
+import { useState } from 'react'
+
+// ✅ Named exports for components
+export function MyComponent({ prop }: { prop: string }) {
+  const [state, setState] = useState('')
+  
+  return (
+    <div className="bg-card text-card-foreground">
+      {/* Component content */}
+    </div>
+  )
+}
+
+// ❌ Avoid default exports for components
+export default function MyComponent() { }
+```
+
+### Next.js 15 App Router
+
+- Use Server Components by default
+- Add `'use client'` only when necessary (state, effects, browser APIs)
+- Use Server Actions for mutations
+- Follow Next.js metadata API for SEO
+- Use `app/` directory structure
+
+### CSS/Styling Rules
+
+```tsx
+// ✅ Use semantic theme variables
+<div className="bg-card text-foreground border-border">
+
+// ✅ Use cn() utility for conditional classes
+import { cn } from '@/lib/utils'
+<div className={cn("bg-card", isActive && "bg-accent")}>
+
+// ❌ Never hardcode colors
+<div className="bg-zinc-950 text-zinc-400">
+
+// ✅ Support light/dark mode
+<div className="bg-background text-foreground">
+// Automatically works in both themes!
+```
+
+### Theme-Aware Styling
+
+```tsx
+// Colors automatically adapt to light/dark mode
+// No need for dark: prefix when using theme variables
+
+// ✅ This works in both modes
+<div className="bg-card text-card-foreground">
+
+// ⚠️ Only use dark: for special overrides
+<div className="bg-card dark:shadow-lg">
+```
+
+## 🔍 BEFORE CREATING NEW COMPONENTS
+
+**Checklist:**
+1. ✅ Check if component exists in `components/ui/`
+2. ✅ Check `ui-design-system/` folder for patterns
+3. ✅ Review existing feature components
+4. ✅ Ensure using theme variables (not hardcoded colors)
+5. ✅ Test in both light and dark mode
+6. ✅ Follow mobile-first responsive design
+7. ✅ Add proper TypeScript types
+8. ✅ Use semantic HTML elements
+
+## 🚫 COMMON MISTAKES TO AVOID
+
+1. **Hardcoded Colors** - Always use theme variables
+2. **Creating duplicate UI components** - Use existing shadcn/ui components
+3. **Documentation in wrong folders** - Use `docs/` directory
+4. **Missing 'use client'** - Add when using hooks/browser APIs
+5. **Not testing mobile** - Design mobile-first
+6. **Forgetting dark mode** - Theme variables handle this automatically
+7. **Inconsistent spacing** - Use Tailwind spacing scale (4, 8, 12, 16, etc.)
+8. **Breaking accessibility** - Use semantic HTML, ARIA labels, keyboard nav
+
+## 📚 HELPFUL REFERENCES
+
+- Design System: `docs/DESIGN_SYSTEM.md`
+- Component Library: `components/ui/`
+- Theme Config: `app/globals.css`
+- Tailwind Config: `tailwind.config.js`
+- UI Examples: `ui-design-system/` folder
+
+## 🎨 COLOR MIGRATION GUIDE
+
+**If you see hardcoded colors in code:**
+
+| ❌ Old (Hardcoded) | ✅ New (Theme Variable) |
+|-------------------|------------------------|
+| `bg-zinc-950` | `bg-background` |
+| `bg-zinc-900` | `bg-card` |
+| `bg-zinc-800` | `bg-muted` or `bg-secondary` |
+| `text-zinc-400` | `text-muted-foreground` |
+| `text-zinc-500` | `text-muted-foreground` |
+| `text-white` | `text-foreground` |
+| `border-zinc-800` | `border-border` |
+| `border-zinc-700` | `border-border` |
+| `bg-red-600` | `bg-primary` |
+| `bg-black` | `bg-background` |
+
+## 🔧 UTILITY PATTERNS
+
+### Conditional Styling
+
+```tsx
+import { cn } from '@/lib/utils'
+
+// ✅ Merge classes safely
+<div className={cn(
+  "bg-card p-4 rounded-lg",
+  isActive && "bg-accent",
+  error && "border-destructive"
+)} />
+```
+
+### Responsive Design
+
+```tsx
+// Mobile-first approach
+<div className="
+  p-4                    // mobile
+  md:p-6                // tablet
+  lg:p-8                // desktop
+  bg-card               // all breakpoints
+" />
+```
+
+---
+
+**Remember: Consistency in design system usage creates a cohesive, maintainable, and professional application. Always use theme variables!**
+

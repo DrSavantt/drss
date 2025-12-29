@@ -1,33 +1,57 @@
 'use client';
 
-import React, { useRef, useEffect } from 'react';
+import React, { useRef, useEffect, useMemo } from 'react';
 import { Check } from 'lucide-react';
+import { QuestionnaireConfigLike } from '@/lib/questionnaire/questionnaire-config-context';
 
 interface ProgressStepperProps {
   currentSection: number;
   completedSections: number[];
   onSectionClick: (section: number) => void;
+  config: QuestionnaireConfigLike; // Required: use database config
 }
 
-const SECTIONS = [
-  { number: 1, name: 'Avatar', fullName: 'Avatar Definition' },
-  { number: 2, name: 'Dream', fullName: 'Dream Outcome' },
-  { number: 3, name: 'Problems', fullName: 'Problems & Obstacles' },
-  { number: 4, name: 'Solution', fullName: 'Solution & Methodology' },
-  { number: 5, name: 'Voice', fullName: 'Brand Voice' },
-  { number: 6, name: 'Proof', fullName: 'Proof & Transformation' },
-  { number: 7, name: 'Faith', fullName: 'Faith Integration' },
-  { number: 8, name: 'Metrics', fullName: 'Business Metrics' },
-] as const;
+// Short names for mobile display
+const SHORT_NAMES: Record<string, string> = {
+  avatar_definition: 'Avatar',
+  dream_outcome: 'Dream',
+  problems_obstacles: 'Problems',
+  solution_methodology: 'Solution',
+  brand_voice: 'Voice',
+  proof_transformation: 'Proof',
+  faith_integration: 'Faith',
+  business_metrics: 'Metrics',
+};
 
 export function ProgressStepper({
   currentSection,
   completedSections,
   onSectionClick,
+  config,
 }: ProgressStepperProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
+  
+  // Get enabled sections from database config
+  const sections = useMemo(() => {
+    const enabledSections = config.getEnabledSections();
+    return enabledSections.map(s => ({
+      number: s.id,
+      name: SHORT_NAMES[s.key] || s.title.split(' ')[0],
+      fullName: s.title,
+      key: s.key,
+    }));
+  }, [config]);
+  
+  const totalSections = sections.length;
+  
   const isCompleted = (num: number) => completedSections.includes(num);
   const isCurrent = (num: number) => num === currentSection;
+  
+  // Get the current section's position in enabled sections (1-indexed for display)
+  const currentPosition = useMemo(() => {
+    const index = sections.findIndex(s => s.number === currentSection);
+    return index >= 0 ? index + 1 : 1;
+  }, [sections, currentSection]);
 
   // Scroll to current section on mobile
   useEffect(() => {
@@ -49,7 +73,7 @@ export function ProgressStepper({
             className="overflow-x-auto pb-2 -mx-2 px-2 questionnaire-stepper"
           >
             <div className="flex gap-2 min-w-max">
-              {SECTIONS.map((section) => (
+              {sections.map((section) => (
                 <button
                   key={section.number}
                   data-section={section.number}
@@ -78,11 +102,11 @@ export function ProgressStepper({
           {/* Mobile Step Counter */}
           <div className="text-center mt-3 pt-3 border-t border-border/50">
             <span className="text-xs sm:text-sm text-silver">
-              Step <span className="text-foreground font-semibold">{currentSection}</span> of{' '}
-              <span className="text-foreground font-semibold">8</span>
+              Step <span className="text-foreground font-semibold">{currentPosition}</span> of{' '}
+              <span className="text-foreground font-semibold">{totalSections}</span>
               <span className="mx-2 text-border">•</span>
               <span className="text-silver">
-                {SECTIONS.find(s => s.number === currentSection)?.fullName}
+                {sections.find(s => s.number === currentSection)?.fullName}
               </span>
             </span>
           </div>
@@ -91,7 +115,7 @@ export function ProgressStepper({
         {/* Desktop: Full stepper track */}
         <div className="hidden lg:block">
           <div className="flex items-center justify-between pb-2">
-            {SECTIONS.map((section, index) => (
+            {sections.map((section, index) => (
               <React.Fragment key={section.number}>
                 {/* Step */}
                 <button
@@ -137,7 +161,7 @@ export function ProgressStepper({
                 </button>
 
                 {/* Connecting Line (not after last) */}
-                {index < SECTIONS.length - 1 && (
+                {index < sections.length - 1 && (
                   <div
                     className={`
                       flex-1 h-0.5 min-w-[20px] mx-1 transition-colors
@@ -152,12 +176,12 @@ export function ProgressStepper({
           {/* Desktop Step Counter */}
           <div className="text-center mt-4 pt-4 border-t border-border/50">
             <span className="text-sm text-silver">
-              Step <span className="text-foreground font-semibold">{currentSection}</span> of{' '}
-              <span className="text-foreground font-semibold">8</span>
+              Step <span className="text-foreground font-semibold">{currentPosition}</span> of{' '}
+              <span className="text-foreground font-semibold">{totalSections}</span>
             </span>
             <span className="mx-3 text-border">•</span>
             <span className="text-sm text-silver">
-              {SECTIONS.find(s => s.number === currentSection)?.fullName}
+              {sections.find(s => s.number === currentSection)?.fullName}
             </span>
           </div>
         </div>
@@ -165,6 +189,3 @@ export function ProgressStepper({
     </div>
   );
 }
-
-// Export sections data for use in other components
-export { SECTIONS };

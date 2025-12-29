@@ -1,9 +1,18 @@
 'use client';
 
-import { useState, useEffect, useCallback, useRef } from 'react';
-import { QuestionnaireData, FormStatus, REQUIRED_QUESTIONS, EMPTY_QUESTIONNAIRE_DATA, UploadedFile } from './types';
-import { questionSchemas } from './validation-schemas';
-import { shouldShowQuestion } from './conditional-logic';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
+import { QuestionnaireData, FormStatus, EMPTY_QUESTIONNAIRE_DATA, UploadedFile } from './types';
+import type { 
+  SectionConfig,
+  QuestionConfig
+} from './questions-config';
+import { 
+  validateQuestion as dynamicValidateQuestion,
+  calculateProgress,
+  getVisibleRequiredQuestionKeys
+} from './dynamic-validation';
+import { useQuestionnaireConfigOptional } from './questionnaire-config-context';
+import { debounce } from '@/lib/utils';
 
 export interface UseQuestionnaireFormReturn {
   formData: QuestionnaireData;
@@ -22,6 +31,14 @@ export interface UseQuestionnaireFormReturn {
   canGoPrevious: () => boolean;
   manualSave: () => void;
   isDraft: boolean;
+  // New config-aware helpers
+  enabledSections: { id: number; title: string; key: string }[];
+  isLastSection: boolean;
+  isFirstSection: boolean;
+  // Auto-save features
+  lastSaved: Date | null;
+  saveNow: () => Promise<void>;
+  submitQuestionnaire: () => Promise<{ success: boolean; data?: any; error?: string }>;
 }
 
 export function useQuestionnaireForm(
@@ -29,16 +46,226 @@ export function useQuestionnaireForm(
   existingData?: QuestionnaireData | null,
   isEditMode: boolean = false
 ): UseQuestionnaireFormReturn {
+  // Try to get config from context (if within provider)
+  const contextConfig = useQuestionnaireConfigOptional();
+  
+  // Require context - throw error if not available
+  if (!contextConfig) {
+    throw new Error('useQuestionnaireForm must be used within a QuestionnaireConfigProvider');
+  }
+  
+  // Create wrapper functions using context
+  const getEnabledSectionsLive = useCallback(() => {
+    return contextConfig.getEnabledSections();
+  }, [contextConfig]);
+  
+  const getQuestionByKeyLive = useCallback((key: string) => {
+    return contextConfig.getQuestionByKey(key);
+  }, [contextConfig]);
+  
+  const getQuestionsForSectionLive = useCallback((sectionId: number) => {
+    return contextConfig.getQuestionsForSection(sectionId);
+  }, [contextConfig]);
+  
+  const shouldShowQuestionLive = useCallback((questionId: string, formData: Record<string, unknown>) => {
+    return contextConfig.shouldShowQuestion(questionId, formData);
+  }, [contextConfig]);
+  
+  const isLastEnabledSectionLive = useCallback((sectionId: number) => {
+    return contextConfig.isLastEnabledSection(sectionId);
+  }, [contextConfig]);
+  
+  const isFirstEnabledSectionLive = useCallback((sectionId: number) => {
+    return contextConfig.isFirstEnabledSection(sectionId);
+  }, [contextConfig]);
+  
+  const getNextEnabledSectionIdLive = useCallback((sectionId: number) => {
+    return contextConfig.getNextEnabledSectionId(sectionId);
+  }, [contextConfig]);
+  
+  const getPreviousEnabledSectionIdLive = useCallback((sectionId: number) => {
+    return contextConfig.getPreviousEnabledSectionId(sectionId);
+  }, [contextConfig]);
+
+  // ============================================
+  // STATE DECLARATIONS
+  // ============================================
+  
   const [formData, setFormData] = useState<QuestionnaireData>(EMPTY_QUESTIONNAIRE_DATA);
-  const [currentSection, setCurrentSection] = useState(1);
+  const [currentSection, setCurrentSection] = useState(1); // Will be updated in useEffect to first enabled section
   const [completedQuestions, setCompletedQuestions] = useState<Set<string>>(new Set());
   const [saveStatus, setSaveStatus] = useState<FormStatus>('saved');
   const [isDraft, setIsDraft] = useState(false);
+  const [lastSaved, setLastSaved] = useState<Date | null>(null);
   
   // Track if we've already restored from localStorage to prevent multiple restorations
   const hasRestoredRef = useRef(false);
   // Track if we've initialized with existing data in edit mode
   const hasInitializedEditDataRef = useRef(false);
+  // Track if we've loaded from server
+  const hasLoadedFromServerRef = useRef(false);
+
+  // ============================================
+  // AUTO-SAVE TO SERVER FUNCTIONS
+  // ============================================
+  
+  /**
+   * Save to server (auto-save draft)
+   */
+  const saveToServer = useCallback(async (data: QuestionnaireData) => {
+    if (!clientId) return;
+    if (isEditMode) return; // Don't auto-save in edit mode
+    
+    // Skip if data is empty
+    if (Object.keys(data).length === 0) return;
+    
+    setSaveStatus('saving');
+    try {
+      const response = await fetch('/api/questionnaire-response', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          client_id: clientId,
+          response_data: data
+        })
+      });
+      
+      if (!response.ok) throw new Error('Save failed');
+      
+      setSaveStatus('saved');
+      setLastSaved(new Date());
+      
+      // Reset to idle after 2 seconds
+      setTimeout(() => setSaveStatus('idle'), 2000);
+    } catch (error) {
+      console.error('Auto-save to server failed:', error);
+      setSaveStatus('error');
+      // Don't throw - let localStorage backup work
+    }
+  }, [clientId, isEditMode]);
+
+  /**
+   * Debounced server save (5 seconds)
+   */
+  const debouncedServerSave = useMemo(
+    () => debounce(saveToServer, 5000),
+    [saveToServer]
+  );
+
+  /**
+   * Load existing response from server
+   */
+  const loadFromServer = useCallback(async () => {
+    if (!clientId) return;
+    if (isEditMode) return; // Edit mode loads from existingData prop
+    if (hasLoadedFromServerRef.current) return;
+    
+    try {
+      const response = await fetch(`/api/questionnaire-response/${clientId}/latest`);
+      if (!response.ok) return; // No existing response, that's okay
+      
+      const { data } = await response.json();
+      
+      if (data?.response_data && data.status === 'draft') {
+        // Load draft from server
+        setFormData(data.response_data);
+        setIsDraft(true);
+        
+        // Mark completed questions
+        const completed = new Set<string>();
+        const checkSection = (sectionData: Record<string, unknown>) => {
+          Object.entries(sectionData).forEach(([key, value]) => {
+            const match = key.match(/^(q\d+)_/);
+            if (match) {
+              const questionId = match[1];
+              if (value && (typeof value === 'string' ? value.trim() !== '' : Array.isArray(value) ? value.length > 0 : false)) {
+                completed.add(questionId);
+              }
+            }
+          });
+        };
+        
+        Object.values(data.response_data).forEach((section: any) => {
+          if (section && typeof section === 'object') {
+            checkSection(section as Record<string, unknown>);
+          }
+        });
+        
+        setCompletedQuestions(completed);
+        hasLoadedFromServerRef.current = true;
+        hasRestoredRef.current = true; // Skip localStorage restore
+      }
+    } catch (error) {
+      console.error('Failed to load from server:', error);
+      // Continue with localStorage/empty form if server load fails
+    }
+  }, [clientId, isEditMode]);
+
+  /**
+   * Submit questionnaire (finalize draft)
+   */
+  const submitQuestionnaire = useCallback(async () => {
+    if (!clientId) return { success: false, error: 'No client ID' };
+    
+    // First save current state to ensure latest data is on server
+    await saveToServer(formData);
+    
+    try {
+      const response = await fetch(`/api/questionnaire-response/${clientId}/submit`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ submitted_by: 'admin' })
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || 'Submit failed');
+      }
+      
+      const { data } = await response.json();
+      
+      // Clear localStorage draft
+      localStorage.removeItem(`questionnaire_draft_${clientId}`);
+      localStorage.removeItem(`questionnaire_completed_${clientId}`);
+      localStorage.removeItem(`questionnaire_section_${clientId}`);
+      
+      setIsDraft(false);
+      
+      return { success: true, data };
+    } catch (error) {
+      console.error('Submit failed:', error);
+      return { 
+        success: false, 
+        error: error instanceof Error ? error.message : 'Failed to submit questionnaire' 
+      };
+    }
+  }, [clientId, formData, saveToServer]);
+
+  // Get enabled sections from config (live from database if context available)
+  const enabledSections = getEnabledSectionsLive().map(s => ({
+    id: s.id,
+    title: s.title,
+    key: s.key
+  }));
+
+  // Check section position (using live config)
+  const isLastSection = isLastEnabledSectionLive(currentSection);
+  const isFirstSection = isFirstEnabledSectionLive(currentSection);
+
+  // Sync currentSection with database config when it loads
+  useEffect(() => {
+    if (contextConfig && contextConfig.isLoaded && !hasRestoredRef.current) {
+      const dbEnabledSections = contextConfig.getEnabledSections();
+      
+      // Check if current section is still valid in database config
+      const isCurrentSectionValid = dbEnabledSections.some(s => s.id === currentSection);
+      
+      if (!isCurrentSectionValid && dbEnabledSections.length > 0) {
+        console.log('[useQuestionnaireForm] Current section not valid in DB config, switching to first enabled section:', dbEnabledSections[0].id);
+        setCurrentSection(dbEnabledSections[0].id);
+      }
+    }
+  }, [contextConfig, currentSection]);
 
   // Initialize with existing data in edit mode (takes priority over localStorage)
   useEffect(() => {
@@ -47,7 +274,7 @@ export function useQuestionnaireForm(
       
       // Mark all questions that have values as completed
       const completed = new Set<string>();
-      const checkSection = (sectionData: Record<string, unknown>, prefix: string) => {
+      const checkSection = (sectionData: Record<string, unknown>) => {
         Object.entries(sectionData).forEach(([key, value]) => {
           // Extract question number from key (e.g., q1_ideal_customer -> q1)
           const match = key.match(/^(q\d+)_/);
@@ -60,14 +287,14 @@ export function useQuestionnaireForm(
         });
       };
       
-      checkSection(existingData.avatar_definition as unknown as Record<string, unknown>, 'avatar');
-      checkSection(existingData.dream_outcome as unknown as Record<string, unknown>, 'dream');
-      checkSection(existingData.problems_obstacles as unknown as Record<string, unknown>, 'problems');
-      checkSection(existingData.solution_methodology as unknown as Record<string, unknown>, 'solution');
-      checkSection(existingData.brand_voice as unknown as Record<string, unknown>, 'brand');
-      checkSection(existingData.proof_transformation as unknown as Record<string, unknown>, 'proof');
-      checkSection(existingData.faith_integration as unknown as Record<string, unknown>, 'faith');
-      checkSection(existingData.business_metrics as unknown as Record<string, unknown>, 'business');
+      checkSection(existingData.avatar_definition as unknown as Record<string, unknown>);
+      checkSection(existingData.dream_outcome as unknown as Record<string, unknown>);
+      checkSection(existingData.problems_obstacles as unknown as Record<string, unknown>);
+      checkSection(existingData.solution_methodology as unknown as Record<string, unknown>);
+      checkSection(existingData.brand_voice as unknown as Record<string, unknown>);
+      checkSection(existingData.proof_transformation as unknown as Record<string, unknown>);
+      checkSection(existingData.faith_integration as unknown as Record<string, unknown>);
+      checkSection(existingData.business_metrics as unknown as Record<string, unknown>);
       
       setCompletedQuestions(completed);
       hasInitializedEditDataRef.current = true;
@@ -75,7 +302,13 @@ export function useQuestionnaireForm(
     }
   }, [isEditMode, existingData]);
 
+  // Load from server on mount (takes priority over localStorage)
+  useEffect(() => {
+    loadFromServer();
+  }, [loadFromServer]);
+
   // Restore from localStorage on mount (only for create mode, not edit mode)
+  // This runs after server load, so it acts as a fallback
   useEffect(() => {
     // Skip restore if we just cleared (reset button was clicked)
     if (sessionStorage.getItem('skipRestore') === 'true') {
@@ -84,8 +317,8 @@ export function useQuestionnaireForm(
       return;
     }
     
-    // Skip if in edit mode or already restored
-    if (isEditMode || hasRestoredRef.current) {
+    // Skip if in edit mode, already restored, or loaded from server
+    if (isEditMode || hasRestoredRef.current || hasLoadedFromServerRef.current) {
       return;
     }
     
@@ -109,11 +342,15 @@ export function useQuestionnaireForm(
         setCompletedQuestions(new Set(parsed));
         }
 
-      // Restore current section
+      // Restore current section (ensure it's an enabled section)
       const savedSection = localStorage.getItem(sectionKey);
       if (savedSection) {
         const sectionNum = parseInt(savedSection, 10);
-        setCurrentSection(sectionNum);
+        const enabled = getEnabledSectionsLive();
+        const isEnabled = enabled.some(s => s.id === sectionNum);
+        if (isEnabled) {
+          setCurrentSection(sectionNum);
+        }
       }
       
       // Mark as restored so this never runs again
@@ -123,6 +360,18 @@ export function useQuestionnaireForm(
       console.error('[RESTORE] ❌ FAILED:', error);
     }
   }, [clientId, isEditMode]); // Still depends on clientId, but ref prevents multiple runs
+
+  // Auto-save to server (debounced) when form data changes
+  useEffect(() => {
+    if (Object.keys(formData).length > 0 && !isEditMode) {
+      debouncedServerSave(formData);
+    }
+    
+    // Cleanup: cancel pending debounced save on unmount
+    return () => {
+      debouncedServerSave.cancel();
+    };
+  }, [formData, debouncedServerSave, isEditMode]);
 
   // Auto-save to localStorage - immediate, no debounce
   useEffect(() => {
@@ -199,137 +448,131 @@ export function useQuestionnaireForm(
     };
   }, [formData, completedQuestions, currentSection, clientId]);
 
-  // Calculate progress
+  // Calculate progress using config-based helper
   const progress = useCallback(() => {
-    const visibleRequired = REQUIRED_QUESTIONS.filter(q => 
-      shouldShowQuestion(q, formData)
+    // Convert formData to flat structure for conditional logic checks
+    const flatFormData: Record<string, unknown> = {};
+    Object.entries(formData).forEach(([sectionKey, sectionData]) => {
+      Object.entries(sectionData as Record<string, unknown>).forEach(([key, value]) => {
+        flatFormData[key] = value;
+      });
+    });
+    
+    return calculateProgress(
+      contextConfig.questions,
+      contextConfig.sections,
+      completedQuestions,
+      flatFormData
     );
-    const answeredRequired = Array.from(completedQuestions).filter(q =>
-      visibleRequired.includes(q)
-    );
-    return Math.round((answeredRequired.length / visibleRequired.length) * 100);
-  }, [completedQuestions, formData]);
+  }, [completedQuestions, formData, contextConfig]);
 
   // Update question value
   const updateQuestion = useCallback((questionId: string, value: string | string[] | UploadedFile[]) => {
     setFormData(prev => {
       const updated = { ...prev };
       
-      // Determine which section this question belongs to
-      // Use exact matching to avoid q10 matching q1, q11 matching q1, etc.
-      if (questionId === 'q1' || questionId === 'q2' || 
-          questionId === 'q3' || questionId === 'q4' || 
-          questionId === 'q5') {
-        updated.avatar_definition = {
-          ...updated.avatar_definition,
-          [`${questionId}_${getQuestionKey(questionId)}`]: value
-        };
-      } else if (questionId === 'q6' || questionId === 'q7' || 
-                 questionId === 'q8' || questionId === 'q9' || 
-                 questionId === 'q10') {
-        const key = getQuestionKey(questionId);
-        updated.dream_outcome = {
-          ...updated.dream_outcome,
-          [`${questionId}_${key}`]: value as string
-        };
-      } else if (questionId === 'q11' || questionId === 'q12' || 
-                 questionId === 'q13' || questionId === 'q14' || 
-                 questionId === 'q15') {
-        const key = getQuestionKey(questionId);
-        updated.problems_obstacles = {
-          ...updated.problems_obstacles,
-          [`${questionId}_${key}`]: value as string
-        };
-      } else if (questionId === 'q16' || questionId === 'q17' || 
-                 questionId === 'q18' || questionId === 'q19') {
-        const key = getQuestionKey(questionId);
-        updated.solution_methodology = {
-          ...updated.solution_methodology,
-          [`${questionId}_${key}`]: value as string
-        };
-      } else if (questionId === 'q20' || questionId === 'q21' || 
-                 questionId === 'q22' || questionId === 'q23' ||
-                 questionId === 'q24') {
-        const key = getQuestionKey(questionId);
-        updated.brand_voice = {
-          ...updated.brand_voice,
-          [`${questionId}_${key}`]: value as string | UploadedFile[]
-        };
-      } else if (questionId === 'q25' || questionId === 'q26' || 
-                 questionId === 'q27' || questionId === 'q28' ||
-                 questionId === 'q29') {
-        const key = getQuestionKey(questionId);
-        updated.proof_transformation = {
-          ...updated.proof_transformation,
-          [`${questionId}_${key}`]: value as string | UploadedFile[]
-        };
-      } else if (questionId === 'q30' || questionId === 'q31' || 
-                 questionId === 'q32') {
-        const key = getQuestionKey(questionId);
-        updated.faith_integration = {
-          ...updated.faith_integration,
-          [`${questionId}_${key}`]: value as string
-        };
-      } else if (questionId === 'q33' || questionId === 'q34') {
-        const key = getQuestionKey(questionId);
-        updated.business_metrics = {
-          ...updated.business_metrics,
-          [`${questionId}_${key}`]: value as string
-        };
+      // Get the question config to find the full key (use live config)
+      const question = getQuestionByKeyLive(questionId);
+      if (!question) {
+        console.warn(`Question not found in config: ${questionId}`);
+        return prev;
+      }
+      
+      const fullKey = question.id; // e.g., "q1_ideal_customer"
+      const sectionId = question.sectionId;
+      
+      // Update the appropriate section
+      switch (sectionId) {
+        case 1:
+          updated.avatar_definition = {
+            ...updated.avatar_definition,
+            [fullKey]: value
+          } as typeof updated.avatar_definition;
+          break;
+        case 2:
+          updated.dream_outcome = {
+            ...updated.dream_outcome,
+            [fullKey]: value as string
+          };
+          break;
+        case 3:
+          updated.problems_obstacles = {
+            ...updated.problems_obstacles,
+            [fullKey]: value as string
+          };
+          break;
+        case 4:
+          updated.solution_methodology = {
+            ...updated.solution_methodology,
+            [fullKey]: value as string
+          };
+          break;
+        case 5:
+          updated.brand_voice = {
+            ...updated.brand_voice,
+            [fullKey]: value as string | UploadedFile[]
+          };
+          break;
+        case 6:
+          updated.proof_transformation = {
+            ...updated.proof_transformation,
+            [fullKey]: value as string | UploadedFile[]
+          };
+          break;
+        case 7:
+          updated.faith_integration = {
+            ...updated.faith_integration,
+            [fullKey]: value as string
+          };
+          break;
+        case 8:
+          updated.business_metrics = {
+            ...updated.business_metrics,
+            [fullKey]: value as string
+          };
+          break;
       }
 
       return updated;
     });
-  }, []);
+  }, [getQuestionByKeyLive]);
 
-  // Validate question
+  // Validate question using dynamic validation
   const validateQuestion = useCallback((questionId: string): string | undefined => {
-    const schema = questionSchemas[questionId];
-    if (!schema) {
-      return undefined;
-    }
-
-    // Get the value from formData
-    const value = getQuestionValue(questionId, formData);
-
-    try {
-      schema.parse(value);
-      return undefined;
-    } catch (error: unknown) {
-      if (error && typeof error === 'object' && 'errors' in error) {
-        const zodError = error as { errors: Array<{ message: string }> };
-        const errorMsg = zodError.errors?.[0]?.message || 'Invalid input';
-        return errorMsg;
-      }
-      return 'Invalid input';
-    }
-  }, [formData]);
+    // Get the value from formData (use live config)
+    const question = getQuestionByKeyLive(questionId);
+    if (!question) return undefined;
+    
+    const value = getQuestionValue(questionId, formData, getQuestionByKeyLive);
+    const error = dynamicValidateQuestion(contextConfig.questions, questionId, value);
+    return error || undefined;
+  }, [formData, getQuestionByKeyLive, contextConfig]);
 
   // Mark question as completed - no validation gate
   const markQuestionCompleted = useCallback((questionId: string) => {
     setCompletedQuestions(prev => new Set(prev).add(questionId));
   }, []);
 
-  // Validate entire section - actually validates content, not just Set membership
+  // Validate entire section - uses config-based question list (live from database)
   const validateSection = useCallback((sectionNumber: number): { isValid: boolean; error?: string } => {
-    const sectionQuestionMap: Record<number, string[]> = {
-      1: ['q1', 'q2', 'q3', 'q4', 'q5'],
-      2: ['q6', 'q7', 'q8', 'q9', 'q10'],
-      3: ['q11', 'q12', 'q14', 'q15'], // Q13 optional
-      4: ['q16', 'q17', 'q18', 'q19'],
-      5: ['q20', 'q21', 'q22', 'q23'],
-      6: ['q25', 'q26', 'q28'], // Q27, Q29 optional
-      7: [], // All optional (faith section)
-      8: ['q33', 'q34'],
-    };
-
-    const requiredQuestions = sectionQuestionMap[sectionNumber] || [];
+    const sectionQuestions = getQuestionsForSectionLive(sectionNumber);
     
-    // Actually validate content, not just check Set membership
+    // Get required questions that are visible
+    const flatFormData: Record<string, unknown> = {};
+    Object.entries(formData).forEach(([, sectionData]) => {
+      Object.entries(sectionData as Record<string, unknown>).forEach(([key, value]) => {
+        flatFormData[key] = value;
+      });
+    });
+    
+    const requiredQuestions = sectionQuestions.filter(q => 
+      q.required && shouldShowQuestionLive(q.id, flatFormData)
+    );
+    
+    // Validate each required question
     const invalidQuestions = requiredQuestions.filter(q => {
-      const error = validateQuestion(q);
-      const isInvalid = error !== undefined;
-      return isInvalid;
+      const error = validateQuestion(q.key);
+      return error !== undefined;
     });
     
     if (invalidQuestions.length > 0) {
@@ -340,41 +583,44 @@ export function useQuestionnaireForm(
     }
 
     return { isValid: true };
-  }, [validateQuestion]);
+  }, [validateQuestion, formData, getQuestionsForSectionLive, shouldShowQuestionLive]);
 
-  // Navigate to section - no validation
+  // Navigate to section - validates it's an enabled section (live from database)
   const goToSection = useCallback((sectionNumber: number) => {
-    if (sectionNumber >= 1 && sectionNumber <= 8) {
-    setCurrentSection(sectionNumber);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    const enabled = getEnabledSectionsLive();
+    const isEnabled = enabled.some(s => s.id === sectionNumber);
+    if (isEnabled) {
+      setCurrentSection(sectionNumber);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     }
-  }, []);
+  }, [getEnabledSectionsLive]);
 
-  // Step navigation - simple boundary checks, no validation
+  // Step navigation - uses config to find next/previous enabled section (live from database)
   const canGoNext = useCallback(() => {
-    return currentSection < 8;
-  }, [currentSection]);
+    return !isLastEnabledSectionLive(currentSection);
+  }, [currentSection, isLastEnabledSectionLive]);
 
   const canGoPrevious = useCallback(() => {
-    return currentSection > 1;
-  }, [currentSection]);
+    return !isFirstEnabledSectionLive(currentSection);
+  }, [currentSection, isFirstEnabledSectionLive]);
 
   const goToNextStep = useCallback((): boolean => {
-    if (currentSection < 8) {
-      setCurrentSection(prev => prev + 1);
+    const nextSectionId = getNextEnabledSectionIdLive(currentSection);
+    if (nextSectionId !== null) {
+      setCurrentSection(nextSectionId);
       window.scrollTo({ top: 0, behavior: 'smooth' });
       return true;
     }
-    
     return false;
-  }, [currentSection]);
+  }, [currentSection, getNextEnabledSectionIdLive]);
 
   const goToPreviousStep = useCallback(() => {
-    if (currentSection > 1) {
-      setCurrentSection(prev => prev - 1);
+    const prevSectionId = getPreviousEnabledSectionIdLive(currentSection);
+    if (prevSectionId !== null) {
+      setCurrentSection(prevSectionId);
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
-  }, [currentSection]);
+  }, [currentSection, getPreviousEnabledSectionIdLive]);
 
   // Manual save
   const manualSave = useCallback(() => {
@@ -416,89 +662,53 @@ export function useQuestionnaireForm(
     canGoPrevious,
     manualSave,
     isDraft,
+    enabledSections,
+    isLastSection,
+    isFirstSection,
+    // Auto-save features
+    lastSaved,
+    saveNow: () => saveToServer(formData),
+    submitQuestionnaire,
   };
 }
 
-// Helper function to get question key from question ID
-function getQuestionKey(questionId: string): string {
-  const keyMap: Record<string, string> = {
-    q1: 'ideal_customer',
-    q2: 'avatar_criteria',
-    q3: 'demographics',
-    q4: 'psychographics',
-    q5: 'platforms',
-    q6: 'dream_outcome',
-    q7: 'status',
-    q8: 'time_to_result',
-    q9: 'effort_sacrifice',
-    q10: 'proof',
-    q11: 'external_problems',
-    q12: 'internal_problems',
-    q13: 'philosophical_problems',
-    q14: 'past_failures',
-    q15: 'limiting_beliefs',
-    q16: 'core_offer',
-    q17: 'unique_mechanism',
-    q18: 'differentiation',
-    q19: 'delivery_vehicle',
-    q20: 'voice_type',
-    q21: 'personality_words',
-    q22: 'signature_phrases',
-    q23: 'avoid_topics',
-    q24: 'brand_assets',
-    q25: 'transformation_story',
-    q26: 'measurable_results',
-    q27: 'credentials',
-    q28: 'guarantees',
-    q29: 'proof_assets',
-    q30: 'faith_preference',
-    q31: 'faith_mission',
-    q32: 'biblical_principles',
-    q33: 'annual_revenue',
-    q34: 'primary_goal',
-  };
-  return keyMap[questionId] || '';
-}
-
-// Helper function to get question value from formData
-function getQuestionValue(questionId: string, formData: QuestionnaireData): string | string[] {
-  const key = `${questionId}_${getQuestionKey(questionId)}`;
+// Helper function to get question value from formData using question key
+function getQuestionValue(
+  questionKey: string, 
+  formData: QuestionnaireData,
+  getQuestionByKeyFn: (key: string) => QuestionConfig | undefined
+): string | string[] {
+  const question = getQuestionByKeyFn(questionKey);
+  if (!question) return '';
+  
+  const fullKey = question.id;
   
   // Skip file upload questions - they don't need validation
-  if (questionId === 'q24' || questionId === 'q29') return '';
+  if (question.type === 'file-upload') return '';
   
-  // Use exact matching to avoid q10 matching q1, q11 matching q1, etc.
-  if (questionId === 'q1' || questionId === 'q2' || 
-      questionId === 'q3' || questionId === 'q4' || 
-      questionId === 'q5') {
-    const value = (formData.avatar_definition as Record<string, string | string[]>)[key] || '';
-    return value;
-  } else if (questionId === 'q6' || questionId === 'q7' || 
-             questionId === 'q8' || questionId === 'q9' || 
-             questionId === 'q10') {
-    return (formData.dream_outcome as Record<string, string>)[key] || '';
-  } else if (questionId === 'q11' || questionId === 'q12' || 
-             questionId === 'q13' || questionId === 'q14' || 
-             questionId === 'q15') {
-    return (formData.problems_obstacles as Record<string, string>)[key] || '';
-  } else if (questionId === 'q16' || questionId === 'q17' || 
-             questionId === 'q18' || questionId === 'q19') {
-    return (formData.solution_methodology as Record<string, string>)[key] || '';
-  } else if (questionId === 'q20' || questionId === 'q21' || 
-             questionId === 'q22' || questionId === 'q23') {
-    const value = (formData.brand_voice as Record<string, unknown>)[key];
-    return typeof value === 'string' ? value : '';
-  } else if (questionId === 'q25' || questionId === 'q26' || 
-             questionId === 'q27' || questionId === 'q28') {
-    const value = (formData.proof_transformation as Record<string, unknown>)[key];
-    return typeof value === 'string' ? value : '';
-  } else if (questionId === 'q30' || questionId === 'q31' || 
-             questionId === 'q32') {
-    return (formData.faith_integration as Record<string, string>)[key] || '';
-  } else if (questionId === 'q33' || questionId === 'q34') {
-    const value = (formData.business_metrics as Record<string, string>)[key] || '';
-    return value;
+  // Get from appropriate section
+  switch (question.sectionId) {
+    case 1:
+      return (formData.avatar_definition as unknown as Record<string, string | string[]>)[fullKey] || '';
+    case 2:
+      return (formData.dream_outcome as unknown as Record<string, string>)[fullKey] || '';
+    case 3:
+      return (formData.problems_obstacles as unknown as Record<string, string>)[fullKey] || '';
+    case 4:
+      return (formData.solution_methodology as unknown as Record<string, string>)[fullKey] || '';
+    case 5: {
+      const value = (formData.brand_voice as unknown as Record<string, unknown>)[fullKey];
+      return typeof value === 'string' ? value : '';
+    }
+    case 6: {
+      const value = (formData.proof_transformation as unknown as Record<string, unknown>)[fullKey];
+      return typeof value === 'string' ? value : '';
+    }
+    case 7:
+      return (formData.faith_integration as unknown as Record<string, string>)[fullKey] || '';
+    case 8:
+      return (formData.business_metrics as unknown as Record<string, string>)[fullKey] || '';
+    default:
+      return '';
   }
-  
-  return '';
 }

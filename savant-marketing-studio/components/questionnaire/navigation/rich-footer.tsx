@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { ChevronLeft, ChevronRight, Check, Loader2, Circle, RotateCcw } from 'lucide-react';
 import {
   AlertDialog,
@@ -12,6 +12,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
+import { QuestionnaireConfigLike } from '@/lib/questionnaire/questionnaire-config-context';
 
 interface RichFooterProps {
   clientId: string;
@@ -20,18 +21,8 @@ interface RichFooterProps {
   onNext: () => void;
   saveStatus: 'idle' | 'saving' | 'saved';
   isLastSection?: boolean;
+  config: QuestionnaireConfigLike; // Required: use database config
 }
-
-const SECTION_NAMES = [
-  'Avatar Definition',
-  'Dream Outcome',
-  'Problems & Obstacles',
-  'Solution & Methodology',
-  'Brand Voice',
-  'Proof & Transformation',
-  'Faith Integration',
-  'Business Metrics',
-] as const;
 
 export function RichFooter({
   clientId,
@@ -40,13 +31,33 @@ export function RichFooter({
   onNext,
   saveStatus,
   isLastSection = false,
+  config,
 }: RichFooterProps) {
   const [resetDialogOpen, setResetDialogOpen] = useState(false);
 
-  const isFirstSection = currentSection === 1;
-  const previousName = currentSection > 1 ? SECTION_NAMES[currentSection - 2] : null;
-  const nextName = currentSection < 8 ? SECTION_NAMES[currentSection] : null;
+  // Get enabled sections from database config
+  const enabledSections = useMemo(() => {
+    return config.getEnabledSections();
+  }, [config]);
+  const totalSections = enabledSections.length;
+  
+  // Get current position (1-indexed)
+  const currentPosition = useMemo(() => {
+    const index = enabledSections.findIndex(s => s.id === currentSection);
+    return index >= 0 ? index + 1 : 1;
+  }, [enabledSections, currentSection]);
 
+  const isFirstSection = config.isFirstEnabledSection(currentSection);
+  
+  // Get previous and next section names from database config
+  const previousSectionId = config.getPreviousEnabledSectionId(currentSection);
+  const nextSectionId = config.getNextEnabledSectionId(currentSection);
+  const previousName = previousSectionId 
+    ? config.getSectionById(previousSectionId)?.title
+    : null;
+  const nextName = nextSectionId 
+    ? config.getSectionById(nextSectionId)?.title 
+    : null;
 
   return (
     <footer className="fixed bottom-0 left-0 right-0 z-50 safe-area-bottom">
@@ -81,7 +92,7 @@ export function RichFooter({
                 )}
               </div>
               <span className="text-xs text-foreground">
-                Step <span className="text-red-primary font-semibold">{currentSection}</span>/8
+                Step <span className="text-red-primary font-semibold">{currentPosition}</span>/{totalSections}
               </span>
             </div>
 
@@ -155,7 +166,7 @@ export function RichFooter({
             {/* CENTER: Step Counter + Save Status */}
             <div className="flex flex-col items-center justify-center">
               <span className="text-sm text-foreground font-medium">
-                Step <span className="text-red-primary">{currentSection}</span> of 8
+                Step <span className="text-red-primary">{currentPosition}</span> of {totalSections}
               </span>
 
               <div className="flex items-center gap-3 mt-1.5">

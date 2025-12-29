@@ -36,8 +36,8 @@ export function ResetButton({ clientId }: ResetButtonProps) {
         localStorage.removeItem(`questionnaire_completed_${clientId}`);
         localStorage.removeItem(`questionnaire_section_${clientId}`);
 
-        // Redirect to blank questionnaire
-        router.push(`/dashboard/clients/onboarding/${clientId}`);
+        // Redirect back to client profile after reset
+        router.push(`/dashboard/clients/${clientId}`);
       } else {
         alert(result.error || 'Failed to reset questionnaire');
         setLoading(false);

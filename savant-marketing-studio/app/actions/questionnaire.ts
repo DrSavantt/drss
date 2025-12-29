@@ -315,6 +315,7 @@ export async function saveQuestionnaire(
       entityType: 'questionnaire',
       entityId: clientId,
       entityName: client?.name,
+      clientId: clientId,
       metadata: { 
         sections_answered: Object.keys(data).length,
         mode 
@@ -385,6 +386,10 @@ export async function resetQuestionnaire(
 /**
  * Submit questionnaire from public form (no auth required)
  * Uses token-based authentication
+ * 
+ * UPDATED: Now saves to questionnaire_responses table with version history
+ * - Creates/updates record in questionnaire_responses table
+ * - Also syncs to clients.intake_responses for backward compatibility
  */
 export async function submitPublicQuestionnaire(
   token: string,
@@ -425,7 +430,54 @@ export async function submitPublicQuestionnaire(
       },
     };
 
-    // Update client with questionnaire data
+    // === NEW: Save to questionnaire_responses table for version history ===
+    
+    // Check if there's an existing draft
+    const { data: existingDraft } = await supabase
+      .from('questionnaire_responses')
+      .select('id, version')
+      .eq('client_id', client.id)
+      .eq('status', 'draft')
+      .eq('is_latest', true)
+      .single()
+
+    if (existingDraft) {
+      // Mark existing draft as submitted
+      await supabase
+        .from('questionnaire_responses')
+        .update({
+          response_data: data, // Store the clean data structure
+          status: 'submitted',
+          submitted_at: new Date().toISOString(),
+          submitted_by: 'client',
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', existingDraft.id)
+    } else {
+      // Get next version number
+      const { data: versionData } = await supabase
+        .rpc('get_next_response_version', { p_client_id: client.id })
+      
+      const nextVersion = versionData || 1
+
+      // Create new submitted response
+      await supabase
+        .from('questionnaire_responses')
+        .insert({
+          client_id: client.id,
+          user_id: client.user_id,
+          version: nextVersion,
+          response_data: data, // Store the clean data structure
+          status: 'submitted',
+          submitted_at: new Date().toISOString(),
+          submitted_by: 'client',
+          is_latest: true
+        })
+    }
+
+    // === END NEW ===
+
+    // Update client with questionnaire data (for backward compatibility)
     const { error } = await supabase
       .from('clients')
       .update({
@@ -467,6 +519,8 @@ export async function submitPublicQuestionnaire(
 /**
  * Save public questionnaire progress (auto-save)
  * Uses token-based authentication
+ * 
+ * UPDATED: Now saves to questionnaire_responses table as draft
  */
 export async function savePublicQuestionnaireProgress(
   token: string,
@@ -482,7 +536,7 @@ export async function savePublicQuestionnaireProgress(
     // Verify token and get client
     const { data: client, error: clientError } = await supabase
       .from('clients')
-      .select('id, questionnaire_status')
+      .select('id, user_id, questionnaire_status')
       .eq('questionnaire_token', token)
       .single();
 
@@ -495,26 +549,55 @@ export async function savePublicQuestionnaireProgress(
       return { success: true };
     }
 
-    // Save progress
-    const progressData = {
-      version: '1.0',
-      last_saved: new Date().toISOString(),
-      sections: {
-        avatar_definition: data.avatar_definition,
-        dream_outcome: data.dream_outcome,
-        problems_obstacles: data.problems_obstacles,
-        solution_methodology: data.solution_methodology,
-        brand_voice: data.brand_voice,
-        proof_transformation: data.proof_transformation,
-        faith_integration: data.faith_integration,
-        business_metrics: data.business_metrics,
-      },
-    };
+    // === NEW: Save to questionnaire_responses table as draft ===
+    
+    // Check if there's an existing draft
+    const { data: existingDraft } = await supabase
+      .from('questionnaire_responses')
+      .select('id, version')
+      .eq('client_id', client.id)
+      .eq('status', 'draft')
+      .eq('is_latest', true)
+      .single()
 
+    if (existingDraft) {
+      // Update existing draft
+      await supabase
+        .from('questionnaire_responses')
+        .update({
+          response_data: data,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', existingDraft.id)
+    } else {
+      // Get next version number
+      const { data: versionData } = await supabase
+        .rpc('get_next_response_version', { p_client_id: client.id })
+      
+      const nextVersion = versionData || 1
+
+      // Create new draft
+      await supabase
+        .from('questionnaire_responses')
+        .insert({
+          client_id: client.id,
+          user_id: client.user_id,
+          version: nextVersion,
+          response_data: data,
+          status: 'draft',
+          is_latest: true
+        })
+    }
+
+    // === END NEW ===
+
+    // Also save to clients.intake_responses for backward compatibility
+    // Store in SAME format as questionnaire_responses.response_data (raw form data)
+    // This ensures consistency between both storage locations
     const { error } = await supabase
       .from('clients')
       .update({
-        intake_responses: progressData,
+        intake_responses: data, // Store raw form data, same as response_data
         questionnaire_status: 'in_progress',
       })
       .eq('id', client.id);

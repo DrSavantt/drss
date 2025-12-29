@@ -2,7 +2,6 @@
 
 import { createClient as createSupabaseClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
-import { redirect } from 'next/navigation'
 import { logActivity } from '@/lib/activity-log'
 
 export async function getProjects(clientId: string) {
@@ -16,6 +15,7 @@ export async function getProjects(clientId: string) {
     .from('projects')
     .select('*')
     .eq('client_id', clientId)
+    .is('deleted_at', null)
     .order('created_at', { ascending: false })
   
   if (error) {
@@ -36,6 +36,7 @@ export async function getProject(id: string) {
     .from('projects')
     .select('*, clients(*)')
     .eq('id', id)
+    .is('deleted_at', null)
     .single()
   
   if (error) {
@@ -84,11 +85,17 @@ export async function createProject(clientId: string, formData: FormData) {
     entityType: 'project',
     entityId: data.id,
     entityName: data.name,
+    clientId: data.client_id,
     metadata: { client_id: data.client_id, status: data.status }
   })
   
   revalidatePath(`/dashboard/clients/${clientId}`)
-  redirect(`/dashboard/clients/${clientId}`)
+  revalidatePath('/dashboard/projects')
+  revalidatePath('/dashboard/projects/board')
+  
+  // Return success - don't use redirect() as it throws an error that 
+  // gets caught by try-catch blocks in client components
+  return { success: true, project: data }
 }
 
 export async function updateProject(id: string, formData: FormData) {
@@ -139,6 +146,7 @@ export async function updateProject(id: string, formData: FormData) {
     entityType: 'project',
     entityId: id,
     entityName: name,
+    clientId: currentProject?.client_id,
     metadata: { 
       old_status: oldStatus, 
       new_status: newStatus,
@@ -188,6 +196,7 @@ export async function updateProjectStatus(
       entityType: 'project',
       entityId: projectId,
       entityName: project?.name,
+      clientId: project?.client_id,
       metadata: { 
         old_status: oldStatus, 
         new_status: newStatus,
@@ -232,7 +241,8 @@ export async function deleteProject(id: string, clientId: string, projectName?: 
     activityType: 'project_deleted',
     entityType: 'project',
     entityId: id,
-    entityName: name
+    entityName: name,
+    clientId: clientId
   })
   
   revalidatePath(`/dashboard/clients/${clientId}`)

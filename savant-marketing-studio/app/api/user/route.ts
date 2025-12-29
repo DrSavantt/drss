@@ -14,6 +14,9 @@ export async function GET() {
     return NextResponse.json({ email: null }, { status: 401 })
   }
 
-  return NextResponse.json({ email: user.email })
+  return NextResponse.json({ 
+    email: user.email,
+    user_metadata: user.user_metadata,
+  })
 }
 

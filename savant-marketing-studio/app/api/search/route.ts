@@ -19,25 +19,28 @@ export async function GET(request: NextRequest) {
   const searchQuery = `%${query.toLowerCase()}%`
 
   try {
-    // Search clients
+    // Search clients (exclude soft-deleted)
     const { data: clients } = await supabase
       .from('clients')
       .select('id, name')
       .ilike('name', searchQuery)
+      .is('deleted_at', null)
       .limit(5)
 
-    // Search projects
+    // Search projects (exclude soft-deleted)
     const { data: projects } = await supabase
       .from('projects')
       .select('id, name, clients(name)')
       .ilike('name', searchQuery)
+      .is('deleted_at', null)
       .limit(5)
 
-    // Search content
+    // Search content (exclude soft-deleted)
     const { data: content } = await supabase
       .from('content_assets')
       .select('id, title, clients(name)')
       .ilike('title', searchQuery)
+      .is('deleted_at', null)
       .limit(5)
 
     // Format results

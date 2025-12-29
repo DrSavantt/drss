@@ -18,7 +18,6 @@ module.exports = {
       boxShadow: {
         'premium-sm': '0px 1px 2px rgba(0,0,0,0.4), 0px 0px 0px 1px rgba(255,255,255,0.05) inset',
         'premium-card': '0px 4px 12px rgba(0,0,0,0.5), 0px 0px 0px 1px rgba(255,255,255,0.05) inset',
-        'glow': '0px 0px 20px rgba(225, 29, 72, 0.3)',
       },
       animation: {
         'shimmer': 'shimmer 2s linear infinite',

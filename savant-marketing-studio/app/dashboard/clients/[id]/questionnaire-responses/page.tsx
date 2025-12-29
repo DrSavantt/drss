@@ -229,13 +229,6 @@ export default async function QuestionnaireResponsesPage({
         {/* Action Buttons */}
         <div className="flex items-center gap-3">
           <ResetButton clientId={client.id} />
-          <Link
-            href={`/dashboard/clients/onboarding/${client.id}?mode=edit`}
-            className="inline-flex items-center px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg transition-colors font-medium"
-          >
-            <Pencil className="w-4 h-4 mr-2" />
-            Edit Responses
-          </Link>
         </div>
       </div>
 

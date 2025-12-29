@@ -1,7 +1,7 @@
 'use client'
 
 import { create } from 'zustand'
-import { Menu, X, Home, Folder, Layout, FileText, BookOpen, BarChart3, Sparkles, Library } from 'lucide-react'
+import { Menu, X, Home, Folder, Layout, FileText, BookOpen, BarChart3, Sparkles, Library, Settings, Archive, Search } from 'lucide-react'
 import { useEffect } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
@@ -37,7 +37,10 @@ export function MobileNav({ userEmail }: MobileNavProps) {
     { href: '/dashboard/content', icon: FileText, label: 'Content' },
     { href: '/dashboard/journal', icon: BookOpen, label: 'Journal' },
     { href: '/dashboard/ai/generate', icon: Sparkles, label: 'AI Studio' },
+    { href: '/dashboard/research', icon: Search, label: 'Deep Research' },
     { href: '/dashboard/frameworks', icon: Library, label: 'Frameworks' },
+    { href: '/dashboard/archive', icon: Archive, label: 'Archive' },
+    { href: '/dashboard/settings', icon: Settings, label: 'Settings' },
   ]
 
   function isActiveRoute(href: string) {

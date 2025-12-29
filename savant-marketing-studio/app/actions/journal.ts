@@ -139,6 +139,7 @@ export async function getJournalEntries(chatId?: string) {
   let query = supabase
     .from('journal_entries')
     .select('*')
+    .is('deleted_at', null)
     .order('created_at', { ascending: false })
 
   if (chatId) {
@@ -171,6 +172,7 @@ export async function getJournalEntriesByProject(projectId: string) {
     .eq('type', 'project')
     .eq('linked_id', projectId)
     .eq('user_id', user.id)
+    .is('deleted_at', null)
     .maybeSingle()
 
   // Query for entries mentioning this project OR in the project's chat
@@ -178,6 +180,7 @@ export async function getJournalEntriesByProject(projectId: string) {
     .from('journal_entries')
     .select('*')
     .eq('user_id', user.id)
+    .is('deleted_at', null)
     .or(projectChat ? `chat_id.eq.${projectChat.id},mentioned_projects.cs.{${projectId}}` : `mentioned_projects.cs.{${projectId}}`)
     .order('created_at', { ascending: false })
     .limit(10)
@@ -211,10 +214,42 @@ export async function getJournalChats() {
     .from('journal_chats')
     .select('*')
     .eq('user_id', user.id)
+    .is('deleted_at', null)
     .order('created_at', { ascending: true })
 
   if (error) throw error
   return data || []
+}
+
+export async function createGeneralChat() {
+  const supabase = await createClient()
+
+  if (!supabase) {
+    throw new Error('Database connection not configured')
+  }
+
+  // Get current user
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) {
+    throw new Error('Not authenticated')
+  }
+
+  // Create new general chat with a timestamp-based name
+  const chatName = `Chat ${new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`
+  
+  const { data, error } = await supabase
+    .from('journal_chats')
+    .insert({
+      name: chatName,
+      type: 'general',
+      user_id: user.id
+    })
+    .select()
+    .single()
+
+  if (error) throw error
+  revalidatePath('/dashboard/journal')
+  return data
 }
 
 export async function createChatForClient(clientId: string, clientName: string) {
@@ -360,6 +395,7 @@ export async function getJournalEntriesByContent(contentId: string) {
     .eq('type', 'content')
     .eq('linked_id', contentId)
     .eq('user_id', user.id)
+    .is('deleted_at', null)
     .maybeSingle()
 
   // Query for entries mentioning this content OR in the content's chat
@@ -367,6 +403,7 @@ export async function getJournalEntriesByContent(contentId: string) {
     .from('journal_entries')
     .select('*')
     .eq('user_id', user.id)
+    .is('deleted_at', null)
     .or(contentChat ? `chat_id.eq.${contentChat.id},mentioned_content.cs.{${contentId}}` : `mentioned_content.cs.{${contentId}}`)
     .order('created_at', { ascending: false })
     .limit(10)
@@ -401,6 +438,7 @@ export async function getJournalEntriesByClient(clientId: string) {
     .from('journal_entries')
     .select('*')
     .eq('user_id', user.id)
+    .is('deleted_at', null)
     .contains('mentioned_clients', [clientId])
     .order('created_at', { ascending: false })
     .limit(10)
@@ -431,6 +469,30 @@ export async function bulkDeleteJournalEntries(ids: string[]) {
     .delete()
     .in('id', ids)
     .eq('user_id', user.id) // Safety: only delete user's own entries
+
+  if (error) throw error
+  revalidatePath('/dashboard/journal')
+  return { success: true }
+}
+
+export async function togglePinJournalEntry(id: string, isPinned: boolean) {
+  const supabase = await createClient()
+
+  if (!supabase) {
+    throw new Error('Database connection not configured')
+  }
+
+  // Get current user
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) {
+    throw new Error('Not authenticated')
+  }
+
+  const { error } = await supabase
+    .from('journal_entries')
+    .update({ is_pinned: isPinned })
+    .eq('id', id)
+    .eq('user_id', user.id) // Safety: only update user's own entries
 
   if (error) throw error
   revalidatePath('/dashboard/journal')
@@ -521,4 +583,49 @@ export async function bulkAddTagsToJournalEntries(ids: string[], newTags: string
   await Promise.all(updates)
   revalidatePath('/dashboard/journal')
   return { success: true }
+}
+
+// Update Journal Entry (for future editing feature)
+export async function updateJournalEntry(
+  id: string,
+  content: string,
+  mentionedClients: string[] = [],
+  mentionedProjects: string[] = [],
+  mentionedContent: string[] = [],
+  tags: string[] = []
+) {
+  const supabase = await createClient()
+
+  if (!supabase) {
+    throw new Error('Database connection not configured')
+  }
+
+  // Get current user
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) {
+    throw new Error('Not authenticated')
+  }
+
+  const { data, error } = await supabase
+    .from('journal_entries')
+    .update({
+      content,
+      mentioned_clients: mentionedClients,
+      mentioned_projects: mentionedProjects,
+      mentioned_content: mentionedContent,
+      tags,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', id)
+    .eq('user_id', user.id) // Safety: only update user's own entries
+    .select()
+    .single()
+
+  if (error) {
+    console.error('Failed to update journal entry:', error)
+    return { error: 'Failed to update entry' }
+  }
+
+  revalidatePath('/dashboard/journal')
+  return { success: true, entry: data }
 }

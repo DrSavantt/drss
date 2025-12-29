@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
-import { notFound } from 'next/navigation'
-import { PublicQuestionnaireForm } from '@/components/questionnaire/public-questionnaire-form'
+import { notFound, redirect } from 'next/navigation'
+import { PublicFormWrapper } from '@/components/questionnaire/public-form-wrapper'
+import { getSections, getQuestionsWithHelp } from '@/app/actions/questionnaire-config'
 
 interface PageProps {
   params: Promise<{ token: string }>
@@ -29,7 +30,7 @@ export default async function PublicFormPage({ params }: PageProps) {
   // Look up client by token (no auth required for public form)
   const { data: client, error } = await supabase
     .from('clients')
-    .select('id, name, questionnaire_status, intake_responses, user_id')
+    .select('id, name, email, questionnaire_status, intake_responses, user_id')
     .eq('questionnaire_token', token)
     .single()
   
@@ -37,39 +38,69 @@ export default async function PublicFormPage({ params }: PageProps) {
     return notFound()
   }
   
-  // If already completed, show thank you page
+  // If already completed, redirect to completion page
   if (client.questionnaire_status === 'completed') {
-    return (
-      <div className="min-h-[60vh] flex items-center justify-center p-4">
-        <div className="max-w-md w-full text-center">
-          <div className="w-16 h-16 bg-green-500/10 rounded-full flex items-center justify-center mx-auto mb-6">
-            <svg className="w-8 h-8 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-            </svg>
-          </div>
-          <h1 className="text-2xl font-bold text-foreground mb-4">
-            Thank You!
-          </h1>
-          <p className="text-silver">
-            You&apos;ve already completed this questionnaire for <span className="text-foreground font-medium">{client.name}</span>.
-          </p>
-          <p className="text-silver mt-2 text-sm">
-            If you need to make changes, please contact your account manager.
-          </p>
-        </div>
-      </div>
-    )
+    redirect(`/form/${token}/complete`)
   }
   
+  // IMPORTANT: Fetch latest response from questionnaire_responses table
+  // This is the primary source of truth for saved progress
+  const { data: latestResponse } = await supabase
+    .from('questionnaire_responses')
+    .select('response_data, status, updated_at')
+    .eq('client_id', client.id)
+    .eq('is_latest', true)
+    .single()
+
+  // Determine the best available response data:
+  // 1. First try questionnaire_responses.response_data (raw format)
+  // 2. Fall back to clients.intake_responses.sections (unwrapped)
+  // 3. Fall back to clients.intake_responses directly (if it's already raw)
+  let existingResponses = null
+  
+  if (latestResponse?.response_data) {
+    // Primary source: questionnaire_responses table has raw form data
+    existingResponses = latestResponse.response_data
+  } else if (client.intake_responses) {
+    // Fallback: clients.intake_responses might be wrapped or raw
+    const intakeData = client.intake_responses as Record<string, unknown>
+    
+    if (intakeData.sections) {
+      // It's wrapped in { version, sections: {...} } format - unwrap it
+      existingResponses = intakeData.sections
+    } else if (intakeData.avatar_definition || intakeData.dream_outcome) {
+      // It's already in raw format
+      existingResponses = intakeData
+    }
+  }
+  
+  // Fetch questionnaire config from database
+  const [sections, questions] = await Promise.all([
+    getSections(),
+    getQuestionsWithHelp()
+  ])
+  
+  // Filter to enabled only
+  const enabledSections = sections
+    .filter(s => s.enabled)
+    .sort((a, b) => a.sort_order - b.sort_order)
+  
+  const enabledQuestions = questions
+    .filter(q => q.enabled)
+    .sort((a, b) => a.sort_order - b.sort_order)
+  
   return (
-    <PublicQuestionnaireForm 
+    <PublicFormWrapper 
       client={{
         id: client.id,
         name: client.name,
-        intake_responses: client.intake_responses,
+        email: client.email,
+        intake_responses: existingResponses, // Pass properly formatted data
         user_id: client.user_id
       }} 
-      token={token} 
+      token={token}
+      sections={enabledSections}
+      questions={enabledQuestions}
     />
   )
 }

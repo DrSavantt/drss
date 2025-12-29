@@ -17,20 +17,23 @@ export async function GET() {
     })
   }
 
-  // Fetch all data
+  // Fetch all data (exclude soft-deleted)
   const { data: clients } = await supabase
     .from('clients')
     .select('id, name, created_at')
+    .is('deleted_at', null)
     .order('created_at', { ascending: false })
 
   const { data: projects } = await supabase
     .from('projects')
     .select('id, name, status, priority, due_date, created_at, client_id, clients(name)')
+    .is('deleted_at', null)
     .order('created_at', { ascending: false })
 
   const { data: content } = await supabase
     .from('content_assets')
     .select('id, title, asset_type, created_at, clients(name)')
+    .is('deleted_at', null)
     .order('created_at', { ascending: false })
     .limit(10)
 
@@ -103,10 +106,11 @@ export async function GET() {
 
   const totalActivityThisWeek = projectsThisWeek + contentThisWeek
 
-  // Fetch all content for storage calculation
+  // Fetch all content for storage calculation (exclude soft-deleted)
   const { data: allContent } = await supabase
     .from('content_assets')
     .select('id, file_size, file_url, created_at, asset_type')
+    .is('deleted_at', null)
 
   // Calculate performance metrics
   const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)

@@ -1,11 +1,10 @@
-import { getAllContentAssets } from '@/app/actions/content'
-import { ContentLibraryClient } from './content-library-client'
-import { ContentLibraryPageClient } from './content-library-page-client'
+import { ContentLibrary } from "@/components/content/content-library"
 
-export default async function ContentLibraryPage() {
-  const content = await getAllContentAssets()
+// ============================================================================
+// EXACT v0 CODE - AppShell wrapper removed (handled by dashboard/layout.tsx)
+// ============================================================================
 
-  return (
-    <ContentLibraryPageClient initialContent={content} />
-  )
+export default function ContentPage() {
+  return <ContentLibrary />
 }
+

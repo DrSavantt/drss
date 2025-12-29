@@ -13,7 +13,7 @@ export async function GET(request: Request) {
   const startDate = new Date()
   startDate.setDate(startDate.getDate() - days)
   
-  // Get user's clients for filtering
+  // Get user's clients for filtering (exclude soft-deleted)
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   
@@ -21,6 +21,7 @@ export async function GET(request: Request) {
     .from('clients')
     .select('id')
     .eq('user_id', user.id)
+    .is('deleted_at', null)
   
   const clientIds = userClients?.map(c => c.id) || []
   
@@ -28,24 +29,27 @@ export async function GET(request: Request) {
   // STAT CARDS DATA (Totals & Growth)
   // ============================================
   
-  // Total clients
+  // Total clients (exclude soft-deleted)
   const { count: totalClients } = await supabase
     .from('clients')
     .select('*', { count: 'exact', head: true })
     .eq('user_id', user.id)
+    .is('deleted_at', null)
   
-  // Active projects (not done)
+  // Active projects (not done, exclude soft-deleted)
   const { count: activeProjects } = await supabase
     .from('projects')
     .select('*', { count: 'exact', head: true })
     .in('client_id', clientIds)
+    .is('deleted_at', null)
     .neq('status', 'done')
   
-  // Total content
+  // Total content (exclude soft-deleted)
   const { count: totalContent } = await supabase
     .from('content_assets')
     .select('*', { count: 'exact', head: true })
     .in('client_id', clientIds)
+    .is('deleted_at', null)
   
   // Journal entries count
   const { data: journalCount } = await supabase.rpc('count_journal_entries')
@@ -58,12 +62,14 @@ export async function GET(request: Request) {
     .from('clients')
     .select('*', { count: 'exact', head: true })
     .eq('user_id', user.id)
+    .is('deleted_at', null)
     .gte('created_at', thirtyDaysAgo.toISOString())
   
   const { count: clientsLastMonth } = await supabase
     .from('clients')
     .select('*', { count: 'exact', head: true })
     .eq('user_id', user.id)
+    .is('deleted_at', null)
     .gte('created_at', sixtyDaysAgo.toISOString())
     .lt('created_at', thirtyDaysAgo.toISOString())
   
@@ -71,11 +77,12 @@ export async function GET(request: Request) {
     ? Math.round(((clientsThisMonth || 0) - clientsLastMonth) / clientsLastMonth * 100)
     : 0
   
-  // Content by type breakdown
+  // Content by type breakdown (exclude soft-deleted)
   const { data: contentAssets } = await supabase
     .from('content_assets')
     .select('asset_type')
     .in('client_id', clientIds)
+    .is('deleted_at', null)
   
   const contentByType: Record<string, number> = {}
   contentAssets?.forEach(item => {
@@ -83,11 +90,12 @@ export async function GET(request: Request) {
     contentByType[type] = (contentByType[type] || 0) + 1
   })
   
-  // Projects by status breakdown
+  // Projects by status breakdown (exclude soft-deleted)
   const { data: projects } = await supabase
     .from('projects')
     .select('status')
     .in('client_id', clientIds)
+    .is('deleted_at', null)
   
   const projectsByStatus: Record<string, number> = {}
   projects?.forEach(item => {
@@ -95,32 +103,35 @@ export async function GET(request: Request) {
     projectsByStatus[status] = (projectsByStatus[status] || 0) + 1
   })
   
-  // CLIENT GROWTH TREND
+  // CLIENT GROWTH TREND (exclude soft-deleted)
   const { data: clientsData } = await supabase
     .from('clients')
     .select('created_at')
     .eq('user_id', user.id)
+    .is('deleted_at', null)
     .gte('created_at', startDate.toISOString())
     .order('created_at', { ascending: true })
   
   const clientTrend = processTimeSeries(clientsData || [], days, true) // cumulative
   
-  // PROJECTS COMPLETED TREND
+  // PROJECTS COMPLETED TREND (exclude soft-deleted)
   const { data: projectsData } = await supabase
     .from('projects')
     .select('updated_at, status')
     .in('client_id', clientIds)
+    .is('deleted_at', null)
     .eq('status', 'done')
     .gte('updated_at', startDate.toISOString())
     .order('updated_at', { ascending: true })
   
   const projectsTrend = processTimeSeries(projectsData || [], days, false)
   
-  // CONTENT CREATED TREND
+  // CONTENT CREATED TREND (exclude soft-deleted)
   const { data: contentData } = await supabase
     .from('content_assets')
     .select('created_at')
     .in('client_id', clientIds)
+    .is('deleted_at', null)
     .gte('created_at', startDate.toISOString())
     .order('created_at', { ascending: true })
   

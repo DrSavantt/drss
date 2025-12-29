@@ -10,12 +10,21 @@ export async function GET(request: NextRequest) {
   
   const searchParams = request.nextUrl.searchParams;
   const limit = parseInt(searchParams.get('limit') || '10');
+  const clientId = searchParams.get('client_id'); // NEW: Optional filter by client
 
-  const { data, error } = await supabase
+  // Build query
+  let query = supabase
     .from('activity_log')
     .select('*')
     .order('created_at', { ascending: false })
     .limit(limit);
+
+  // If clientId provided, filter to only that client's activities
+  if (clientId) {
+    query = query.eq('client_id', clientId);
+  }
+
+  const { data, error } = await query;
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });

@@ -1,504 +1,437 @@
-'use client';
+'use client'
 
-import { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronDown, Users, Zap, FileText, HardDrive, Target } from 'lucide-react';
-import { springTransitions } from '@/lib/animations';
+import { useState, useEffect } from 'react'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { cn } from '@/lib/utils'
+import { 
+  Users, Zap, FileText, HardDrive, Gauge,
+  ChevronDown, RefreshCw, AlertCircle
+} from 'lucide-react'
+
+// ============================================================================
+// DATA INTERFACES
+// ============================================================================
 
 interface MetricData {
   clientHealth: {
-    health: number;
-    total: number;
-    active: number;
-    activePercent: number;
-    questionnairesCompleted: number;
-    questionnairePercent: number;
-    inactive: number;
-    overdueProjects: number;
-  } | null;
+    health: number
+    total: number
+    active: number
+    activePercent: number
+    questionnairesCompleted: number
+    questionnairePercent: number
+    inactive: number
+    overdueProjects: number
+  } | null
   projectVelocity: {
-    avgVelocity: number;
-    total: number;
-    backlog: number;
-    inProgress: number;
-    inReview: number;
-    done: number;
-    completedThisWeek: number;
-    stuck: number;
-    completionRate: number;
-  } | null;
+    avgVelocity: number
+    total: number
+    backlog: number
+    inProgress: number
+    inReview: number
+    done: number
+    completedThisWeek: number
+    stuck: number
+    completionRate: number
+  } | null
   contentOutput: {
-    thisMonth: number;
-    thisWeek: number;
-    total: number;
-    byType: Record<string, number>;
-  } | null;
+    thisMonth: number
+    thisWeek: number
+    total: number
+    byType: Record<string, number>
+  } | null
   storage: {
-    totalMB: number;
-    filesCount: number;
-    filesThisWeek: number;
-  } | null;
+    totalMB: number
+    filesCount: number
+    filesThisWeek: number
+  } | null
   capacity: {
-    currentClients: number;
-    maxCapacity: number;
-    capacityPercent: number;
-    clientsCanAdd: number;
-    hoursPerWeek: number;
-    avgHoursPerClient: number;
-  } | null;
+    currentClients: number
+    maxCapacity: number
+    capacityPercent: number
+    clientsCanAdd: number
+    hoursPerWeek: number
+    avgHoursPerClient: number
+  } | null
 }
 
 interface MetricCardsProps {
-  autoExpand?: string;
+  autoExpand?: string
 }
 
+// ============================================================================
+// MAIN COMPONENT
+// ============================================================================
+
 export function MetricCards({ autoExpand }: MetricCardsProps) {
-  const [metrics, setMetrics] = useState<MetricData | null>(null);
-  const [expanded, setExpanded] = useState<Record<string, boolean>>({});
-  const [loading, setLoading] = useState(true);
-  const [activeCard, setActiveCard] = useState<string | null>(null);
+  const [metrics, setMetrics] = useState<MetricData | null>(null)
+  const [expanded, setExpanded] = useState<Record<string, boolean>>({})
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
   const fetchMetrics = async () => {
     try {
-      const res = await fetch('/api/metrics');
-      const data = await res.json();
-      setMetrics(data);
-      setLoading(false);
-    } catch (error) {
-      console.error('Failed to fetch metrics:', error);
-      setLoading(false);
+      const res = await fetch('/api/metrics')
+      if (!res.ok) throw new Error('Failed to fetch metrics')
+      const data = await res.json()
+      setMetrics(data)
+      setError(null)
+    } catch (err) {
+      console.error('Failed to fetch metrics:', err)
+      setError('Failed to load metrics')
+    } finally {
+      setLoading(false)
     }
-  };
+  }
 
   useEffect(() => {
-    fetchMetrics();
-    const interval = setInterval(fetchMetrics, 30000);
-    return () => clearInterval(interval);
-  }, []);
+    fetchMetrics()
+    const interval = setInterval(fetchMetrics, 30000) // Auto-refresh every 30s
+    return () => clearInterval(interval)
+  }, [])
 
   useEffect(() => {
     if (autoExpand) {
-      setExpanded(prev => ({ ...prev, [autoExpand]: true }));
-      setActiveCard(autoExpand);
+      setExpanded(prev => ({ ...prev, [autoExpand]: true }))
     }
-  }, [autoExpand]);
+  }, [autoExpand])
 
   const toggleExpand = (metricKey: string) => {
-    setExpanded(prev => ({ ...prev, [metricKey]: !prev[metricKey] }));
-    setActiveCard(expanded[metricKey] ? null : metricKey);
-  };
-
-  if (loading || !metrics) {
-    return (
-      <div className="flex flex-col gap-3 max-w-4xl">
-        {[...Array(5)].map((_, i) => (
-          <div key={i} className="bg-glass-bg backdrop-blur-xl border border-glass-border rounded-xl p-5 animate-pulse">
-            <div className="h-4 bg-muted/20 rounded w-1/3 mb-4"></div>
-            <div className="h-8 bg-muted/20 rounded w-1/2"></div>
-          </div>
-        ))}
-      </div>
-    );
+    setExpanded(prev => ({ ...prev, [metricKey]: !prev[metricKey] }))
   }
 
   const getHealthColor = (value: number, threshold: number) => {
-    if (value >= threshold) return 'text-green-500';
-    if (value >= threshold * 0.7) return 'text-yellow-500';
-    return 'text-red-500';
-  };
+    if (value >= threshold) return 'text-green-500'
+    if (value >= threshold * 0.7) return 'text-yellow-500'
+    return 'text-red-500'
+  }
+
+  if (loading) {
+    return <MetricCardsSkeleton />
+  }
+
+  if (error || !metrics) {
+    return <MetricCardsError message={error} onRetry={fetchMetrics} />
+  }
 
   return (
-    <div className="flex flex-col gap-3 max-w-4xl">
-      
+    <div className="flex flex-col gap-3 max-w-5xl">
       {/* METRIC 1: CLIENT HEALTH */}
       {metrics.clientHealth && (
-        <motion.div
-          layout
-          className={`
-            relative overflow-hidden
-            bg-glass-bg backdrop-blur-xl 
-            border border-glass-border rounded-xl p-5
-            transition-all duration-300
-            ${activeCard === 'clientHealth' ? 'ring-2 ring-active-ring shadow-xl shadow-active-shadow' : ''}
-          `}
+        <MetricCard
+          id="clientHealth"
+          title="Client Health"
+          icon={Users}
+          value={`${metrics.clientHealth.health}%`}
+          valueColor={getHealthColor(metrics.clientHealth.health, 80)}
+          isExpanded={expanded.clientHealth || false}
+          onToggle={() => toggleExpand('clientHealth')}
         >
-          {/* Spotlight on active */}
-          <AnimatePresence>
-            {activeCard === 'clientHealth' && (
-              <motion.div
-                className="absolute inset-0 bg-gradient-radial from-active-ring via-active-shadow to-transparent pointer-events-none"
-                initial={{ opacity: 0, scale: 0.8 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.8 }}
-                transition={springTransitions.springMicro}
+          <div className="mt-4 space-y-1 border-t border-border pt-4">
+            <MetricRow label="Total Clients" value={metrics.clientHealth.total} />
+            <MetricRow 
+              label="Active (30d)" 
+              value={metrics.clientHealth.active}
+              valueColor="text-green-500"
+            />
+            <MetricRow 
+              label="Questionnaires Done" 
+              value={metrics.clientHealth.questionnairesCompleted}
+            />
+            {metrics.clientHealth.inactive > 0 && (
+              <MetricRow 
+                label="Inactive" 
+                value={metrics.clientHealth.inactive}
+                valueColor="text-yellow-500"
               />
             )}
-          </AnimatePresence>
-
-          <button 
-            onClick={() => toggleExpand('clientHealth')}
-            className="relative z-10 w-full flex items-center justify-between mb-2 hover:opacity-80 transition-opacity"
-          >
-            <div className="flex items-center gap-3">
-              <Users className="w-5 h-5 text-red-primary" />
-              <span className="text-sm font-medium text-muted-foreground">Client Health</span>
-            </div>
-            <motion.div
-              animate={{ rotate: expanded.clientHealth ? 180 : 0 }}
-              transition={springTransitions.springMicro}
-            >
-              <ChevronDown className="w-4 h-4 text-muted-foreground" />
-            </motion.div>
-          </button>
-          
-          <div className={`relative z-10 text-3xl font-bold ${getHealthColor(metrics.clientHealth.health, 80)}`}>
-            {metrics.clientHealth.health}%
-          </div>
-          
-          <AnimatePresence>
-            {expanded.clientHealth && (
-              <motion.div
-                initial={{ height: 0, opacity: 0 }}
-                animate={{ height: "auto", opacity: 1 }}
-                exit={{ height: 0, opacity: 0 }}
-                transition={springTransitions.springMedium}
-                className="overflow-hidden relative z-10"
-              >
-                <div className="mt-4 space-y-1 border-t border-border pt-4">
-                  <div className="w-full flex justify-between p-2 rounded-lg">
-                    <span className="text-sm text-muted-foreground">Total Clients</span>
-                    <span className="text-sm text-foreground">{metrics.clientHealth.total}</span>
-                  </div>
-                  <div className="w-full flex justify-between p-2 rounded-lg">
-                    <span className="text-sm text-muted-foreground">Active (30d)</span>
-                    <span className="text-sm text-green-500">{metrics.clientHealth.active}</span>
-                  </div>
-                  <div className="w-full flex justify-between p-2 rounded-lg">
-                    <span className="text-sm text-muted-foreground">Questionnaires Done</span>
-                    <span className="text-sm text-foreground">{metrics.clientHealth.questionnairesCompleted}</span>
-                  </div>
-                  {metrics.clientHealth.inactive > 0 && (
-                    <div className="w-full flex justify-between p-2 rounded-lg">
-                      <span className="text-sm text-muted-foreground">Inactive</span>
-                      <span className="text-sm text-yellow-500">{metrics.clientHealth.inactive}</span>
-                    </div>
-                  )}
-                  {metrics.clientHealth.overdueProjects > 0 && (
-                    <div className="w-full flex justify-between p-2 rounded-lg">
-                      <span className="text-sm text-muted-foreground">With Overdue Projects</span>
-                      <span className="text-sm text-red-500">{metrics.clientHealth.overdueProjects}</span>
-                    </div>
-                  )}
-                </div>
-              </motion.div>
+            {metrics.clientHealth.overdueProjects > 0 && (
+              <MetricRow 
+                label="With Overdue Projects" 
+                value={metrics.clientHealth.overdueProjects}
+                valueColor="text-red-500"
+              />
             )}
-          </AnimatePresence>
-        </motion.div>
+          </div>
+        </MetricCard>
       )}
 
       {/* METRIC 2: PROJECT VELOCITY */}
       {metrics.projectVelocity && (
-        <motion.div
-          layout
-          className={`
-            relative overflow-hidden
-            bg-glass-bg backdrop-blur-xl 
-            border border-glass-border rounded-xl p-5
-            transition-all duration-300
-            ${activeCard === 'projectVelocity' ? 'ring-2 ring-active-ring shadow-xl shadow-active-shadow' : ''}
-          `}
+        <MetricCard
+          id="projectVelocity"
+          title="Project Velocity"
+          icon={Zap}
+          value={
+            <>
+              {metrics.projectVelocity.avgVelocity}{' '}
+              <span className="text-sm text-muted-foreground">days</span>
+            </>
+          }
+          isExpanded={expanded.projectVelocity || false}
+          onToggle={() => toggleExpand('projectVelocity')}
         >
-          <AnimatePresence>
-            {activeCard === 'projectVelocity' && (
-              <motion.div
-                className="absolute inset-0 bg-gradient-radial from-active-ring via-active-shadow to-transparent pointer-events-none"
-                initial={{ opacity: 0, scale: 0.8 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.8 }}
-                transition={springTransitions.springMicro}
+          <div className="mt-4 space-y-1 border-t border-border pt-4">
+            <MetricRow label="Backlog" value={metrics.projectVelocity.backlog} />
+            <MetricRow 
+              label="In Progress" 
+              value={metrics.projectVelocity.inProgress}
+              valueColor="text-blue-500"
+            />
+            <MetricRow 
+              label="In Review" 
+              value={metrics.projectVelocity.inReview}
+              valueColor="text-yellow-500"
+            />
+            <MetricRow 
+              label="Done" 
+              value={metrics.projectVelocity.done}
+              valueColor="text-green-500"
+            />
+            {metrics.projectVelocity.stuck > 0 && (
+              <MetricRow 
+                label="Stuck (7+ days)" 
+                value={metrics.projectVelocity.stuck}
+                valueColor="text-red-500"
               />
             )}
-          </AnimatePresence>
-
-          <button 
-            onClick={() => toggleExpand('projectVelocity')}
-            className="relative z-10 w-full flex items-center justify-between mb-2 hover:opacity-80 transition-opacity"
-          >
-            <div className="flex items-center gap-3">
-              <Zap className="w-5 h-5 text-red-primary" />
-              <span className="text-sm font-medium text-muted-foreground">Project Velocity</span>
-            </div>
-            <motion.div
-              animate={{ rotate: expanded.projectVelocity ? 180 : 0 }}
-              transition={springTransitions.springMicro}
-            >
-              <ChevronDown className="w-4 h-4 text-muted-foreground" />
-            </motion.div>
-          </button>
-          
-          <div className="relative z-10 text-3xl font-bold text-foreground">
-            {metrics.projectVelocity.avgVelocity} <span className="text-sm text-muted-foreground">days</span>
           </div>
-          
-          <AnimatePresence>
-            {expanded.projectVelocity && (
-              <motion.div
-                initial={{ height: 0, opacity: 0 }}
-                animate={{ height: "auto", opacity: 1 }}
-                exit={{ height: 0, opacity: 0 }}
-                transition={springTransitions.springMedium}
-                className="overflow-hidden relative z-10"
-              >
-                <div className="mt-4 space-y-1 border-t border-border pt-4">
-                  <div className="w-full flex justify-between p-2 rounded-lg">
-                    <span className="text-sm text-muted-foreground">Backlog</span>
-                    <span className="text-sm text-foreground">{metrics.projectVelocity.backlog}</span>
-                  </div>
-                  <div className="w-full flex justify-between p-2 rounded-lg">
-                    <span className="text-sm text-muted-foreground">In Progress</span>
-                    <span className="text-sm text-blue-500">{metrics.projectVelocity.inProgress}</span>
-                  </div>
-                  <div className="w-full flex justify-between p-2 rounded-lg">
-                    <span className="text-sm text-muted-foreground">In Review</span>
-                    <span className="text-sm text-yellow-500">{metrics.projectVelocity.inReview}</span>
-                  </div>
-                  <div className="w-full flex justify-between p-2 rounded-lg">
-                    <span className="text-sm text-muted-foreground">Done</span>
-                    <span className="text-sm text-green-500">{metrics.projectVelocity.done}</span>
-                  </div>
-                  {metrics.projectVelocity.stuck > 0 && (
-                    <div className="w-full flex justify-between p-2 rounded-lg">
-                      <span className="text-sm text-muted-foreground">Stuck (7+ days)</span>
-                      <span className="text-sm text-red-500">{metrics.projectVelocity.stuck}</span>
-                    </div>
-                  )}
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </motion.div>
+        </MetricCard>
       )}
 
       {/* METRIC 3: CONTENT OUTPUT */}
       {metrics.contentOutput && (
-        <motion.div
-          layout
-          className={`
-            relative overflow-hidden
-            bg-glass-bg backdrop-blur-xl 
-            border border-glass-border rounded-xl p-5
-            transition-all duration-300
-            ${activeCard === 'contentOutput' ? 'ring-2 ring-active-ring shadow-xl shadow-active-shadow' : ''}
-          `}
+        <MetricCard
+          id="contentOutput"
+          title="Content Output"
+          icon={FileText}
+          value={
+            <>
+              {metrics.contentOutput.thisMonth}{' '}
+              <span className="text-sm text-muted-foreground">this month</span>
+            </>
+          }
+          isExpanded={expanded.contentOutput || false}
+          onToggle={() => toggleExpand('contentOutput')}
         >
-          <AnimatePresence>
-            {activeCard === 'contentOutput' && (
-              <motion.div
-                className="absolute inset-0 bg-gradient-radial from-active-ring via-active-shadow to-transparent pointer-events-none"
-                initial={{ opacity: 0, scale: 0.8 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.8 }}
-                transition={springTransitions.springMicro}
+          <div className="mt-4 space-y-1 border-t border-border pt-4">
+            <MetricRow label="This Week" value={metrics.contentOutput.thisWeek} />
+            <MetricRow label="Total" value={metrics.contentOutput.total} />
+            {Object.entries(metrics.contentOutput.byType).map(([type, count]) => (
+              <MetricRow
+                key={type}
+                label={type.replace('_', ' ')}
+                value={count as number}
+                capitalize
               />
-            )}
-          </AnimatePresence>
-
-          <button 
-            onClick={() => toggleExpand('contentOutput')}
-            className="relative z-10 w-full flex items-center justify-between mb-2 hover:opacity-80 transition-opacity"
-          >
-            <div className="flex items-center gap-3">
-              <FileText className="w-5 h-5 text-red-primary" />
-              <span className="text-sm font-medium text-muted-foreground">Content Output</span>
-            </div>
-            <motion.div
-              animate={{ rotate: expanded.contentOutput ? 180 : 0 }}
-              transition={springTransitions.springMicro}
-            >
-              <ChevronDown className="w-4 h-4 text-muted-foreground" />
-            </motion.div>
-          </button>
-          
-          <div className="relative z-10 text-3xl font-bold text-foreground">
-            {metrics.contentOutput.thisMonth} <span className="text-sm text-muted-foreground">this month</span>
+            ))}
           </div>
-          
-          <AnimatePresence>
-            {expanded.contentOutput && (
-              <motion.div
-                initial={{ height: 0, opacity: 0 }}
-                animate={{ height: "auto", opacity: 1 }}
-                exit={{ height: 0, opacity: 0 }}
-                transition={springTransitions.springMedium}
-                className="overflow-hidden relative z-10"
-              >
-                <div className="mt-4 space-y-1 border-t border-border pt-4">
-                  <div className="w-full flex justify-between p-2 rounded-lg">
-                    <span className="text-sm text-muted-foreground">This Week</span>
-                    <span className="text-sm text-foreground">{metrics.contentOutput.thisWeek}</span>
-                  </div>
-                  <div className="w-full flex justify-between p-2 rounded-lg">
-                    <span className="text-sm text-muted-foreground">Total</span>
-                    <span className="text-sm text-foreground">{metrics.contentOutput.total}</span>
-                  </div>
-                  {Object.entries(metrics.contentOutput.byType).map(([type, count]) => (
-                    <div 
-                      key={type}
-                      className="w-full flex justify-between p-2 rounded-lg"
-                    >
-                      <span className="text-sm text-muted-foreground capitalize">{type.replace('_', ' ')}</span>
-                      <span className="text-sm text-foreground">{count as number}</span>
-                    </div>
-                  ))}
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </motion.div>
+        </MetricCard>
       )}
 
       {/* METRIC 4: STORAGE */}
       {metrics.storage && (
-        <motion.div
-          layout
-          className={`
-            relative overflow-hidden
-            bg-glass-bg backdrop-blur-xl 
-            border border-glass-border rounded-xl p-5
-            transition-all duration-300
-            ${activeCard === 'storage' ? 'ring-2 ring-active-ring shadow-xl shadow-active-shadow' : ''}
-          `}
+        <MetricCard
+          id="storage"
+          title="Storage Used"
+          icon={HardDrive}
+          value={
+            <>
+              {metrics.storage.totalMB}{' '}
+              <span className="text-sm text-muted-foreground">MB</span>
+            </>
+          }
+          isExpanded={expanded.storage || false}
+          onToggle={() => toggleExpand('storage')}
         >
-          <AnimatePresence>
-            {activeCard === 'storage' && (
-              <motion.div
-                className="absolute inset-0 bg-gradient-radial from-active-ring via-active-shadow to-transparent pointer-events-none"
-                initial={{ opacity: 0, scale: 0.8 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.8 }}
-                transition={springTransitions.springMicro}
-              />
-            )}
-          </AnimatePresence>
-
-          <button 
-            onClick={() => toggleExpand('storage')}
-            className="relative z-10 w-full flex items-center justify-between mb-2 hover:opacity-80 transition-opacity"
-          >
-            <div className="flex items-center gap-3">
-              <HardDrive className="w-5 h-5 text-red-primary" />
-              <span className="text-sm font-medium text-muted-foreground">Storage Used</span>
-            </div>
-            <motion.div
-              animate={{ rotate: expanded.storage ? 180 : 0 }}
-              transition={springTransitions.springMicro}
-            >
-              <ChevronDown className="w-4 h-4 text-muted-foreground" />
-            </motion.div>
-          </button>
-          
-          <div className="relative z-10 text-3xl font-bold text-foreground">
-            {metrics.storage.totalMB} <span className="text-sm text-muted-foreground">MB</span>
+          <div className="mt-4 space-y-1 border-t border-border pt-4">
+            <MetricRow label="Total Files" value={metrics.storage.filesCount} />
+            <MetricRow label="Files This Week" value={metrics.storage.filesThisWeek} />
           </div>
-          
-          <AnimatePresence>
-            {expanded.storage && (
-              <motion.div
-                initial={{ height: 0, opacity: 0 }}
-                animate={{ height: "auto", opacity: 1 }}
-                exit={{ height: 0, opacity: 0 }}
-                transition={springTransitions.springMedium}
-                className="overflow-hidden relative z-10"
-              >
-                <div className="mt-4 space-y-1 border-t border-border pt-4">
-                  <div className="w-full flex justify-between p-2 rounded-lg">
-                    <span className="text-sm text-muted-foreground">Total Files</span>
-                    <span className="text-sm text-foreground">{metrics.storage.filesCount}</span>
-                  </div>
-                  <div className="w-full flex justify-between p-2 rounded-lg">
-                    <span className="text-sm text-muted-foreground">Files This Week</span>
-                    <span className="text-sm text-foreground">{metrics.storage.filesThisWeek}</span>
-                  </div>
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </motion.div>
+        </MetricCard>
       )}
 
       {/* METRIC 5: CAPACITY */}
       {metrics.capacity && (
-        <motion.div
-          layout
-          className={`
-            relative overflow-hidden
-            bg-glass-bg backdrop-blur-xl 
-            border border-glass-border rounded-xl p-5
-            transition-all duration-300
-            ${activeCard === 'capacity' ? 'ring-2 ring-active-ring shadow-xl shadow-active-shadow' : ''}
-          `}
+        <MetricCard
+          id="capacity"
+          title="Capacity"
+          icon={Gauge}
+          value={
+            <>
+              {metrics.capacity.capacityPercent}%{' '}
+              <span className="text-sm text-muted-foreground">used</span>
+            </>
+          }
+          valueColor={getHealthColor(100 - metrics.capacity.capacityPercent, 50)}
+          isExpanded={expanded.capacity || false}
+          onToggle={() => toggleExpand('capacity')}
         >
-          <AnimatePresence>
-            {activeCard === 'capacity' && (
-              <motion.div
-                className="absolute inset-0 bg-gradient-radial from-active-ring via-active-shadow to-transparent pointer-events-none"
-                initial={{ opacity: 0, scale: 0.8 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.8 }}
-                transition={springTransitions.springMicro}
-              />
-            )}
-          </AnimatePresence>
-
-          <button 
-            onClick={() => toggleExpand('capacity')}
-            className="relative z-10 w-full flex items-center justify-between mb-2 hover:opacity-80 transition-opacity"
-          >
-            <div className="flex items-center gap-3">
-              <Target className="w-5 h-5 text-red-primary" />
-              <span className="text-sm font-medium text-muted-foreground">Capacity</span>
-            </div>
-            <motion.div
-              animate={{ rotate: expanded.capacity ? 180 : 0 }}
-              transition={springTransitions.springMicro}
-            >
-              <ChevronDown className="w-4 h-4 text-muted-foreground" />
-            </motion.div>
-          </button>
-          
-          <div className={`relative z-10 text-3xl font-bold ${getHealthColor(100 - metrics.capacity.capacityPercent, 50)}`}>
-            {metrics.capacity.capacityPercent}% <span className="text-sm text-muted-foreground">used</span>
+          <div className="mt-4 space-y-1 border-t border-border pt-4">
+            <MetricRow label="Current Clients" value={metrics.capacity.currentClients} />
+            <MetricRow 
+              label="Can Add" 
+              value={metrics.capacity.clientsCanAdd}
+              valueColor="text-green-500"
+            />
+            <MetricRow 
+              label="Hours Per Client" 
+              value={`${metrics.capacity.avgHoursPerClient}h`}
+            />
           </div>
-          
-          <AnimatePresence>
-            {expanded.capacity && (
-              <motion.div
-                initial={{ height: 0, opacity: 0 }}
-                animate={{ height: "auto", opacity: 1 }}
-                exit={{ height: 0, opacity: 0 }}
-                transition={springTransitions.springMedium}
-                className="overflow-hidden relative z-10"
-              >
-                <div className="mt-4 space-y-1 border-t border-border pt-4">
-                  <div className="w-full flex justify-between p-2 rounded-lg">
-                    <span className="text-sm text-muted-foreground">Current Clients</span>
-                    <span className="text-sm text-foreground">{metrics.capacity.currentClients}</span>
-                  </div>
-                  <div className="w-full flex justify-between p-2 rounded-lg">
-                    <span className="text-sm text-muted-foreground">Can Add</span>
-                    <span className="text-sm text-green-500">{metrics.capacity.clientsCanAdd}</span>
-                  </div>
-                  <div className="w-full flex justify-between p-2 rounded-lg">
-                    <span className="text-sm text-muted-foreground">Hours Per Client</span>
-                    <span className="text-sm text-foreground">{metrics.capacity.avgHoursPerClient}h</span>
-                  </div>
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </motion.div>
+        </MetricCard>
       )}
-
     </div>
-  );
+  )
 }
+
+// ============================================================================
+// METRIC CARD COMPONENT
+// ============================================================================
+
+interface MetricCardProps {
+  id: string
+  title: string
+  icon: React.ElementType
+  value: React.ReactNode
+  valueColor?: string
+  isExpanded: boolean
+  onToggle: () => void
+  children?: React.ReactNode
+}
+
+function MetricCard({ 
+  title, 
+  icon: Icon, 
+  value, 
+  valueColor, 
+  isExpanded, 
+  onToggle,
+  children 
+}: MetricCardProps) {
+  return (
+    <Card 
+      className={cn(
+        "relative overflow-hidden transition-all duration-300 cursor-pointer",
+        isExpanded && "ring-2 ring-primary shadow-lg"
+      )}
+      onClick={onToggle}
+    >
+      <CardHeader className="pb-2">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <Icon className="h-5 w-5 text-primary" />
+            <CardTitle className="text-sm font-medium text-muted-foreground">
+              {title}
+            </CardTitle>
+          </div>
+          <ChevronDown 
+            className={cn(
+              "h-4 w-4 text-muted-foreground transition-transform duration-300",
+              isExpanded && "rotate-180"
+            )}
+          />
+        </div>
+      </CardHeader>
+      <CardContent>
+        <div className={cn("text-3xl font-bold", valueColor || "text-foreground")}>
+          {value}
+        </div>
+        <div 
+          className={cn(
+            "grid transition-all duration-300 ease-in-out",
+            isExpanded 
+              ? "grid-rows-[1fr] opacity-100" 
+              : "grid-rows-[0fr] opacity-0"
+          )}
+        >
+          <div className="overflow-hidden">
+            {children}
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  )
+}
+
+// ============================================================================
+// METRIC ROW COMPONENT
+// ============================================================================
+
+interface MetricRowProps {
+  label: string
+  value: string | number
+  valueColor?: string
+  capitalize?: boolean
+}
+
+function MetricRow({ label, value, valueColor, capitalize }: MetricRowProps) {
+  return (
+    <div className="flex justify-between p-2 rounded-lg hover:bg-muted/50 transition-colors">
+      <span className={cn(
+        "text-sm text-muted-foreground",
+        capitalize && "capitalize"
+      )}>
+        {label}
+      </span>
+      <span className={cn(
+        "text-sm font-medium",
+        valueColor || "text-foreground"
+      )}>
+        {value}
+      </span>
+    </div>
+  )
+}
+
+// ============================================================================
+// LOADING SKELETON
+// ============================================================================
+
+function MetricCardsSkeleton() {
+  return (
+    <div className="flex flex-col gap-3 max-w-5xl">
+      {[...Array(5)].map((_, i) => (
+        <Card key={i} className="animate-pulse">
+          <CardHeader className="pb-2">
+            <div className="h-4 bg-muted rounded w-32" />
+          </CardHeader>
+          <CardContent>
+            <div className="h-8 bg-muted rounded w-24" />
+          </CardContent>
+        </Card>
+      ))}
+    </div>
+  )
+}
+
+// ============================================================================
+// ERROR STATE
+// ============================================================================
+
+function MetricCardsError({ 
+  message, 
+  onRetry 
+}: { 
+  message: string | null
+  onRetry: () => void 
+}) {
+  return (
+    <Card className="max-w-5xl">
+      <CardContent className="flex items-center justify-center gap-4 py-8">
+        <AlertCircle className="h-5 w-5 text-destructive" />
+        <span className="text-muted-foreground">
+          {message || 'Failed to load metrics'}
+        </span>
+        <button 
+          onClick={onRetry}
+          className="inline-flex items-center gap-1 text-primary hover:underline focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 rounded px-2 py-1"
+        >
+          <RefreshCw className="h-4 w-4" />
+          Retry
+        </button>
+      </CardContent>
+    </Card>
+  )
+}
+

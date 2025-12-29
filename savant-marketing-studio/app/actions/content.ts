@@ -17,6 +17,7 @@ export async function getContentAssets(clientId: string) {
     .select('*, projects(name)')
     .eq('client_id', clientId)
     .eq('is_archived', false)
+    .is('deleted_at', null)
     .order('created_at', { ascending: false })
   
   if (error) {
@@ -37,6 +38,7 @@ export async function getContentAsset(id: string) {
     .from('content_assets')
     .select('*, clients(name), projects(name)')
     .eq('id', id)
+    .is('deleted_at', null)
     .single()
   
   if (error) {
@@ -97,6 +99,7 @@ export async function createContentAsset(clientId: string, formData: FormData) {
     entityType: 'content',
     entityId: data.id,
     entityName: data.title,
+    clientId: clientId,
     metadata: { client_id: clientId, asset_type: 'note' }
   })
   
@@ -110,6 +113,13 @@ export async function updateContentAsset(id: string, formData: FormData) {
   if (!supabase) {
     return { error: 'Database connection not configured' }
   }
+  
+  // Get current content to find client_id
+  const { data: currentContent } = await supabase
+    .from('content_assets')
+    .select('client_id')
+    .eq('id', id)
+    .single()
   
   const title = formData.get('title') as string
   const project_id = formData.get('project_id') as string
@@ -137,7 +147,8 @@ export async function updateContentAsset(id: string, formData: FormData) {
     activityType: 'content_updated',
     entityType: 'content',
     entityId: id,
-    entityName: title
+    entityName: title,
+    clientId: currentContent?.client_id
   })
   
   return { success: true }
@@ -155,6 +166,7 @@ export async function getContentRelatedCounts(contentId: string) {
     .from('journal_entries')
     .select('*', { count: 'exact', head: true })
     .contains('mentioned_content', [contentId])
+    .is('deleted_at', null)
   
   return {
     captures: capturesCount ?? 0
@@ -217,7 +229,8 @@ export async function deleteContentAsset(id: string, clientId: string, deleteOpt
     activityType: 'content_deleted',
     entityType: 'content',
     entityId: id,
-    entityName: title
+    entityName: title,
+    clientId: clientId
   })
   
   revalidatePath(`/dashboard/clients/${clientId}`)
@@ -234,6 +247,7 @@ export async function getAllContentAssets() {
   const { data: content, error } = await supabase
     .from('content_assets')
     .select('*, clients(name), projects(name)')
+    .is('deleted_at', null)
     .order('created_at', { ascending: false })
   
   if (error) {
@@ -254,6 +268,7 @@ export async function getClientProjects(clientId: string) {
     .from('projects')
     .select('id, name')
     .eq('client_id', clientId)
+    .is('deleted_at', null)
     .order('name', { ascending: true })
   
   if (error) {
@@ -310,6 +325,7 @@ export async function createFileAsset(clientId: string, formData: FormData) {
     entityType: 'file',
     entityId: data.id,
     entityName: data.title,
+    clientId: clientId,
     metadata: { 
       file_size: file_size, 
       file_type: file_type,
@@ -454,6 +470,7 @@ export async function getAllProjects() {
   const { data: projects, error } = await supabase
     .from('projects')
     .select('id, name, clients(name)')
+    .is('deleted_at', null)
     .order('name', { ascending: true })
   
   if (error) {

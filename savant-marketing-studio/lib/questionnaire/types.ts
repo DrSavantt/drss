@@ -60,7 +60,7 @@ export interface QuestionnaireData {
   };
 }
 
-export type FormStatus = 'saved' | 'saving' | 'error';
+export type FormStatus = 'idle' | 'saved' | 'saving' | 'error';
 
 export const REQUIRED_QUESTIONS = [
   'q1', 'q2', 'q3', 'q4', 'q5',

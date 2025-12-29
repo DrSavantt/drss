@@ -157,6 +157,50 @@ export async function deleteFramework(id: string): Promise<{ success: boolean } 
   return { success: true };
 }
 
+// Duplicate framework
+export async function duplicateFramework(id: string): Promise<{ success: boolean; id?: string } | { error: string }> {
+  const supabase = await createClient();
+  if (!supabase) return { error: 'Database not configured' };
+  
+  // Get original framework
+  const { data: original, error: fetchError } = await supabase
+    .from('marketing_frameworks')
+    .select('*')
+    .eq('id', id)
+    .single();
+  
+  if (fetchError || !original) {
+    console.error('Failed to fetch framework:', fetchError);
+    return { error: 'Framework not found' };
+  }
+  
+  // Create duplicate with "Copy of" prefix
+  const { data: duplicate, error: insertError } = await supabase
+    .from('marketing_frameworks')
+    .insert({
+      user_id: original.user_id,
+      name: `Copy of ${original.name}`,
+      description: original.description,
+      category: original.category,
+      content: original.content,
+    })
+    .select()
+    .single();
+  
+  if (insertError || !duplicate) {
+    console.error('Failed to duplicate framework:', insertError);
+    return { error: 'Failed to duplicate framework' };
+  }
+  
+  // Generate embeddings for the duplicate
+  generateFrameworkEmbeddings(duplicate.id, duplicate.content).catch(err => {
+    console.error('Failed to generate embeddings for duplicate:', err);
+  });
+  
+  revalidatePath('/dashboard/frameworks');
+  return { success: true, id: duplicate.id };
+}
+
 // Generate embeddings for framework content
 async function generateFrameworkEmbeddings(frameworkId: string, content: string) {
   const supabase = await createClient();

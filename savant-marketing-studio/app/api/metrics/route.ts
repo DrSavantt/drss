@@ -15,7 +15,8 @@ export async function GET() {
   
   const { count: totalClients } = await supabase
     .from('clients')
-    .select('*', { count: 'exact', head: true });
+    .select('*', { count: 'exact', head: true })
+    .is('deleted_at', null);
 
   if (totalClients && totalClients > 0) {
     const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
@@ -23,22 +24,26 @@ export async function GET() {
     const { count: active } = await supabase
       .from('clients')
       .select('*', { count: 'exact', head: true })
+      .is('deleted_at', null)
       .gte('updated_at', thirtyDaysAgo);
 
     const { count: questionnairesCompleted } = await supabase
       .from('clients')
       .select('*', { count: 'exact', head: true })
+      .is('deleted_at', null)
       .eq('questionnaire_status', 'completed');
 
     const { count: inactive } = await supabase
       .from('clients')
       .select('*', { count: 'exact', head: true })
+      .is('deleted_at', null)
       .lt('updated_at', thirtyDaysAgo);
 
     const today = new Date().toISOString().split('T')[0];
     const { data: clientsWithOverdue } = await supabase
       .from('projects')
       .select('client_id')
+      .is('deleted_at', null)
       .lt('due_date', today)
       .neq('status', 'done');
 
@@ -67,7 +72,8 @@ export async function GET() {
 
   const { data: projects } = await supabase
     .from('projects')
-    .select('id, status, created_at, updated_at');
+    .select('id, status, created_at, updated_at')
+    .is('deleted_at', null);
 
   if (projects) {
     const backlog = projects.filter(p => p.status === 'backlog').length;
@@ -107,7 +113,8 @@ export async function GET() {
   // ============================================
   const { count: totalContent } = await supabase
     .from('content_assets')
-    .select('*', { count: 'exact', head: true });
+    .select('*', { count: 'exact', head: true })
+    .is('deleted_at', null);
 
   const startOfMonth = new Date();
   startOfMonth.setDate(1);
@@ -116,17 +123,20 @@ export async function GET() {
   const { count: thisMonth } = await supabase
     .from('content_assets')
     .select('*', { count: 'exact', head: true })
+    .is('deleted_at', null)
     .gte('created_at', startOfMonth.toISOString());
 
   const oneWeekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
   const { count: thisWeek } = await supabase
     .from('content_assets')
     .select('*', { count: 'exact', head: true })
+    .is('deleted_at', null)
     .gte('created_at', oneWeekAgo);
 
   const { data: contentByType } = await supabase
     .from('content_assets')
-    .select('asset_type');
+    .select('asset_type')
+    .is('deleted_at', null);
 
   const typeCounts = contentByType?.reduce((acc, item) => {
     acc[item.asset_type] = (acc[item.asset_type] || 0) + 1;
@@ -146,6 +156,7 @@ export async function GET() {
   const { data: files } = await supabase
     .from('content_assets')
     .select('file_size')
+    .is('deleted_at', null)
     .not('file_size', 'is', null);
 
   const totalBytes = files?.reduce((sum, f) => sum + (f.file_size || 0), 0) || 0;
@@ -154,6 +165,7 @@ export async function GET() {
   const { count: filesThisWeek } = await supabase
     .from('content_assets')
     .select('*', { count: 'exact', head: true })
+    .is('deleted_at', null)
     .gte('created_at', oneWeekAgo)
     .not('file_size', 'is', null);
 

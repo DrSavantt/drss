@@ -1,0 +1,852 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ========================================
+   iOS SAFE AREA SUPPORT
+   ======================================== */
+
+/* iOS Safe Area CSS Variables */
+:root {
+  --sat: env(safe-area-inset-top);
+  --sar: env(safe-area-inset-right);
+  --sab: env(safe-area-inset-bottom);
+  --sal: env(safe-area-inset-left);
+}
+
+html, body {
+  padding: 0;
+  margin: 0;
+}
+
+/* Push all content to respect safe areas */
+body {
+  padding-top: env(safe-area-inset-top);
+  padding-bottom: env(safe-area-inset-bottom);
+  padding-left: env(safe-area-inset-left);
+  padding-right: env(safe-area-inset-right);
+}
+
+/* ========================================
+   MOBILE VIEWPORT - FILL SCREEN, PREVENT ZOOM
+   ======================================== */
+
+/* Mobile-specific viewport fixes */
+@media (max-width: 768px) {
+  html {
+    width: 100vw;
+    min-height: -webkit-fill-available;
+    overflow-x: hidden;
+  }
+  
+  body {
+    width: 100vw;
+    min-height: 100vh;
+    min-height: 100dvh;
+    min-height: -webkit-fill-available;
+    overflow-x: hidden;
+    overscroll-behavior: none;
+  }
+  
+  /* Prevent zoom */
+  * {
+    touch-action: manipulation;
+  }
+  
+  /* Main container */
+  main {
+    width: 100vw;
+    min-height: 100vh;
+    min-height: 100dvh;
+  }
+  
+  /* Allow scrollable containers */
+  [data-scrollable="true"],
+  .overflow-y-auto,
+  .overflow-auto {
+    touch-action: pan-y;
+  }
+  
+  /* Hide scrollbars on mobile but keep functionality */
+  * {
+    scrollbar-width: none; /* Firefox */
+    -ms-overflow-style: none; /* IE/Edge */
+  }
+  
+  *::-webkit-scrollbar {
+    display: none; /* Chrome/Safari */
+  }
+  
+  /* Keep smooth scroll functionality */
+  .overflow-y-auto,
+  .overflow-x-auto,
+  .overflow-auto {
+    -webkit-overflow-scrolling: touch;
+  }
+}
+
+/* Main app container should fill screen */
+#__next,
+main {
+  min-height: 100vh;
+  min-height: 100dvh;
+}
+
+/* ========================================
+   POLISH UTILITIES - SMOOTH SCROLLBARS
+   ======================================== */
+
+/* Desktop smooth scrollbar */
+@media (min-width: 1024px) {
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: rgb(255 255 255 / 0.1) transparent;
+  }
+
+  *::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  *::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  *::-webkit-scrollbar-thumb {
+    background: rgb(255 255 255 / 0.1);
+    border-radius: 3px;
+  }
+
+  *::-webkit-scrollbar-thumb:hover {
+    background: rgb(255 255 255 / 0.15);
+  }
+}
+
+/* Better text rendering */
+body {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+/* Focus rings */
+button:focus-visible,
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible {
+  outline: 2px solid rgb(239 68 68 / 0.5);
+  outline-offset: 2px;
+}
+
+/* Prevent iOS zoom on input focus - 16px minimum */
+input,
+textarea,
+select,
+.ProseMirror {
+  font-size: 16px !important;
+  touch-action: manipulation;
+}
+
+/* Allow text selection in form fields */
+input,
+textarea,
+[contenteditable="true"],
+.ProseMirror,
+.selectable {
+  -webkit-user-select: text;
+  user-select: text;
+}
+
+/* Tiptap editor specific mobile styles */
+.ProseMirror {
+  min-height: 200px;
+  outline: none;
+}
+
+.ProseMirror p {
+  margin: 0.75em 0;
+}
+
+/* Ensure Tiptap paragraphs are readable on mobile */
+@media (max-width: 768px) {
+  .ProseMirror {
+    font-size: 16px !important;
+    line-height: 1.6;
+  }
+  
+  .ProseMirror p,
+  .ProseMirror li {
+    font-size: 16px !important;
+  }
+}
+
+/* Prevent text selection on mobile (optional) */
+* {
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Custom scrollbar for desktop */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: hsl(var(--background));
+}
+
+::-webkit-scrollbar-thumb {
+  background: hsl(var(--red-primary));
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: hsl(var(--red-bright));
+}
+
+/* Hide scrollbars but keep functionality */
+.overflow-x-auto::-webkit-scrollbar {
+  display: none;
+}
+
+.overflow-x-auto {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+/* ========================================
+   DESIGN SYSTEM - BLACK/RED/WHITE PALETTE
+   ======================================== */
+
+@layer base {
+  :root {
+    /* Light mode defaults */
+    --pure-black: 0 0% 0%;
+    --rich-black: 0 0% 4%;
+    --pure-white: 0 0% 100%;
+    --off-white: 0 0% 96%;
+    --ghost-white: 0 0% 98%;
+
+    --charcoal: 0 0% 96%;            /* Light card/surface */
+    --dark-gray: 0 0% 93%;           /* Inputs / subtle fills */
+    --mid-gray: 0 0% 85%;            /* Borders */
+    --slate: 0 0% 40%;
+    --silver: 0 0% 53%;
+    --light-gray: 0 0% 67%;
+    --pale-gray: 0 0% 80%;
+
+    --surface: 0 0% 100%;            /* Card bg */
+    --surface-highlight: 0 0% 95%;   /* Hover */
+
+    --red-dark: 0 100% 40%;
+    --red-primary: 351 91% 71%;
+    --red-bright: 0 100% 70%;
+    --red-light: 0 100% 76%;
+    --red-pale: 0 100% 83%;
+
+    --success: 142 71% 58%;
+    --warning: 38 100% 63%;
+    --info: 218 100% 63%;
+    --error: 353 56% 61%;
+
+    /* Glass morphism (light mode) */
+    --glass-bg: rgba(255, 255, 255, 0.7);
+    --glass-border: rgba(0, 0, 0, 0.1);
+    --glass-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+    --hover-bg: rgba(0, 0, 0, 0.03);
+    --active-ring: rgba(220, 38, 38, 0.2);
+    --active-shadow: rgba(220, 38, 38, 0.1);
+
+    /* Semantic mappings - light */
+    --background: 0 0% 98%;          /* ghost-white */
+    --foreground: 0 0% 0%;           /* black */
+    --card: var(--surface);
+    --card-foreground: var(--foreground);
+    --popover: var(--surface);
+    --popover-foreground: var(--foreground);
+    --border: var(--mid-gray);
+    --input: var(--dark-gray);
+    --ring: var(--red-primary);
+    --primary: var(--red-primary);
+    --primary-foreground: var(--pure-white);
+    --secondary: var(--dark-gray);
+    --secondary-foreground: var(--foreground);
+    --muted: var(--slate);
+    --muted-foreground: var(--silver);
+    --accent: var(--red-bright);
+    --accent-foreground: var(--pure-white);
+    --destructive: var(--error);
+    --destructive-foreground: var(--pure-white);
+    --radius: 0.5rem;
+  }
+
+  .dark {
+    /* Dark mode overrides */
+    --pure-black: 0 0% 6%;           /* #0F0F10 */
+    --rich-black: 0 0% 4%;           /* #0A0A0A */
+    --charcoal: 0 0% 10%;            /* #1A1A1A */
+    --dark-gray: 0 0% 16%;           /* #2A2A2A */
+    --mid-gray: 0 0% 25%;            /* #404040 */
+    --surface: 0 0% 9%;              /* #18181B */
+    --surface-highlight: 0 0% 15%;   /* #27272A */
+
+    --slate: 0 0% 40%;
+    --silver: 0 0% 53%;
+    --light-gray: 0 0% 67%;
+    --pale-gray: 0 0% 80%;
+
+    /* Glass morphism (dark mode) */
+    --glass-bg: rgba(0, 0, 0, 0.4);
+    --glass-border: rgba(255, 255, 255, 0.1);
+    --glass-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+    --hover-bg: rgba(255, 255, 255, 0.05);
+    --active-ring: rgba(251, 113, 133, 0.3);
+    --active-shadow: rgba(251, 113, 133, 0.1);
+
+    --background: var(--pure-black);
+    --foreground: var(--pure-white);
+    --card: var(--surface);
+    --card-foreground: var(--pure-white);
+    --popover: var(--surface);
+    --popover-foreground: var(--pure-white);
+    --border: var(--mid-gray);
+    --input: var(--dark-gray);
+    --ring: var(--red-primary);
+    --primary: var(--red-primary);
+    --primary-foreground: var(--pure-white);
+    --secondary: var(--dark-gray);
+    --secondary-foreground: var(--pure-white);
+    --muted: var(--slate);
+    --muted-foreground: var(--silver);
+    --accent: var(--red-bright);
+    --accent-foreground: var(--pure-white);
+    --destructive: var(--error);
+    --destructive-foreground: var(--pure-white);
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  html {
+    font-family: var(--font-inter), -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  }
+  body {
+    @apply bg-background text-foreground font-sans;
+    font-family: var(--font-inter), -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    font-weight: 400; /* Regular weight for body text */
+  }
+  /* Headings should be bold Roboto */
+  h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-inter), -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    font-weight: 700 !important; /* Bold weight - force with !important */
+  }
+  /* All text elements use Roboto - ensure font-family is applied */
+  p, span, div, button, input, textarea, select, label, a, li, td, th, strong, b {
+    font-family: var(--font-inter), -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  }
+  /* Ensure font-bold class uses Roboto Bold */
+  .font-bold, [class*="font-bold"] {
+    font-family: var(--font-inter), -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    font-weight: 700 !important;
+  }
+  /* Ensure font-semibold uses Roboto Bold */
+  .font-semibold, [class*="font-semibold"] {
+    font-family: var(--font-inter), -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    font-weight: 700 !important;
+  }
+  /* Regular text should be weight 400 */
+  .font-normal, .font-regular, [class*="font-normal"], [class*="font-regular"] {
+    font-family: var(--font-inter), -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    font-weight: 400 !important;
+  }
+  /* Remove underlines from navigation links */
+  header nav a {
+    text-decoration: none !important;
+  }
+}
+
+/* PWA full-screen support */
+@media (display-mode: standalone) {
+  /* PWA gets same treatment as mobile browser */
+  html, body {
+    width: 100vw;
+    min-height: 100vh;
+    min-height: 100dvh;
+  }
+  
+  body {
+    -webkit-tap-highlight-color: transparent;
+  }
+}
+
+/* ========================================
+   NAVIGATION HEADER FIX
+   ======================================== */
+
+/* Prevent content showing through header when scrolling */
+nav {
+  background: hsla(var(--background), 0.95) !important;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  z-index: 50;
+}
+
+.sticky {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+}
+
+/* Main content stacking - z-index handled separately from padding */
+
+/* ========================================
+   LANDING PAGE REVEAL ANIMATIONS
+   Apple-style smooth scroll reveals
+   ======================================== */
+
+/* Base reveal animation */
+.reveal {
+  opacity: 0;
+  transform: translateY(30px);
+  transition: opacity 0.8s cubic-bezier(0.25, 0.1, 0.25, 1),
+              transform 0.8s cubic-bezier(0.25, 0.1, 0.25, 1);
+}
+
+.reveal.in-view {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* Staggered reveal for children */
+.reveal-stagger > * {
+  opacity: 0;
+  transform: translateY(20px);
+  transition: opacity 0.6s cubic-bezier(0.25, 0.1, 0.25, 1),
+              transform 0.6s cubic-bezier(0.25, 0.1, 0.25, 1);
+}
+
+.reveal-stagger.in-view > *:nth-child(1) {
+  transition-delay: 0.1s;
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.reveal-stagger.in-view > *:nth-child(2) {
+  transition-delay: 0.2s;
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.reveal-stagger.in-view > *:nth-child(3) {
+  transition-delay: 0.3s;
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.reveal-stagger.in-view > *:nth-child(4) {
+  transition-delay: 0.4s;
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.reveal-stagger.in-view > *:nth-child(5) {
+  transition-delay: 0.5s;
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.reveal-stagger.in-view > *:nth-child(6) {
+  transition-delay: 0.6s;
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.reveal-stagger.in-view > *:nth-child(7) {
+  transition-delay: 0.7s;
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.reveal-stagger.in-view > *:nth-child(8) {
+  transition-delay: 0.8s;
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* Apple-style easing curves */
+.apple-ease {
+  transition-timing-function: cubic-bezier(0.25, 0.1, 0.25, 1);
+}
+
+.apple-spring {
+  transition-timing-function: cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* Performance optimizations */
+.will-change-transform {
+  will-change: transform;
+}
+
+.will-change-opacity {
+  will-change: opacity;
+}
+
+.will-change-transform.will-change-opacity {
+  will-change: transform, opacity;
+}
+
+/* Toast animation */
+@keyframes slide-in {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+.animate-slide-in {
+  animation: slide-in 0.3s cubic-bezier(0.25, 0.1, 0.25, 1) forwards;
+}
+
+/* ========================================
+   COMPREHENSIVE MOBILE OPTIMIZATION
+   iPhone 15 Pro Max + All Mobile Devices
+   ======================================== */
+
+/* Safe area insets for iPhone notch and home indicator */
+.safe-area-top {
+  padding-top: env(safe-area-inset-top, 0);
+}
+
+.safe-area-bottom {
+  padding-bottom: env(safe-area-inset-bottom, 0);
+}
+
+.safe-area-left {
+  padding-left: env(safe-area-inset-left, 0);
+}
+
+.safe-area-right {
+  padding-right: env(safe-area-inset-right, 0);
+}
+
+/* Additional safe area utility with default padding */
+.safe-area-bottom-with-padding {
+  padding-bottom: calc(env(safe-area-inset-bottom, 0) + 1rem);
+}
+
+/* Mobile-specific improvements */
+@media (max-width: 768px) {
+  /* Ensure content fits screen width */
+  * {
+    max-width: 100vw;
+    box-sizing: border-box;
+  }
+  
+  /* Touch-friendly tap targets (44px minimum for iOS) */
+  button, 
+  a, 
+  [role="button"],
+  .clickable {
+    min-height: 44px;
+  }
+  
+  /* Form inputs touch optimization */
+  input:not([type="checkbox"]):not([type="radio"]), 
+  textarea, 
+  select {
+    min-height: 48px;
+    padding: 12px 16px;
+    font-size: 16px !important; /* Prevents iOS zoom on focus */
+    -webkit-appearance: none;
+    border-radius: 8px;
+  }
+  
+  /* Improve text readability */
+  body {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+  }
+  
+  /* Cards - full bleed on mobile for better use of space */
+  .glass-card,
+  .mobile-full-bleed {
+    margin-left: -1rem;
+    margin-right: -1rem;
+    border-radius: 0;
+    border-left: none;
+    border-right: none;
+  }
+  
+  /* Better spacing for cards within containers */
+  .space-y-6 > * + * {
+    margin-top: 1rem;
+  }
+  
+  /* Responsive text sizes */
+  h1 {
+    font-size: 1.75rem !important;
+    line-height: 1.2;
+  }
+  
+  h2 {
+    font-size: 1.375rem !important;
+    line-height: 1.25;
+  }
+  
+  h3 {
+    font-size: 1.125rem !important;
+    line-height: 1.3;
+  }
+  
+  /* Stack elements on mobile */
+  .md\:flex-row {
+    flex-direction: column;
+  }
+  
+  /* Full width buttons on mobile */
+  .mobile-full-width {
+    width: 100%;
+  }
+}
+
+/* Large phone landscape optimization */
+@media (max-width: 768px) and (orientation: landscape) {
+  /* Reduce vertical padding in landscape */
+  .py-8 {
+    padding-top: 1rem;
+    padding-bottom: 1rem;
+  }
+  
+  /* Ensure content is still readable */
+  .min-h-screen {
+    min-height: 100vh;
+    min-height: 100dvh; /* Dynamic viewport height */
+  }
+}
+
+/* iOS Safari specific fixes */
+@supports (-webkit-touch-callout: none) {
+  /* iOS uses dvh for proper viewport sizing */
+  .min-h-screen {
+    min-height: 100dvh;
+  }
+  
+  .h-screen {
+    height: 100dvh;
+  }
+  
+  /* Fix for fixed positioning issues on iOS */
+  .fixed {
+    transform: translateZ(0);
+    -webkit-transform: translateZ(0);
+  }
+  
+  /* Prevent rubber-band scrolling on fixed elements */
+  .fixed-no-bounce {
+    overscroll-behavior: none;
+  }
+}
+
+/* PWA standalone mode - additional styles */
+@media (display-mode: standalone) {
+  /* Extra padding for status bar in PWA */
+  .pwa-safe-top {
+    padding-top: calc(env(safe-area-inset-top, 0) + 0.5rem);
+  }
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+  .border-border {
+    border-color: currentColor;
+  }
+  
+  button, a {
+    text-decoration: underline;
+  }
+}
+
+/* Reduce motion for accessibility */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Touch device optimizations */
+@media (hover: none) and (pointer: coarse) {
+  /* Larger hit areas for touch */
+  .touch-target {
+    position: relative;
+  }
+  
+  .touch-target::after {
+    content: '';
+    position: absolute;
+    top: -8px;
+    right: -8px;
+    bottom: -8px;
+    left: -8px;
+  }
+  
+  /* Remove hover states that don't work well on touch */
+  .hover\:bg-surface-highlight:hover {
+    background-color: transparent;
+  }
+  
+  /* Add active states instead */
+  .hover\:bg-surface-highlight:active {
+    background-color: hsl(var(--surface-highlight));
+  }
+}
+
+/* Dark mode improvements for OLED screens */
+@media (prefers-color-scheme: dark) {
+  .dark {
+    /* True black for OLED power savings */
+    --pure-black: 0 0% 0%;
+  }
+}
+
+/* Bottom sheet / modal mobile styles */
+@media (max-width: 640px) {
+  .modal-mobile {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    top: auto;
+    max-height: 90vh;
+    max-height: 90dvh;
+    border-radius: 1.5rem 1.5rem 0 0;
+    animation: slide-up 0.3s ease-out;
+  }
+  
+  @keyframes slide-up {
+    from {
+      transform: translateY(100%);
+    }
+    to {
+      transform: translateY(0);
+    }
+  }
+}
+
+/* Mobile navigation improvements */
+@media (max-width: 1023px) {
+  /* Ensure mobile nav is above everything */
+  .mobile-nav-overlay {
+    z-index: 9998;
+  }
+  
+  .mobile-nav-drawer {
+    z-index: 9999;
+  }
+  
+  /* Add backdrop blur for modern feel */
+  .mobile-nav-header {
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+  }
+}
+
+/* Questionnaire specific mobile styles */
+@media (max-width: 768px) {
+  /* Progress stepper horizontal scroll on mobile */
+  .questionnaire-stepper {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+    padding-bottom: 0.5rem;
+  }
+  
+  .questionnaire-stepper::-webkit-scrollbar {
+    display: none;
+  }
+  
+  /* Fixed bottom navigation for questionnaire */
+  .questionnaire-nav-fixed {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: hsla(var(--surface), 0.95);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border-top: 1px solid hsl(var(--border));
+    padding: 1rem;
+    padding-bottom: calc(env(safe-area-inset-bottom, 0) + 1rem);
+    z-index: 40;
+  }
+  
+  /* Add bottom padding to main content to account for fixed nav */
+  .questionnaire-content {
+    padding-bottom: 6rem;
+  }
+}
+
+/* Card grid responsive behavior */
+@media (max-width: 640px) {
+  .grid-cols-2,
+  .sm\:grid-cols-2 {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+@media (min-width: 641px) and (max-width: 768px) {
+  .lg\:grid-cols-3,
+  .lg\:grid-cols-4 {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+}
+
+/* Analytics charts mobile optimization */
+@media (max-width: 768px) {
+  .recharts-wrapper {
+    font-size: 10px !important;
+  }
+  
+  .recharts-legend-wrapper {
+    font-size: 11px !important;
+  }
+  
+  .recharts-cartesian-axis-tick-value {
+    font-size: 10px !important;
+  }
+}
+
+/* Form field improvements */
+.form-field-mobile {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+@media (max-width: 768px) {
+  .form-field-mobile label {
+    font-size: 0.875rem;
+    font-weight: 600;
+  }
+  
+  .form-field-mobile input,
+  .form-field-mobile textarea,
+  .form-field-mobile select {
+    width: 100%;
+  }
+}

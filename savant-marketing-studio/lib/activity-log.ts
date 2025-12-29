@@ -24,6 +24,7 @@ interface LogActivityParams {
   entityType: EntityType;
   entityId: string;
   entityName?: string;
+  clientId?: string; // NEW: Optional client_id for filtering activities by client
   metadata?: Record<string, unknown>;
 }
 
@@ -32,6 +33,7 @@ export async function logActivity({
   entityType,
   entityId,
   entityName,
+  clientId,
   metadata = {}
 }: LogActivityParams) {
   try {
@@ -54,6 +56,7 @@ export async function logActivity({
       entity_type: entityType,
       entity_id: entityId,
       entity_name: entityName,
+      client_id: clientId || null,
       metadata
     });
     

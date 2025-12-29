@@ -1,251 +1,342 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { getJournalEntriesByContent, getJournalEntriesByClient } from '@/app/actions/journal'
-import { highlightMentions } from '@/lib/utils/mentions'
+import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { ExternalLink } from 'lucide-react'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
+import { 
+  ArrowLeft, 
+  Download, 
+  Trash2, 
+  Loader2,
+  Calendar,
+  User,
+  Folder,
+  FileIcon,
+  HardDrive,
+  ExternalLink,
+  FileText,
+  Image as ImageIcon
+} from 'lucide-react'
+import { format } from 'date-fns'
+import { deleteContentAsset } from '@/app/actions/content'
 import { ResponsiveFilePreview } from '@/components/responsive-file-preview'
 
-interface Content {
-  id: string
-  title: string
-  asset_type: string
-  file_url: string | null
-  file_size: number | null
-  file_type: string | null
-  created_at: string
-  updated_at: string
-  client_id: string
-  clients: { name: string } | null
-  projects: { name: string } | null
+// ============================================================================
+// FULL FILE PREVIEW - View and download uploaded files
+// ============================================================================
+
+interface FilePreviewClientProps {
+  content: {
+    id: string
+    title: string
+    asset_type: string
+    file_url: string
+    file_type?: string
+    file_size?: number
+    client_id: string
+    project_id?: string | null
+    created_at: string
+    updated_at: string
+    clients?: { id: string; name: string } | null
+    projects?: { id: string; name: string } | null
+  }
 }
 
-interface JournalEntry {
-  id: string
-  content: string
-  tags: string[]
-  created_at: string
-}
+export function FilePreviewClient({ content }: FilePreviewClientProps) {
+  const router = useRouter()
+  const [isDeleting, setIsDeleting] = useState(false)
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
 
-interface Props {
-  content: Content
-}
-
-export function FilePreviewClient({ content }: Props) {
-  const [journalEntries, setJournalEntries] = useState<JournalEntry[]>([])
-  const [loadingJournal, setLoadingJournal] = useState(false)
-  const [isExpanded, setIsExpanded] = useState(false)
-
-  // Fetch journal entries
-  useEffect(() => {
-    async function fetchJournalEntries() {
-      setLoadingJournal(true)
-      try {
-        // Get entries from content chat
-        const contentEntries = await getJournalEntriesByContent(content.id)
-
-        // Get entries mentioning the client
-        const clientEntries = await getJournalEntriesByClient(content.client_id)
-
-        // Combine and dedupe by id
-        const allEntries = [...contentEntries, ...clientEntries]
-        const uniqueEntries = Array.from(
-          new Map(allEntries.map(entry => [entry.id, entry])).values()
-        )
-
-        // Sort by created_at descending
-        uniqueEntries.sort((a, b) =>
-          new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-        )
-
-        setJournalEntries(uniqueEntries)
-      } catch (error) {
-        console.error('Failed to load journal entries:', error)
-      } finally {
-        setLoadingJournal(false)
-      }
+  const handleDelete = async () => {
+    setIsDeleting(true)
+    try {
+      await deleteContentAsset(content.id, content.client_id, 'all', content.title)
+      router.push(`/dashboard/clients/${content.client_id}`)
+    } catch (error) {
+      console.error('Failed to delete:', error)
+      setIsDeleting(false)
     }
-    fetchJournalEntries()
-  }, [content.id, content.client_id, content.title])
+  }
+
+  const handleDownload = () => {
+    if (content.file_url) {
+      // Create a link and trigger download
+      const link = document.createElement('a')
+      link.href = content.file_url
+      link.download = content.title
+      link.target = '_blank'
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+    }
+  }
+
+  const formatFileSize = (bytes?: number) => {
+    if (!bytes) return 'Unknown size'
+    if (bytes < 1024) return `${bytes} B`
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
+    return `${(bytes / (1024 * 1024)).toFixed(2)} MB`
+  }
+
+  const getFileTypeDisplay = () => {
+    if (content.file_type) {
+      if (content.file_type.includes('pdf')) return 'PDF Document'
+      if (content.file_type.includes('image')) return 'Image'
+      if (content.file_type.includes('word') || content.file_type.includes('document')) return 'Word Document'
+      if (content.file_type.includes('excel') || content.file_type.includes('spreadsheet')) return 'Spreadsheet'
+      if (content.file_type.includes('powerpoint') || content.file_type.includes('presentation')) return 'PowerPoint'
+      return content.file_type
+    }
+    return content.asset_type?.replace('_', ' ') || 'File'
+  }
+
+  const getFileIcon = () => {
+    if (content.file_type?.includes('image')) {
+      return <ImageIcon className="h-6 w-6 text-blue-500" />
+    }
+    if (content.file_type?.includes('pdf')) {
+      return <FileText className="h-6 w-6 text-red-500" />
+    }
+    return <FileIcon className="h-6 w-6 text-muted-foreground" />
+  }
 
   return (
-    <div className="space-y-8 pb-8">
+    <div className="min-h-screen bg-background">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <Link
-          href={`/dashboard/clients/${content.client_id}`}
-          className="text-sm text-silver hover:text-red-primary transition-colors flex items-center gap-2"
-        >
-          ← Back to {content.clients?.name || 'Client'}
-        </Link>
-      </div>
+      <div className="border-b bg-card sticky top-0 z-10">
+        <div className="container max-w-6xl mx-auto px-4 py-4">
+          <div className="flex items-center justify-between">
+            {/* Back Button & Breadcrumb */}
+            <div className="flex items-center gap-4">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => router.back()}
+              >
+                <ArrowLeft className="h-5 w-5" />
+              </Button>
+              
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                {content.clients && (
+                  <>
+                    <Link 
+                      href={`/dashboard/clients/${content.client_id}`}
+                      className="hover:text-foreground transition-colors"
+                    >
+                      {content.clients.name}
+                    </Link>
+                    <span>/</span>
+                  </>
+                )}
+                <span className="text-foreground">File Preview</span>
+              </div>
+            </div>
 
-      {/* File Header Card */}
-      <div className="bg-charcoal border border-mid-gray rounded-xl p-8 hover:border-red-bright/50 transition-all duration-200">
-        <div className="flex items-start justify-between mb-6">
-          <div className="flex-1">
-            <h1 className="text-4xl font-bold mb-2 text-red-primary">{content.title}</h1>
-            <div className="flex flex-wrap gap-3 mt-4">
-              <span className="px-3 py-1 text-xs font-medium rounded-full bg-success/20 text-success border border-success/30">
-                {content.asset_type.replace('_', ' ')}
-              </span>
-              {content.clients && (
-                <span className="px-3 py-1 text-xs font-medium rounded-full bg-slate/20 text-foreground border border-slate/30">
-                  {content.clients.name}
-                </span>
-              )}
-              {content.projects && (
-                <span className="px-3 py-1 text-xs font-medium rounded-full bg-info/20 text-info border border-info/30">
-                  {content.projects.name}
-                </span>
-              )}
+            {/* Actions */}
+            <div className="flex items-center gap-2">
+              {/* Download Button */}
+              <Button onClick={handleDownload}>
+                <Download className="h-4 w-4 mr-2" />
+                Download
+              </Button>
+
+              {/* Open in New Tab */}
+              <Button 
+                variant="outline" 
+                onClick={() => window.open(content.file_url, '_blank')}
+              >
+                <ExternalLink className="h-4 w-4" />
+              </Button>
+
+              {/* Delete Button */}
+              <Button
+                variant="outline"
+                onClick={() => setShowDeleteConfirm(true)}
+                className="text-destructive hover:text-destructive hover:bg-destructive/10"
+              >
+                <Trash2 className="h-4 w-4" />
+              </Button>
             </div>
           </div>
         </div>
+      </div>
 
-        <div className="border-t border-mid-gray pt-6 mt-6">
-          <dl className="grid grid-cols-1 gap-x-6 gap-y-4 sm:grid-cols-2">
-            <div>
-              <dt className="text-sm font-medium text-silver">Created</dt>
-              <dd className="mt-1.5 text-sm text-foreground">
-                {new Date(content.created_at).toLocaleDateString('en-US', {
-                  year: 'numeric',
-                  month: 'long',
-                  day: 'numeric',
-                })}
-              </dd>
-            </div>
-            <div>
-              <dt className="text-sm font-medium text-silver">File Size</dt>
-              <dd className="mt-1.5 text-sm text-foreground">
-                {content.file_size ? `${(content.file_size / 1024 / 1024).toFixed(2)} MB` : 'Unknown'}
-              </dd>
-            </div>
-          </dl>
-        </div>
-
-        <div className="mt-6">
-          <a
-            href={content.file_url || '#'}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="w-full flex items-center justify-center gap-2 rounded-lg bg-red-primary px-6 py-3 text-sm font-semibold text-pure-white hover:bg-red-bright transition-colors"
-          >
-            <ExternalLink className="w-4 h-4" />
-            Open File
-          </a>
-        </div>
-
-        {/* Quick Captures - Collapsible */}
-        <div className="border-t border-mid-gray pt-6 mt-6">
-          <button
-            onClick={() => setIsExpanded(!isExpanded)}
-            className="w-full flex items-center justify-between text-left hover:opacity-80 transition-opacity"
-          >
+      {/* Main Content */}
+      <div className="container max-w-6xl mx-auto px-4 py-6">
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+          {/* Preview Column */}
+          <div className="lg:col-span-3 space-y-4">
+            {/* Title */}
             <div className="flex items-center gap-3">
-              <span className="text-xl">📝</span>
-              <div>
-                <h3 className="text-lg font-semibold text-foreground">Quick Captures</h3>
-                <p className="text-xs text-silver">
-                  {loadingJournal ? 'Loading...' : `${journalEntries.length} ${journalEntries.length === 1 ? 'entry' : 'entries'}`}
-                </p>
-              </div>
+              {getFileIcon()}
+              <h1 className="text-2xl font-bold">{content.title}</h1>
             </div>
-            <div className="flex items-center gap-3">
-              <Link
-                href="/dashboard/journal"
-                onClick={(e) => e.stopPropagation()}
-                className="text-xs text-red-primary hover:text-red-bright font-medium transition-colors"
-              >
-                View All →
-              </Link>
-              <svg
-                className={`w-5 h-5 text-silver transition-transform ${isExpanded ? 'rotate-180' : ''}`}
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-              </svg>
-            </div>
-          </button>
 
-          {/* Collapsible Content */}
-          {isExpanded && (
-            <div className="mt-6">
-              {loadingJournal ? (
-                <div className="flex items-center justify-center py-12">
-                  <div className="w-8 h-8 border-4 border-red-primary border-t-transparent rounded-full animate-spin"></div>
-                </div>
-              ) : journalEntries.length === 0 ? (
-                <div className="text-center py-12 border-2 border-dashed border-mid-gray rounded-lg">
-                  <span className="text-4xl mb-3 block">📭</span>
-                  <h3 className="text-base font-medium text-foreground mb-2">No captures yet</h3>
-                  <p className="text-sm text-silver mb-4">
-                    Create a journal capture mentioning @{content.title} to see it here
-                  </p>
-                  <Link
-                    href="/dashboard/journal"
-                    className="inline-block bg-red-primary text-pure-white px-4 py-2 rounded-lg hover:bg-red-bright transition-all duration-200 text-sm font-medium"
-                  >
-                    Create Capture
-                  </Link>
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  {journalEntries.map((entry) => (
-                    <div
-                      key={entry.id}
-                      className="border border-mid-gray rounded-lg p-4 hover:border-red-bright/50 transition-all duration-200"
-                    >
-                      <div
-                        className="text-sm text-foreground mb-3 leading-relaxed"
-                        dangerouslySetInnerHTML={{ __html: highlightMentions(entry.content, [content.title, content.clients?.name, content.projects?.name].filter(Boolean) as string[]) }}
-                      />
-                      <div className="flex items-center justify-between text-xs text-slate">
-                        <div className="flex items-center gap-3">
-                          <span>
-                            {new Date(entry.created_at).toLocaleDateString('en-US', {
-                              month: 'short',
-                              day: 'numeric',
-                              hour: 'numeric',
-                              minute: '2-digit'
-                            })}
-                          </span>
-                          {entry.tags && entry.tags.length > 0 && (
-                            <div className="flex gap-1">
-                              {entry.tags.map((tag) => (
-                                <span
-                                  key={tag}
-                                  className="px-2 py-0.5 bg-red-primary/20 text-red-primary rounded-full"
-                                >
-                                  #{tag}
-                                </span>
-                              ))}
-                            </div>
-                          )}
-                        </div>
-                      </div>
+            {/* Type Badges */}
+            <div className="flex items-center gap-2">
+              <Badge variant="outline">
+                <FileIcon className="h-3 w-3 mr-1" />
+                {getFileTypeDisplay()}
+              </Badge>
+              <Badge variant="secondary">
+                <HardDrive className="h-3 w-3 mr-1" />
+                {formatFileSize(content.file_size)}
+              </Badge>
+            </div>
+
+            {/* File Preview - Uses ResponsiveFilePreview for full format support */}
+            <ResponsiveFilePreview
+              fileUrl={content.file_url}
+              fileName={content.title}
+              fileType={content.file_type || null}
+            />
+          </div>
+
+          {/* Sidebar */}
+          <div className="space-y-4">
+            {/* Metadata Card */}
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-sm font-medium">File Details</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4 text-sm">
+                {/* Client */}
+                {content.clients && (
+                  <div className="flex items-start gap-2">
+                    <User className="h-4 w-4 text-muted-foreground mt-0.5" />
+                    <div className="flex-1">
+                      <p className="text-xs text-muted-foreground mb-1">Client</p>
+                      <Link 
+                        href={`/dashboard/clients/${content.client_id}`}
+                        className="hover:underline font-medium"
+                      >
+                        {content.clients.name}
+                      </Link>
                     </div>
-                  ))}
+                  </div>
+                )}
+
+                {/* Project */}
+                {content.projects && (
+                  <div className="flex items-start gap-2">
+                    <Folder className="h-4 w-4 text-muted-foreground mt-0.5" />
+                    <div className="flex-1">
+                      <p className="text-xs text-muted-foreground mb-1">Project</p>
+                      <p className="font-medium">{content.projects.name}</p>
+                    </div>
+                  </div>
+                )}
+
+                {/* File Size */}
+                <div className="flex items-start gap-2">
+                  <HardDrive className="h-4 w-4 text-muted-foreground mt-0.5" />
+                  <div className="flex-1">
+                    <p className="text-xs text-muted-foreground mb-1">Size</p>
+                    <p className="font-medium">{formatFileSize(content.file_size)}</p>
+                  </div>
                 </div>
-              )}
-            </div>
-          )}
+
+                {/* File Type */}
+                <div className="flex items-start gap-2">
+                  <FileIcon className="h-4 w-4 text-muted-foreground mt-0.5" />
+                  <div className="flex-1">
+                    <p className="text-xs text-muted-foreground mb-1">Type</p>
+                    <p className="font-medium">{getFileTypeDisplay()}</p>
+                  </div>
+                </div>
+
+                {/* Uploaded */}
+                <div className="flex items-start gap-2">
+                  <Calendar className="h-4 w-4 text-muted-foreground mt-0.5" />
+                  <div className="flex-1">
+                    <p className="text-xs text-muted-foreground mb-1">Uploaded</p>
+                    <p className="font-medium">{format(new Date(content.created_at), 'MMM d, yyyy')}</p>
+                    <p className="text-xs text-muted-foreground">{format(new Date(content.created_at), 'h:mm a')}</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Quick Actions */}
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-sm font-medium">Quick Actions</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                <Button 
+                  className="w-full justify-start" 
+                  variant="outline"
+                  onClick={handleDownload}
+                >
+                  <Download className="h-4 w-4 mr-2" />
+                  Download File
+                </Button>
+                <Button 
+                  className="w-full justify-start" 
+                  variant="outline"
+                  onClick={() => window.open(content.file_url, '_blank')}
+                >
+                  <ExternalLink className="h-4 w-4 mr-2" />
+                  Open in New Tab
+                </Button>
+                <Button 
+                  className="w-full justify-start text-destructive hover:text-destructive hover:bg-destructive/10" 
+                  variant="outline"
+                  onClick={() => setShowDeleteConfirm(true)}
+                >
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Delete File
+                </Button>
+              </CardContent>
+            </Card>
+          </div>
         </div>
       </div>
 
-      {/* File Preview Section */}
-      <div className="bg-charcoal border border-mid-gray rounded-xl p-4 md:p-8 hover:border-red-bright/50 transition-all duration-200">
-        <h2 className="text-xl md:text-2xl font-semibold text-foreground mb-4 md:mb-6">Preview</h2>
-
-        <ResponsiveFilePreview
-          fileUrl={content.file_url || ''}
-          fileName={content.title}
-          fileType={content.file_type}
-        />
-      </div>
+      {/* Delete Confirmation Dialog */}
+      {showDeleteConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+          <Card className="w-full max-w-md mx-4">
+            <CardHeader>
+              <CardTitle>Delete File?</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <p className="text-muted-foreground">
+                Are you sure you want to delete <strong>"{content.title}"</strong>? This file will be permanently removed.
+              </p>
+              <div className="flex justify-end gap-2">
+                <Button
+                  variant="outline"
+                  onClick={() => setShowDeleteConfirm(false)}
+                  disabled={isDeleting}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  variant="destructive"
+                  onClick={handleDelete}
+                  disabled={isDeleting}
+                >
+                  {isDeleting ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Deleting...
+                    </>
+                  ) : (
+                    <>
+                      <Trash2 className="h-4 w-4 mr-2" />
+                      Delete
+                    </>
+                  )}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
     </div>
   )
 }
