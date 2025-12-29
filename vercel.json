@@ -1,8 +1,0 @@
-{
-  "buildCommand": "cd savant-marketing-studio && npm run build",
-  "devCommand": "cd savant-marketing-studio && npm run dev",
-  "installCommand": "cd savant-marketing-studio && npm install",
-  "framework": "nextjs",
-  "outputDirectory": "savant-marketing-studio/.next"
-}
-
