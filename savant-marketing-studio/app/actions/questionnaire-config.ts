@@ -91,6 +91,11 @@ export async function getSections(): Promise<SectionConfig[]> {
 
 export async function getEnabledSections(): Promise<SectionConfig[]> {
   const supabase = await createClient()
+  
+  if (!supabase) {
+    return []
+  }
+  
   const { data, error } = await supabase
     .from('questionnaire_sections')
     .select('*')
@@ -106,6 +111,11 @@ export async function getEnabledSections(): Promise<SectionConfig[]> {
 
 export async function getQuestions(): Promise<QuestionConfig[]> {
   const supabase = await createClient()
+  
+  if (!supabase) {
+    return []
+  }
+  
   const { data, error } = await supabase
     .from('questionnaire_questions')
     .select('*')
@@ -181,6 +191,11 @@ export async function getQuestionsWithHelp(): Promise<QuestionWithHelp[]> {
 
 export async function getQuestionsBySection(sectionId: number): Promise<QuestionConfig[]> {
   const supabase = await createClient()
+  
+  if (!supabase) {
+    return []
+  }
+  
   const { data, error } = await supabase
     .from('questionnaire_questions')
     .select('*')
@@ -196,6 +211,11 @@ export async function getQuestionsBySection(sectionId: number): Promise<Question
 
 export async function getHelp(questionId: string): Promise<HelpConfig | null> {
   const supabase = await createClient()
+  
+  if (!supabase) {
+    return null
+  }
+  
   const { data, error } = await supabase
     .from('questionnaire_help')
     .select('*')
@@ -214,6 +234,11 @@ export async function getHelp(questionId: string): Promise<HelpConfig | null> {
 
 export async function updateSection(id: number, updates: Partial<Omit<SectionConfig, 'id' | 'created_at' | 'updated_at'>>) {
   const supabase = await createClient()
+  
+  if (!supabase) {
+    throw new Error('Database connection not available')
+  }
+  
   const { error } = await supabase
     .from('questionnaire_sections')
     .update(updates)
@@ -234,6 +259,10 @@ export async function toggleSection(id: number, enabled: boolean) {
 export async function reorderSections(orderedIds: number[]) {
   const supabase = await createClient()
   
+  if (!supabase) {
+    throw new Error('Database connection not available')
+  }
+  
   // Update all sections with new sort orders
   for (let i = 0; i < orderedIds.length; i++) {
     const { error } = await supabase
@@ -252,6 +281,11 @@ export async function reorderSections(orderedIds: number[]) {
 
 export async function addSection(section: Omit<SectionConfig, 'id' | 'created_at' | 'updated_at'>) {
   const supabase = await createClient()
+  
+  if (!supabase) {
+    throw new Error('Database connection not available')
+  }
+  
   const { data, error } = await supabase
     .from('questionnaire_sections')
     .insert(section)
@@ -269,6 +303,11 @@ export async function addSection(section: Omit<SectionConfig, 'id' | 'created_at
 
 export async function deleteSection(id: number) {
   const supabase = await createClient()
+  
+  if (!supabase) {
+    throw new Error('Database connection not available')
+  }
+  
   // This will cascade delete questions in the section
   const { error } = await supabase
     .from('questionnaire_sections')
@@ -287,6 +326,11 @@ export async function deleteSection(id: number) {
 
 export async function updateQuestion(id: string, updates: Partial<Omit<QuestionConfig, 'id' | 'created_at' | 'updated_at'>>) {
   const supabase = await createClient()
+  
+  if (!supabase) {
+    throw new Error('Database connection not available')
+  }
+  
   const { error } = await supabase
     .from('questionnaire_questions')
     .update(updates)
@@ -306,6 +350,10 @@ export async function toggleQuestion(id: string, enabled: boolean) {
 
 export async function reorderQuestions(sectionId: number, orderedIds: string[]) {
   const supabase = await createClient()
+  
+  if (!supabase) {
+    throw new Error('Database connection not available')
+  }
   
   // Get the starting sort_order for this section
   const firstQuestion = await supabase
@@ -337,6 +385,10 @@ export async function reorderQuestions(sectionId: number, orderedIds: string[]) 
 export async function addQuestion(question: Omit<QuestionConfig, 'created_at' | 'updated_at'>) {
   const supabase = await createClient()
   
+  if (!supabase) {
+    throw new Error('Database connection not available')
+  }
+  
   const { error } = await supabase
     .from('questionnaire_questions')
     .insert(question)
@@ -353,6 +405,11 @@ export async function addQuestion(question: Omit<QuestionConfig, 'created_at' | 
 
 export async function deleteQuestion(id: string) {
   const supabase = await createClient()
+  
+  if (!supabase) {
+    throw new Error('Database connection not available')
+  }
+  
   const { error } = await supabase
     .from('questionnaire_questions')
     .delete()
@@ -370,6 +427,10 @@ export async function deleteQuestion(id: string) {
 
 export async function updateHelp(questionId: string, updates: Omit<Partial<HelpConfig>, 'id' | 'question_id' | 'created_at' | 'updated_at'>) {
   const supabase = await createClient()
+  
+  if (!supabase) {
+    throw new Error('Database connection not available')
+  }
   
   // Check if help exists
   const existing = await getHelp(questionId)
@@ -405,6 +466,11 @@ export async function updateHelp(questionId: string, updates: Omit<Partial<HelpC
 
 export async function deleteHelp(questionId: string) {
   const supabase = await createClient()
+  
+  if (!supabase) {
+    throw new Error('Database connection not available')
+  }
+  
   const { error } = await supabase
     .from('questionnaire_help')
     .delete()
@@ -423,6 +489,10 @@ export async function deleteHelp(questionId: string) {
 export async function bulkToggleQuestions(questionIds: string[], enabled: boolean) {
   const supabase = await createClient()
   
+  if (!supabase) {
+    throw new Error('Database connection not available')
+  }
+  
   for (const id of questionIds) {
     const { error } = await supabase
       .from('questionnaire_questions')
@@ -440,6 +510,10 @@ export async function bulkToggleQuestions(questionIds: string[], enabled: boolea
 
 export async function duplicateQuestion(id: string): Promise<string> {
   const supabase = await createClient()
+  
+  if (!supabase) {
+    throw new Error('Database connection not available')
+  }
   
   // Get original question
   const { data: original, error: fetchError } = await supabase

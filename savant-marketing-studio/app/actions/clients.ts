@@ -190,6 +190,11 @@ export async function deleteClient(
   clientName?: string
 ) {
   const supabase = await createSupabaseClient()
+  
+  if (!supabase) {
+    return { error: 'Database connection not available' }
+  }
+  
   const { data: { user } } = await supabase.auth.getUser()
   
   if (!user) {
@@ -337,6 +342,11 @@ export async function deleteClient(
 
 export async function restoreClient(id: string) {
   const supabase = await createSupabaseClient()
+  
+  if (!supabase) {
+    return { error: 'Database connection not available' }
+  }
+  
   const { data: { user } } = await supabase.auth.getUser()
   
   if (!user) {
@@ -396,6 +406,11 @@ export async function restoreClient(id: string) {
 
 export async function getArchivedClients() {
   const supabase = await createSupabaseClient()
+  
+  if (!supabase) {
+    return { error: 'Database connection not available' }
+  }
+  
   const { data: { user } } = await supabase.auth.getUser()
   
   if (!user) return []
@@ -417,6 +432,11 @@ export async function getArchivedClients() {
 
 export async function permanentlyDeleteClient(id: string) {
   const supabase = await createSupabaseClient()
+  
+  if (!supabase) {
+    return { error: 'Database connection not available' }
+  }
+  
   const { data: { user } } = await supabase.auth.getUser()
   
   if (!user) {
