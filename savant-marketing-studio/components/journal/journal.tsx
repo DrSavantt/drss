@@ -112,17 +112,27 @@ export function Journal() {
         
         setClients(clientsData.map(c => ({ id: c.id, name: c.name })))
         
-        setProjects(projectsData.map(p => ({
-          id: p.id,
-          name: p.name,
-          clientName: p.clients?.name
-        })))
+        setProjects(projectsData.map(p => {
+          const clientName = Array.isArray(p.clients) && p.clients.length > 0 
+            ? (p.clients[0] as any)?.name 
+            : undefined
+          return {
+            id: p.id,
+            name: p.name,
+            clientName
+          }
+        }))
         
-        setContentItems(contentData.map(c => ({
-          id: c.id,
-          title: c.title,
-          clientName: c.clients?.name
-        })))
+        setContentItems(contentData.map(c => {
+          const clientName = Array.isArray(c.clients) && c.clients.length > 0 
+            ? (c.clients[0] as any)?.name 
+            : undefined
+          return {
+            id: c.id,
+            title: c.title,
+            clientName
+          }
+        }))
       } catch (error) {
         console.error('Failed to fetch mentionable items:', error)
       }
