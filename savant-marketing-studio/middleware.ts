@@ -2,11 +2,29 @@ import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
 export async function middleware(request: NextRequest) {
+  const pathname = request.nextUrl.pathname
+
+  // Allow public routes immediately without any auth checks
+  if (
+    pathname === '/landing' ||
+    pathname === '/login' ||
+    pathname.startsWith('/form/') ||
+    pathname.startsWith('/api/')
+  ) {
+    return NextResponse.next()
+  }
+
   try {
-    // Check if env vars exist
-    if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
-      console.error('Missing Supabase environment variables in middleware')
-      // Allow request to proceed without auth check
+    // Check if env vars exist - if not, only allow non-dashboard routes
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+    const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+
+    if (!supabaseUrl || !supabaseKey) {
+      // If no Supabase configured and trying to access dashboard, redirect to login
+      if (pathname.startsWith('/dashboard')) {
+        return NextResponse.redirect(new URL('/login?error=config', request.url))
+      }
+      // Allow other routes
       return NextResponse.next()
     }
 
@@ -15,15 +33,15 @@ export async function middleware(request: NextRequest) {
     })
 
     const supabase = createServerClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+      supabaseUrl,
+      supabaseKey,
       {
         cookies: {
           getAll() {
             return request.cookies.getAll()
           },
           setAll(cookiesToSet) {
-            cookiesToSet.forEach(({ name, value, options }) =>
+            cookiesToSet.forEach(({ name, value }) =>
               request.cookies.set(name, value)
             )
             supabaseResponse = NextResponse.next({
@@ -42,48 +60,42 @@ export async function middleware(request: NextRequest) {
       data: { user },
     } = await supabase.auth.getUser()
 
-    // Allow public form routes without authentication (client questionnaires)
-    if (request.nextUrl.pathname.startsWith('/form/')) {
-      return supabaseResponse
-    }
-
     // Protect dashboard routes
-    if (request.nextUrl.pathname.startsWith('/dashboard') && !user) {
+    if (pathname.startsWith('/dashboard') && !user) {
       return NextResponse.redirect(new URL('/login', request.url))
     }
 
-    // Allow landing page without authentication
-    if (request.nextUrl.pathname === '/landing') {
-      return NextResponse.next()
-    }
-
     // Redirect to dashboard if logged in and trying to access login
-    if (request.nextUrl.pathname === '/login' && user) {
+    if (pathname === '/login' && user) {
       return NextResponse.redirect(new URL('/dashboard', request.url))
     }
 
     return supabaseResponse
   } catch (error) {
+    // Log error but allow the request through for non-protected routes
     console.error('Middleware error:', error)
 
-    // FAIL CLOSED: If middleware fails, block protected routes
-    // This prevents authentication bypass via middleware crashes
-    if (request.nextUrl.pathname.startsWith('/dashboard')) {
+    // Block dashboard access if middleware fails
+    if (pathname.startsWith('/dashboard')) {
       return NextResponse.redirect(
         new URL('/login?error=auth_failed', request.url)
       )
     }
 
-    // Allow public routes (landing, form, api) to continue
-    // This prevents total site outage from middleware errors
+    // Allow other routes to continue
     return NextResponse.next()
   }
 }
 
 export const config = {
   matcher: [
-    // Run middleware for all routes except static assets
-    // Form routes NEED middleware to run (for Supabase cookie handling)
-    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
+    /*
+     * Match all request paths except for the ones starting with:
+     * - _next/static (static files)
+     * - _next/image (image optimization files)
+     * - favicon.ico (favicon file)
+     * - public assets (images, etc)
+     */
+    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)',
   ],
 }
