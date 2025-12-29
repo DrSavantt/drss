@@ -163,9 +163,29 @@ export function ShareQuestionnairePopup({
     return overrides.some(o => o.question_id === question.id)
   }
 
-  // Handle section toggle - saves to client overrides
+  // Handle section toggle - updates local state immediately and tracks for save
   const handleSectionToggle = (sectionId: number, enabled: boolean) => {
-    // Track pending change
+    // Update local overrides state immediately for visual feedback
+    setOverrides(prev => {
+      const existingIndex = prev.findIndex(o => o.section_id === sectionId.toString())
+      if (existingIndex >= 0) {
+        // Update existing override
+        const updated = [...prev]
+        updated[existingIndex] = { ...updated[existingIndex], is_enabled: enabled }
+        return updated
+      } else {
+        // Add new override to local state
+        return [...prev, {
+          id: `temp-section-${sectionId}`,
+          client_id: clientId,
+          section_id: sectionId.toString(),
+          override_type: 'section',
+          is_enabled: enabled
+        }]
+      }
+    })
+    
+    // Track pending change for batch save
     setPendingChanges(prev => {
       const next = new Map(prev)
       next.set(`section-${sectionId}`, {
@@ -179,9 +199,30 @@ export function ShareQuestionnairePopup({
     })
   }
 
-  // Handle question toggle - saves to client overrides
+  // Handle question toggle - updates local state immediately and tracks for save
   const handleQuestionToggle = (questionId: string, enabled: boolean) => {
-    // Track pending change
+    // Update local overrides state immediately for visual feedback
+    setOverrides(prev => {
+      const existingIndex = prev.findIndex(o => o.question_id === questionId)
+      const existingOverride = prev[existingIndex]
+      if (existingIndex >= 0) {
+        // Update existing override
+        const updated = [...prev]
+        updated[existingIndex] = { ...updated[existingIndex], is_enabled: enabled }
+        return updated
+      } else {
+        // Add new override to local state
+        return [...prev, {
+          id: `temp-question-${questionId}`,
+          client_id: clientId,
+          question_id: questionId,
+          override_type: 'question',
+          is_enabled: enabled
+        }]
+      }
+    })
+    
+    // Track pending change for batch save
     setPendingChanges(prev => {
       const next = new Map(prev)
       const existingOverride = overrides.find(o => o.question_id === questionId)
@@ -204,7 +245,32 @@ export function ShareQuestionnairePopup({
 
   // Handle question save - saves custom text to client overrides
   const handleQuestionSave = (questionId: string, customText: string | null) => {
-    // Track pending change
+    // Update local overrides state immediately for visual feedback
+    setOverrides(prev => {
+      const existingIndex = prev.findIndex(o => o.question_id === questionId)
+      const existingOverride = prev[existingIndex]
+      if (existingIndex >= 0) {
+        // Update existing override with custom text
+        const updated = [...prev]
+        updated[existingIndex] = { 
+          ...updated[existingIndex], 
+          custom_text: customText || undefined 
+        }
+        return updated
+      } else {
+        // Add new override to local state
+        return [...prev, {
+          id: `temp-question-${questionId}`,
+          client_id: clientId,
+          question_id: questionId,
+          override_type: 'question',
+          is_enabled: true,
+          custom_text: customText || undefined
+        }]
+      }
+    })
+    
+    // Track pending change for batch save
     setPendingChanges(prev => {
       const next = new Map(prev)
       const existingOverride = overrides.find(o => o.question_id === questionId)

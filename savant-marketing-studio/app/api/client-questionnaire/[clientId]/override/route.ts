@@ -29,7 +29,8 @@ export async function PUT(
       section_id, 
       override_type, 
       is_enabled, 
-      custom_text, 
+      custom_text,
+      custom_description, // For sections - stored in custom_help.description
       custom_help 
     } = body
 
@@ -82,6 +83,16 @@ export async function PUT(
       existingOverride = data
     }
 
+    // For sections, store description in custom_help.description
+    // For questions, use custom_help directly
+    let finalCustomHelp = custom_help || null
+    if (section_id && custom_description) {
+      finalCustomHelp = { 
+        ...(custom_help || {}), 
+        description: custom_description 
+      }
+    }
+
     const overrideData = {
       client_id: clientId,
       question_id: question_id || null,
@@ -89,7 +100,7 @@ export async function PUT(
       override_type: override_type || (question_id ? 'question' : 'section'),
       is_enabled: is_enabled ?? true,
       custom_text: custom_text || null,
-      custom_help: custom_help || null,
+      custom_help: finalCustomHelp,
       updated_at: new Date().toISOString()
     }
 

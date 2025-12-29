@@ -1,7 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { notFound, redirect } from 'next/navigation'
 import { PublicFormWrapper } from '@/components/questionnaire/public-form-wrapper'
-import { getSections, getQuestionsWithHelp } from '@/app/actions/questionnaire-config'
+import { getSectionsForClient, getQuestionsForClient } from '@/app/actions/questionnaire-config'
 
 interface PageProps {
   params: Promise<{ token: string }>
@@ -74,13 +74,14 @@ export default async function PublicFormPage({ params }: PageProps) {
     }
   }
   
-  // Fetch questionnaire config from database
+  // Fetch questionnaire config WITH CLIENT-SPECIFIC OVERRIDES APPLIED
+  // This ensures disabled sections/questions for this client are excluded
   const [sections, questions] = await Promise.all([
-    getSections(),
-    getQuestionsWithHelp()
+    getSectionsForClient(client.id),
+    getQuestionsForClient(client.id)
   ])
   
-  // Filter to enabled only
+  // Filter to enabled only (after overrides are applied)
   const enabledSections = sections
     .filter(s => s.enabled)
     .sort((a, b) => a.sort_order - b.sort_order)

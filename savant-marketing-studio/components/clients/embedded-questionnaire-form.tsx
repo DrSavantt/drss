@@ -139,8 +139,9 @@ export function EmbeddedQuestionnaireForm({
         setError(null);
         
         // Fetch config, user, and existing responses in parallel
+        // Pass clientId to get client-specific overrides applied
         const [configResponse, userResponse, responsesResponse] = await Promise.all([
-          fetch('/api/questionnaire-config'),
+          fetch(`/api/questionnaire-config?clientId=${clientId}`),
           !userIdProp ? fetch('/api/user') : Promise.resolve(null),
           // Only fetch existing responses if no initialData provided
           !initialData ? fetch(`/api/questionnaire-response/${clientId}/latest`) : Promise.resolve(null),

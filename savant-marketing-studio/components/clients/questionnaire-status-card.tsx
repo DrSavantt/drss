@@ -15,7 +15,9 @@ import {
 } from 'lucide-react'
 import Link from 'next/link'
 import { cn } from '@/lib/utils'
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
+import { sanitizeProgressData } from '@/lib/questionnaire/data-sanitizer'
+import { isEmpty } from '@/lib/utils/safe-render'
 
 // ============================================================================
 // QUESTIONNAIRE STATUS CARD - Prominent display of onboarding status
@@ -48,6 +50,12 @@ export function QuestionnaireStatusCard({
   const [copied, setCopied] = useState(false)
   const effectiveStatus = status || 'not_started'
   
+  // Sanitize progress data to prevent crashes from corrupted data
+  const safeProgress = useMemo(() => {
+    if (!progress || isEmpty(progress)) return null
+    return sanitizeProgressData(progress)
+  }, [progress])
+  
   const handleCopyLink = async () => {
     if (!questionnaireToken) return
     
@@ -61,10 +69,17 @@ export function QuestionnaireStatusCard({
     }
   }
 
-  // Calculate progress for in_progress status
-  const progressPercent = effectiveStatus === 'in_progress' && progress?.completed_questions 
-    ? Math.round((progress.completed_questions.length / (progress.total_questions || 32)) * 100)
-    : 0
+  // Calculate progress for in_progress status with type safety
+  const progressPercent = (() => {
+    if (effectiveStatus !== 'in_progress' || !safeProgress) return 0
+    
+    const completedCount = safeProgress.completed_questions.length
+    const totalCount = safeProgress.total_questions || 32
+    
+    if (completedCount === 0) return 0
+    
+    return Math.round((completedCount / totalCount) * 100)
+  })()
 
   // Not started or in progress - Red/Orange card with CTA
   if (effectiveStatus !== 'completed') {
@@ -106,7 +121,7 @@ export function QuestionnaireStatusCard({
                 <div className="mb-4 space-y-1">
                   <Progress value={progressPercent} className="h-2" />
                   <p className="text-xs text-muted-foreground">
-                    Section {progress?.current_section || 1} of 8 • {progressPercent}% complete
+                    Section {safeProgress?.current_section || 1} of 8 • {progressPercent}% complete
                   </p>
                 </div>
               )}

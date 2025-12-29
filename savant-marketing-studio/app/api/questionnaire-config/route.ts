@@ -1,10 +1,14 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 
 // GET /api/questionnaire-config
 // Returns all questionnaire sections and questions with help data
-export async function GET() {
-  console.log('[API] /api/questionnaire-config called');
+// Optional: ?clientId=xxx to apply client-specific overrides
+export async function GET(request: NextRequest) {
+  const { searchParams } = new URL(request.url);
+  const clientId = searchParams.get('clientId');
+  
+  console.log('[API] /api/questionnaire-config called', clientId ? `with clientId: ${clientId}` : '(global)');
   
   try {
     const supabase = await createClient();
@@ -61,16 +65,93 @@ export async function GET() {
     
     console.log('[API] Help fetched:', help?.length);
     
-    // Combine questions with their help data
-    const questionsWithHelp = (questions || []).map(q => ({
-      ...q,
-      help: help?.find(h => h.question_id === q.id)
-    }));
+    // Fetch client-specific overrides if clientId provided
+    let sectionOverrides: Record<number, { is_enabled: boolean; custom_text?: string; custom_help?: Record<string, unknown> }> = {};
+    let questionOverrides: Record<string, { is_enabled: boolean; custom_text?: string; custom_help?: Record<string, unknown> }> = {};
+    
+    if (clientId) {
+      console.log('[API] Fetching client overrides for:', clientId);
+      const { data: overrides, error: overridesError } = await supabase
+        .from('client_questionnaire_overrides')
+        .select('*')
+        .eq('client_id', clientId);
+      
+      if (overridesError) {
+        console.error('[API] Overrides error:', overridesError);
+        // Don't fail - just continue without overrides
+      } else if (overrides) {
+        console.log('[API] Overrides fetched:', overrides.length);
+        
+        // Build override lookup maps
+        for (const o of overrides) {
+          if (o.section_id && o.override_type === 'section') {
+            sectionOverrides[o.section_id] = {
+              is_enabled: o.is_enabled,
+              custom_text: o.custom_text || undefined,
+              custom_help: o.custom_help || undefined
+            };
+          } else if (o.question_id) {
+            questionOverrides[o.question_id] = {
+              is_enabled: o.is_enabled,
+              custom_text: o.custom_text || undefined,
+              custom_help: o.custom_help || undefined
+            };
+          }
+        }
+      }
+    }
+    
+    // Merge sections with overrides
+    const mergedSections = (sections || []).map(section => {
+      const override = sectionOverrides[section.id];
+      if (override) {
+        // Read description from custom_help.description if present
+        const customDescription = override.custom_help && typeof override.custom_help === 'object'
+          ? (override.custom_help as Record<string, unknown>).description as string | null
+          : null;
+        
+        return {
+          ...section,
+          enabled: override.is_enabled,
+          title: override.custom_text || section.title,
+          description: customDescription || section.description,
+        };
+      }
+      return section;
+    });
+    
+    // Combine questions with their help data AND overrides
+    const questionsWithHelp = (questions || []).map(q => {
+      const questionHelp = help?.find(h => h.question_id === q.id);
+      const override = questionOverrides[q.id];
+      
+      // Merge custom_help if provided
+      let mergedHelp = questionHelp;
+      if (override?.custom_help && typeof override.custom_help === 'object') {
+        mergedHelp = questionHelp 
+          ? { ...questionHelp, ...override.custom_help }
+          : override.custom_help;
+      }
+      
+      if (override) {
+        return {
+          ...q,
+          enabled: override.is_enabled,
+          text: override.custom_text || q.text,
+          help: mergedHelp
+        };
+      }
+      
+      return {
+        ...q,
+        help: questionHelp
+      };
+    });
     
     console.log('[API] Returning data successfully');
     
     return NextResponse.json({
-      sections: sections || [],
+      sections: mergedSections,
       questions: questionsWithHelp
     });
     

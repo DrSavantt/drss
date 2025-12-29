@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { ChevronDown, ChevronRight, CheckCircle2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { safeRender, isEmptyObject } from '@/lib/utils/safe-render'
 
 interface QuestionResponse {
   questionKey: string        // Full key like "q1_ideal_customer"
@@ -49,16 +50,31 @@ export function ResponseViewer({ responseData, sections, className }: ResponseVi
   const getAnswer = (sectionKey: string, questionKey: string): string | string[] | null => {
     const sectionData = responseData[sectionKey]
     if (!sectionData) return null
-    return sectionData[questionKey] ?? null
+    
+    const rawAnswer = sectionData[questionKey]
+    
+    // Validate the answer type - filter out invalid types
+    if (rawAnswer === null || rawAnswer === undefined) return null
+    
+    // Handle empty objects (corrupted data)
+    if (isEmptyObject(rawAnswer)) {
+      console.warn('Empty object in response data at', sectionKey, questionKey)
+      return null
+    }
+    
+    // Handle objects (should not happen, but protect against it)
+    if (typeof rawAnswer === 'object' && !Array.isArray(rawAnswer)) {
+      console.warn('Unexpected object in response data:', sectionKey, questionKey, rawAnswer)
+      return null // Treat objects as no answer
+    }
+    
+    return rawAnswer ?? null
   }
 
   const formatAnswer = (answer: string | string[] | null, type: string): string => {
-    if (answer === null || answer === undefined) return '—'
-    if (Array.isArray(answer)) {
-      return answer.length > 0 ? answer.join(', ') : '—'
-    }
-    if (typeof answer === 'string' && answer.trim() === '') return '—'
-    return answer
+    // Use the safe render utility
+    const rendered = safeRender(answer)
+    return rendered || '—'
   }
 
   const getAnsweredCount = (section: SectionResponse): number => {

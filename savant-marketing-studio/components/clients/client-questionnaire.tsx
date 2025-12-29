@@ -1,17 +1,28 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { Copy, Settings, ExternalLink, Loader2, FileText, AlertCircle, Eye, PencilLine, History } from 'lucide-react'
+import { useState, useEffect, useMemo } from 'react'
+import { useRouter } from 'next/navigation'
+import { Copy, Settings, ExternalLink, Loader2, FileText, AlertCircle, Eye, PencilLine, History, Trash2 } from 'lucide-react'
 import { format } from 'date-fns'
 import { ResponseViewer } from '@/components/questionnaire/response-viewer'
 import { ResponseHistory, ResponseVersion } from '@/components/questionnaire/response-history'
-import { ShareQuestionnairePopup } from '@/components/questionnaire/share-questionnaire-popup'
 import { EmbeddedQuestionnaireForm } from './embedded-questionnaire-form'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
+import { sanitizeResponses, hasValidResponseData } from '@/lib/utils/safe-render'
 
 interface ClientQuestionnaireProps {
   clientId: string
@@ -62,6 +73,7 @@ export function ClientQuestionnaire({
   questionnaireToken,
   currentUserId = ''
 }: ClientQuestionnaireProps) {
+  const router = useRouter()
   const [activeTab, setActiveTab] = useState<TabValue>('view')
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -69,8 +81,11 @@ export function ClientQuestionnaire({
   const [currentVersion, setCurrentVersion] = useState<ResponseVersion | null>(null)
   const [sections, setSections] = useState<SectionConfig[]>([])
   const [questions, setQuestions] = useState<QuestionWithHelp[]>([])
-  const [showCustomizePopup, setShowCustomizePopup] = useState(false)
   const [refreshKey, setRefreshKey] = useState(0)
+  
+  // Delete draft state
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  const [isDeleting, setIsDeleting] = useState(false)
 
   // Fetch response versions and config
   useEffect(() => {
@@ -109,7 +124,37 @@ export function ClientQuestionnaire({
     fetchData()
   }, [clientId, refreshKey])
 
-  // Copy questionnaire link
+  // Calculate progress from current responses
+  const calculateProgress = (): number => {
+    if (!currentVersion?.response_data) return 0
+    
+    const responseData = currentVersion.response_data
+    
+    // Handle edge case: empty response_data object
+    if (typeof responseData !== 'object' || Object.keys(responseData).length === 0) {
+      return 0
+    }
+    
+    let filled = 0
+    let total = 0
+    
+    // Iterate through sections and their responses
+    Object.values(responseData).forEach((section: any) => {
+      if (typeof section === 'object' && section !== null && !Array.isArray(section)) {
+        Object.values(section).forEach((answer: any) => {
+          total++
+          // Count as filled if answer has content
+          if (answer && answer !== '' && (Array.isArray(answer) ? answer.length > 0 : true)) {
+            filled++
+          }
+        })
+      }
+    })
+    
+    return total > 0 ? Math.round((filled / total) * 100) : 0
+  }
+
+  // Copy questionnaire link with contextual message
   const handleCopyLink = () => {
     if (!questionnaireToken) {
       toast.error('No questionnaire link available')
@@ -117,7 +162,16 @@ export function ClientQuestionnaire({
     }
     const link = `${window.location.origin}/form/${questionnaireToken}`
     navigator.clipboard.writeText(link)
-    toast.success('Questionnaire link copied to clipboard!')
+    
+    if (questionnaireStatus === 'in_progress') {
+      toast.success('Resume link copied! Client will continue from their saved progress.', {
+        description: `Progress: ${calculateProgress()}% complete`
+      })
+    } else if (questionnaireStatus === 'completed') {
+      toast.success('Link copied! Questionnaire is already completed.')
+    } else {
+      toast.success('Questionnaire link copied to clipboard!')
+    }
   }
 
   // View a specific version
@@ -130,6 +184,32 @@ export function ClientQuestionnaire({
     setActiveTab('view')
     setRefreshKey(prev => prev + 1)
     toast.success('Questionnaire submitted successfully!')
+  }
+
+  // Handle delete draft
+  const handleDeleteDraft = async () => {
+    setIsDeleting(true)
+    try {
+      const response = await fetch(`/api/questionnaire-response/${clientId}/draft`, {
+        method: 'DELETE',
+      })
+      
+      if (response.ok) {
+        toast.success('Draft deleted successfully')
+        setShowDeleteConfirm(false)
+        // Refresh the page data
+        router.refresh()
+        setRefreshKey(prev => prev + 1)
+      } else {
+        const data = await response.json()
+        toast.error(data.error || 'Failed to delete draft')
+      }
+    } catch (error) {
+      console.error('Delete draft error:', error)
+      toast.error('Failed to delete draft')
+    } finally {
+      setIsDeleting(false)
+    }
   }
 
   // Transform sections for ResponseViewer
@@ -152,7 +232,21 @@ export function ClientQuestionnaire({
       }
     })
 
-  const hasResponses = versions.length > 0
+  // Check if there are actual responses with content (not just empty objects)
+  const hasResponses = useMemo(() => {
+    if (versions.length === 0) return false
+    if (!currentVersion?.response_data) return false
+    
+    // Use the safe validation function
+    return hasValidResponseData(currentVersion.response_data)
+  }, [versions, currentVersion])
+  
+  // Sanitize response data to prevent crashes from corrupted data
+  const safeResponseData = useMemo(() => {
+    if (!currentVersion?.response_data) return null
+    return sanitizeResponses(currentVersion.response_data)
+  }, [currentVersion])
+  
   const isCompleted = questionnaireStatus === 'completed'
 
   // Loading state
@@ -184,43 +278,69 @@ export function ClientQuestionnaire({
   return (
     <div className="space-y-6">
       {/* Header Actions */}
-      <div className="flex flex-wrap items-center justify-between gap-4">
-        <div className="flex items-center gap-3">
-          <Button
-            onClick={handleCopyLink}
-            disabled={!questionnaireToken}
-            variant="default"
-            size="sm"
-          >
-            <Copy className="h-4 w-4 mr-2" />
-            Copy Link
-          </Button>
-          {questionnaireToken && (
+      <div className="space-y-4">
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
             <Button
-              onClick={() => window.open(`/form/${questionnaireToken}`, '_blank')}
+              onClick={handleCopyLink}
+              disabled={!questionnaireToken}
+              variant="default"
+              size="sm"
+            >
+              <Copy className="h-4 w-4 mr-2" />
+              {questionnaireStatus === 'in_progress' ? 'Copy Resume Link' : 'Copy Link'}
+            </Button>
+            {questionnaireToken && (
+              <Button
+                onClick={() => window.open(`/form/${questionnaireToken}`, '_blank')}
+                variant="outline"
+                size="sm"
+              >
+                <ExternalLink className="h-4 w-4 mr-2" />
+                Open Public Form
+              </Button>
+            )}
+          </div>
+          <div className="flex items-center gap-3">
+            {/* Delete Draft button - show when there are responses or status is in_progress */}
+            {(hasResponses || questionnaireStatus === 'in_progress') && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                onClick={() => setShowDeleteConfirm(true)}
+              >
+                <Trash2 className="h-4 w-4 mr-2" />
+                Delete Draft
+              </Button>
+            )}
+            <Button
+              onClick={() => router.push(`/dashboard/clients/${clientId}/questionnaire/customize`)}
               variant="outline"
               size="sm"
             >
-              <ExternalLink className="h-4 w-4 mr-2" />
-              Open Public Form
+              <Settings className="h-4 w-4 mr-2" />
+              Customize Form
             </Button>
-          )}
+          </div>
         </div>
-        <Button
-          onClick={() => setShowCustomizePopup(true)}
-          variant="outline"
-          size="sm"
-        >
-          <Settings className="h-4 w-4 mr-2" />
-          Customize Form
-        </Button>
+
+        {/* Draft Status Message */}
+        {questionnaireStatus === 'in_progress' && hasResponses && (
+          <div className="flex items-center gap-2 text-sm text-muted-foreground rounded-md bg-muted/50 px-3 py-2">
+            <div className="w-2 h-2 rounded-full bg-yellow-500 flex-shrink-0" />
+            <span className="font-medium text-foreground">Draft in progress</span>
+            <span>•</span>
+            <span>Client will continue where they left off when they open the link</span>
+          </div>
+        )}
       </div>
 
       {/* Status Card */}
       <Card>
         <CardHeader className="pb-3">
           <div className="flex items-center justify-between">
-            <div>
+            <div className="flex-1">
               <CardTitle className="text-lg">Questionnaire Status</CardTitle>
               <CardDescription>
                 {isCompleted ? (
@@ -233,7 +353,7 @@ export function ClientQuestionnaire({
               </CardDescription>
             </div>
             <div className={cn(
-              "px-3 py-1 rounded-full text-sm font-medium",
+              "px-3 py-1 rounded-full text-sm font-medium flex-shrink-0",
               isCompleted 
                 ? 'bg-green-500/10 text-green-600' 
                 : hasResponses 
@@ -243,6 +363,22 @@ export function ClientQuestionnaire({
               {isCompleted ? 'Completed' : hasResponses ? 'In Progress' : 'Not Started'}
             </div>
           </div>
+          
+          {/* Progress bar for in_progress status */}
+          {questionnaireStatus === 'in_progress' && hasResponses && (
+            <div className="mt-4 pt-3 border-t">
+              <div className="flex justify-between items-center text-sm mb-2">
+                <span className="text-muted-foreground">Progress</span>
+                <span className="font-semibold text-foreground">{calculateProgress()}% complete</span>
+              </div>
+              <div className="w-full bg-muted rounded-full h-2 overflow-hidden">
+                <div 
+                  className="bg-gradient-to-r from-yellow-500 to-yellow-600 rounded-full h-2 transition-all duration-500"
+                  style={{ width: `${calculateProgress()}%` }}
+                />
+              </div>
+            </div>
+          )}
         </CardHeader>
       </Card>
 
@@ -268,9 +404,9 @@ export function ClientQuestionnaire({
 
         {/* View Tab - Show responses */}
         <TabsContent value="view" className="mt-6">
-          {hasResponses && currentVersion?.response_data ? (
+          {hasResponses && safeResponseData ? (
             <div className="space-y-4">
-              {versions.length > 1 && (
+              {versions.length > 1 && currentVersion && (
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-muted-foreground">
                     Viewing version {currentVersion.version}
@@ -279,7 +415,7 @@ export function ClientQuestionnaire({
                 </div>
               )}
               <ResponseViewer
-                responseData={currentVersion.response_data}
+                responseData={safeResponseData}
                 sections={transformedSections}
               />
             </div>
@@ -346,14 +482,36 @@ export function ClientQuestionnaire({
         </TabsContent>
       </Tabs>
 
-      {/* Customize Questionnaire Popup */}
-      <ShareQuestionnairePopup
-        isOpen={showCustomizePopup}
-        onClose={() => setShowCustomizePopup(false)}
-        clientId={clientId}
-        clientName={clientName}
-        questionnaireToken={questionnaireToken || ''}
-      />
+      {/* Delete Draft Confirmation Dialog */}
+      <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Draft?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently delete all saved responses for this questionnaire.
+              The client will have to start over from the beginning. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteDraft}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              disabled={isDeleting}
+            >
+              {isDeleting ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Deleting...
+                </>
+              ) : (
+                'Delete Draft'
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
     </div>
   )
 }

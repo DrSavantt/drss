@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { Check, ChevronDown, ChevronUp, AlertCircle } from 'lucide-react';
 import { UploadedFile } from '@/lib/questionnaire/types';
+import { renderValue } from '@/lib/questionnaire/render-utils';
 
 interface ReviewSectionCardProps {
   sectionNumber: number;
@@ -72,19 +73,8 @@ export default function ReviewSectionCard({
             const isRequired = requiredQuestions.includes(questionNumber);
             const isCompleted = completedQuestions.has(questionNumber);
             
-            // Handle different value types
-            let displayValue: string;
-            if (Array.isArray(value) && value.length > 0 && typeof value[0] === 'object' && 'name' in value[0]) {
-              // File upload array
-              const files = value as UploadedFile[];
-              displayValue = `${files.length} file(s) uploaded: ${files.map(f => f.name).join(', ')}`;
-            } else if (Array.isArray(value)) {
-              // String array
-              displayValue = value.join(', ');
-            } else {
-              // String
-              displayValue = value || '';
-            }
+            // Use safe render utility to handle all value types
+            const displayValue = renderValue(value);
 
             return (
               <div
