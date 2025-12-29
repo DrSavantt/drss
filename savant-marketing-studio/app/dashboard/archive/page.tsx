@@ -2,7 +2,26 @@ import { getArchivedClients } from '@/app/actions/clients'
 import { ArchiveList } from '@/components/archive/archive-list'
 
 export default async function ArchivePage() {
-  const archivedClients = await getArchivedClients()
+  const result = await getArchivedClients()
+  
+  // Handle error case
+  if ('error' in result) {
+    return (
+      <div className="container py-8">
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold">Archive</h1>
+          <p className="text-muted-foreground mt-1">
+            Deleted items are kept here for 30 days before permanent deletion.
+          </p>
+        </div>
+        <div className="text-destructive">
+          Failed to load archived clients: {result.error}
+        </div>
+      </div>
+    )
+  }
+
+  const archivedClients = result
   
   return (
     <div className="container py-8">
