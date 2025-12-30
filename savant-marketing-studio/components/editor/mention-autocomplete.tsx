@@ -45,7 +45,7 @@ export function MentionAutocomplete({
       className="absolute bottom-full left-0 mb-2 w-full max-w-md bg-card border border-border rounded-lg shadow-xl overflow-hidden animate-in fade-in slide-in-from-bottom-2 duration-150 z-50"
     >
       <div className="p-2 space-y-0.5 max-h-64 overflow-y-auto">
-        {mentions.map((mention, index) => (
+        {mentions.map((mention: MentionOption, index: number) => (
           <button
             key={mention.id}
             data-index={index}
