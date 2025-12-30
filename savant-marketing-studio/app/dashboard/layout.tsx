@@ -3,7 +3,6 @@
 import { AppShell } from '@/components/layout/app-shell'
 import { MobileNav } from '@/components/mobile-nav'
 import { PerfMonitor } from '@/components/perf-monitor'
-import { CommandPalette } from '@/components/command-palette'
 import { InstallPrompt } from '@/components/install-prompt'
 import { ErrorBoundary } from '@/components/error-boundary'
 import { SidebarProvider } from '@/contexts/sidebar-context'
@@ -28,9 +27,8 @@ export default function DashboardLayout({
 
   return (
     <SidebarProvider>
-      {/* Command Palette (Cmd+K) */}
-      <CommandPalette />
-
+      {/* Command Palette is now integrated in Sidebar component */}
+      
       {/* PWA Install Prompt */}
       <InstallPrompt />
 
