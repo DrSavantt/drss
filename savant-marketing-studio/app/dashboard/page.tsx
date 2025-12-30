@@ -245,6 +245,9 @@ function getActivityLink(activity: ActivityItem): string | null {
       return `/dashboard/clients/${activity.entity_id}`
     case 'framework':
       return '/dashboard/frameworks'
+    case 'ai_execution':
+      // Link to client if available, otherwise no link
+      return activity.client_id ? `/dashboard/clients/${activity.client_id}` : null
     default:
       return null
   }
@@ -265,6 +268,8 @@ function getActivityText(activity: any) {
       return `Content created: ${name}`
     case 'questionnaire_completed': 
       return `Questionnaire completed for ${name}`
+    case 'ai_generation':
+      return `Generated ${name}`
     default: 
       return activity.activity_type.replace(/_/g, ' ')
   }

@@ -2,7 +2,8 @@ import { createClient } from '@/lib/supabase/server';
 import { ClaudeProvider } from './providers/claude';
 import { GeminiProvider } from './providers/gemini';
 import { BaseAIProvider, AIRequest, AIResponse } from './providers/base-provider';
-import { calculateCost } from './pricing';
+import { calculateCost, getModelLabel } from './pricing';
+import { logActivity } from '../activity-log';
 
 export type TaskComplexity = 'simple' | 'medium' | 'complex';
 export type TaskPriority = 'cost' | 'speed' | 'quality';
@@ -93,7 +94,7 @@ export class AIOrchestrator {
     );
 
     // Log execution
-    await supabase.from('ai_executions').insert({
+    const { data: execution, error: insertError } = await supabase.from('ai_executions').insert({
       user_id: user.id,
       client_id: task.clientId || null,
       model_id: selection.modelId,
@@ -111,7 +112,39 @@ export class AIOrchestrator {
       total_cost_usd: cost,
       duration_ms: Date.now() - startTime,
       status: 'success',
-    });
+    }).select('id').single();
+
+    // Log to activity feed
+    if (execution?.id) {
+      const modelLabel = getModelLabel(selection.modelName);
+      const totalTokens = response.inputTokens + response.outputTokens;
+      
+      // Format task type for display
+      const taskTypeLabel = task.type
+        .split('_')
+        .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+        .join(' ');
+      
+      await logActivity({
+        activityType: 'ai_generation',
+        entityType: 'ai_execution',
+        entityId: execution.id,
+        entityName: `${taskTypeLabel} (${modelLabel})`,
+        clientId: task.clientId,
+        metadata: {
+          model: selection.modelName,
+          model_label: modelLabel,
+          tokens: totalTokens,
+          input_tokens: response.inputTokens,
+          output_tokens: response.outputTokens,
+          cost: cost,
+          generation_type: task.type,
+          complexity: task.complexity,
+          duration_ms: Date.now() - startTime,
+          used_fallback: usedFallback,
+        },
+      });
+    }
 
     return {
       ...response,

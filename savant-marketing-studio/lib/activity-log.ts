@@ -15,9 +15,10 @@ export type ActivityType =
   | 'questionnaire_completed'
   | 'questionnaire_updated'
   | 'file_uploaded'
-  | 'file_deleted';
+  | 'file_deleted'
+  | 'ai_generation';
 
-export type EntityType = 'client' | 'project' | 'content' | 'questionnaire' | 'file';
+export type EntityType = 'client' | 'project' | 'content' | 'questionnaire' | 'file' | 'ai_execution';
 
 interface LogActivityParams {
   activityType: ActivityType;
