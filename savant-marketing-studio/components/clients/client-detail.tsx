@@ -24,6 +24,7 @@ import { ClientCaptures } from "./client-captures"
 import { QuestionnaireStatusCard } from "./questionnaire-status-card"
 import { CreateContentModal } from "@/components/content/create-content-modal"
 import { NewProjectDialog } from "@/components/projects/new-project-dialog"
+import { AIHistoryTab } from "./ai-history-tab"
 import { formatDistanceToNow } from "date-fns"
 import { cn } from "@/lib/utils"
 
@@ -473,19 +474,7 @@ export function ClientDetail({ clientId }: ClientDetailProps) {
         </TabsContent>
 
         <TabsContent value="ai" className="mt-6">
-          <Card className="border-border bg-card">
-            <CardHeader>
-              <CardTitle>AI Generation History</CardTitle>
-              <CardDescription>All AI-generated content for {client.name}</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="flex flex-col items-center justify-center py-12 text-center">
-                <Sparkles className="h-12 w-12 text-muted-foreground/50" />
-                <p className="mt-4 text-muted-foreground">AI generation history will appear here</p>
-                <p className="text-sm text-muted-foreground">Track usage and costs per generation</p>
-              </div>
-            </CardContent>
-          </Card>
+          <AIHistoryTab clientId={clientId} />
         </TabsContent>
       </Tabs>
 
