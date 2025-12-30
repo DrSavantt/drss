@@ -120,7 +120,7 @@ console.log('\n4️⃣ Current Pricing Table')
 console.log('─'.repeat(50))
 
 Object.entries(AI_PRICING).forEach(([modelId, pricing]) => {
-  console.log(`${pricing.icon || '🤖'} ${pricing.label}`)
+  console.log(`🤖 ${pricing.label}`)
   console.log(`   Input:  $${pricing.input}/1K tokens`)
   console.log(`   Output: $${pricing.output}/1K tokens`)
   console.log(`   Example (1K/1K): ${formatCost(calculateCost(modelId, 1000, 1000))}`)
