@@ -2,6 +2,7 @@
 
 import Link from "next/link"
 import { usePathname } from "next/navigation"
+import { useState, useEffect } from "react"
 import { cn } from "@/lib/utils"
 import {
   LayoutDashboard,
@@ -20,6 +21,7 @@ import {
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { useSidebar } from "@/contexts/sidebar-context"
+import { CommandPalette } from "@/components/command-palette"
 
 // Reordered to follow marketer workflow
 const navItems = [
@@ -40,11 +42,26 @@ const bottomNavItems = [{ href: "/dashboard/settings", label: "Settings", icon: 
 export function Sidebar() {
   const pathname = usePathname()
   const { collapsed, toggleCollapsed } = useSidebar()
+  const [commandOpen, setCommandOpen] = useState(false)
+
+  // Global keyboard shortcut for command palette
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+        e.preventDefault()
+        setCommandOpen(true)
+      }
+    }
+
+    document.addEventListener('keydown', handleKeyDown)
+    return () => document.removeEventListener('keydown', handleKeyDown)
+  }, [])
 
   return (
+    <>
     <aside
       className={cn(
-        "fixed left-0 top-0 z-40 h-screen border-r border-sidebar-border bg-sidebar transition-all duration-300",
+        "fixed left-0 top-0 z-40 h-screen border-r border-sidebar-border bg-sidebar transition-[width] duration-200 ease-in-out",
         collapsed ? "w-16" : "w-64",
       )}
     >
@@ -66,15 +83,11 @@ export function Sidebar() {
           )}
         </div>
 
-        {/* Search */}
+        {/* Search - Opens Command Palette */}
         {!collapsed && (
           <div className="p-4">
             <button 
-              onClick={() => {
-                // Trigger command palette (for now, show alert as placeholder)
-                // TODO: Implement command palette modal
-                alert('Command palette coming soon! Use navigation links for now.')
-              }}
+              onClick={() => setCommandOpen(true)}
               className="flex w-full items-center gap-2 rounded-lg border border-sidebar-border bg-sidebar px-3 py-2 text-sm text-muted-foreground transition-colors hover:border-primary/50 hover:text-sidebar-foreground cursor-pointer"
             >
               <Search className="h-4 w-4" />
@@ -93,14 +106,18 @@ export function Sidebar() {
                 key={item.href}
                 href={item.href}
                 className={cn(
-                  "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all",
+                  "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors duration-150",
                   isActive
-                    ? "border-l-2 border-primary bg-sidebar-accent text-sidebar-foreground"
-                    : "text-muted-foreground hover:bg-sidebar-accent/50 hover:text-sidebar-foreground",
+                    ? "bg-red-500/10 text-red-500"
+                    : "text-muted-foreground hover:text-foreground hover:bg-muted/50",
                 )}
               >
-                <item.icon className={cn("h-5 w-5 shrink-0", isActive && "text-primary")} />
-                {!collapsed && <span>{item.label}</span>}
+                <item.icon className={cn("h-5 w-5 shrink-0 transition-colors duration-150", isActive && "text-red-500")} />
+                {!collapsed && (
+                  <span className="transition-opacity duration-150">
+                    {item.label}
+                  </span>
+                )}
               </Link>
             )
           })}
@@ -115,14 +132,18 @@ export function Sidebar() {
                 key={item.href}
                 href={item.href}
                 className={cn(
-                  "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all",
+                  "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors duration-150",
                   isActive
-                    ? "border-l-2 border-primary bg-sidebar-accent text-sidebar-foreground"
-                    : "text-muted-foreground hover:bg-sidebar-accent/50 hover:text-sidebar-foreground",
+                    ? "bg-red-500/10 text-red-500"
+                    : "text-muted-foreground hover:text-foreground hover:bg-muted/50",
                 )}
               >
-                <item.icon className={cn("h-5 w-5 shrink-0", isActive && "text-primary")} />
-                {!collapsed && <span>{item.label}</span>}
+                <item.icon className={cn("h-5 w-5 shrink-0 transition-colors duration-150", isActive && "text-red-500")} />
+                {!collapsed && (
+                  <span className="transition-opacity duration-150">
+                    {item.label}
+                  </span>
+                )}
               </Link>
             )
           })}
@@ -142,5 +163,9 @@ export function Sidebar() {
         </div>
       </div>
     </aside>
+
+    {/* Command Palette */}
+    <CommandPalette open={commandOpen} onOpenChange={setCommandOpen} />
+    </>
   )
 }
