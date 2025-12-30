@@ -245,43 +245,86 @@ export async function GET(request: Request) {
     .is('deleted_at', null)
     .gte('created_at', sevenDaysAgo)
   
-  // 11. Total AI Generations (with fallback if table doesn't exist)
-  let aiGenerations = 0
-  try {
-    if (isFilteringByClient) {
-      const { count } = await supabase
-        .from('ai_generations')
-        .select('*', { count: 'exact', head: true })
-        .eq('client_id', clientId)
-      aiGenerations = count || 0
-    } else {
-      const { count } = await supabase
-        .from('ai_generations')
-        .select('*', { count: 'exact', head: true })
-        .eq('user_id', user.id)
-      aiGenerations = count || 0
-    }
-  } catch (e) {
-    console.log('ai_generations table not found, defaulting to 0')
-  }
+  // ============================================
+  // AI METRICS (Real Data from ai_executions)
+  // ============================================
   
-  // 12. Total Tokens Used (with fallback if table doesn't exist)
+  let aiGenerations = 0
   let totalTokens = 0
+  let totalAICost = 0
+  let aiByModel: Record<string, { count: number; cost: number; tokens: number }> = {}
+  let aiByClient: Record<string, { count: number; cost: number; tokens: number; clientName: string }> = {}
+  let aiTrend: Array<{ date: string; value: number }> = []
+  
   try {
-    const query = supabase
+    // Fetch AI executions
+    let aiQuery = supabase
       .from('ai_executions')
-      .select('tokens_used, completion_tokens')
+      .select('model_id, input_tokens, output_tokens, total_cost_usd, client_id, created_at, task_type')
       .eq('user_id', user.id)
+      .eq('status', 'success')
+      .gte('created_at', startDate.toISOString())
     
-    const { data: executions } = await query
+    if (isFilteringByClient) {
+      aiQuery = aiQuery.eq('client_id', clientId)
+    }
     
-    if (executions) {
-      totalTokens = executions.reduce((sum, exec) => {
-        return sum + (exec.tokens_used || 0) + (exec.completion_tokens || 0)
-      }, 0)
+    const { data: aiExecutions } = await aiQuery
+    
+    if (aiExecutions && aiExecutions.length > 0) {
+      aiGenerations = aiExecutions.length
+      
+      // Calculate totals and breakdowns
+      aiExecutions.forEach(exec => {
+        const tokens = (exec.input_tokens || 0) + (exec.output_tokens || 0)
+        const cost = exec.total_cost_usd || 0
+        const modelId = exec.model_id || 'unknown'
+        
+        totalTokens += tokens
+        totalAICost += cost
+        
+        // By model breakdown
+        if (!aiByModel[modelId]) {
+          aiByModel[modelId] = { count: 0, cost: 0, tokens: 0 }
+        }
+        aiByModel[modelId].count++
+        aiByModel[modelId].cost += cost
+        aiByModel[modelId].tokens += tokens
+        
+        // By client breakdown (if client_id exists)
+        if (exec.client_id) {
+          if (!aiByClient[exec.client_id]) {
+            aiByClient[exec.client_id] = { count: 0, cost: 0, tokens: 0, clientName: '' }
+          }
+          aiByClient[exec.client_id].count++
+          aiByClient[exec.client_id].cost += cost
+          aiByClient[exec.client_id].tokens += tokens
+        }
+      })
+      
+      // AI Usage Trend (daily generations)
+      aiTrend = processTimeSeries(aiExecutions, days, false)
+      
+      // Get client names for aiByClient
+      if (Object.keys(aiByClient).length > 0) {
+        const { data: clientsData } = await supabase
+          .from('clients')
+          .select('id, name')
+          .in('id', Object.keys(aiByClient))
+        
+        clientsData?.forEach(client => {
+          if (aiByClient[client.id]) {
+            aiByClient[client.id].clientName = client.name
+          }
+        })
+      }
+    } else {
+      // No AI executions, generate empty trend
+      aiTrend = generateFlatLine(days, 0)
     }
   } catch (e) {
-    console.log('ai_executions table not found, defaulting to 0')
+    console.log('Error fetching AI metrics:', e)
+    aiTrend = generateFlatLine(days, 0)
   }
   
   // 14. Journal Entries This Week - only when not filtering by client
@@ -396,13 +439,24 @@ export async function GET(request: Request) {
       aiGenerations,
       totalTokens,
       entriesThisWeek,
-      questionnairesCompleted
+      questionnairesCompleted,
+      
+      // AI-specific metrics
+      totalAICost: Math.round(totalAICost * 100) / 100,
+      avgCostPerGeneration: aiGenerations > 0 
+        ? Math.round((totalAICost / aiGenerations) * 10000) / 10000 
+        : 0,
     },
     // Time series charts
     clientGrowth: clientTrend,
     projectsCompleted: projectsTrend,
     contentCreated: contentTrend,
-    dailyActivity: activityTrend
+    dailyActivity: activityTrend,
+    aiUsageTrend: aiTrend,
+    
+    // AI breakdowns
+    aiByModel,
+    aiByClient
   })
 }
 

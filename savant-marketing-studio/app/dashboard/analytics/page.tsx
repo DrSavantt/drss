@@ -55,6 +55,8 @@ interface StatsData {
   totalTokens: number
   entriesThisWeek: number
   questionnairesCompleted: number
+  totalAICost: number
+  avgCostPerGeneration: number
 }
 
 interface AnalyticsData {
@@ -63,6 +65,9 @@ interface AnalyticsData {
   projectsCompleted: TimeSeriesData
   contentCreated: TimeSeriesData
   dailyActivity: TimeSeriesData
+  aiUsageTrend: TimeSeriesData
+  aiByModel: Record<string, { count: number; cost: number; tokens: number }>
+  aiByClient: Record<string, { count: number; cost: number; tokens: number; clientName: string }>
 }
 
 interface Client {
@@ -587,7 +592,30 @@ function AITab({ data, viewMode }: TabContentProps) {
   const avgTokens = data.stats.aiGenerations > 0 
     ? Math.round(data.stats.totalTokens / data.stats.aiGenerations) 
     : 0
-  const estimatedCost = estimateCost(data.stats.totalTokens)
+
+  // Prepare chart data for models
+  const modelChartData = Object.entries(data.aiByModel || {}).map(([modelId, modelData]) => ({
+    name: modelId.includes('claude-sonnet') ? 'Sonnet 4.5' :
+          modelId.includes('claude-opus') ? 'Opus 4.5' :
+          modelId.includes('claude-haiku') ? 'Haiku 4.5' :
+          modelId.includes('gemini-flash') ? 'Gemini Flash' :
+          modelId.includes('gemini-pro') ? 'Gemini Pro' :
+          modelId,
+    value: modelData.count,
+    cost: modelData.cost,
+    tokens: modelData.tokens
+  })).sort((a, b) => b.value - a.value)
+
+  // Prepare chart data for clients
+  const clientChartData = Object.entries(data.aiByClient || {})
+    .map(([clientId, clientData]) => ({
+      name: clientData.clientName || 'Unknown',
+      value: clientData.count,
+      cost: clientData.cost,
+      tokens: clientData.tokens
+    }))
+    .sort((a, b) => b.value - a.value)
+    .slice(0, 10) // Top 10 clients
 
   return (
     <div className="space-y-6">
@@ -605,14 +633,14 @@ function AITab({ data, viewMode }: TabContentProps) {
           color="blue"
         />
         <StatCard
-          title="Estimated Cost"
-          value={formatCurrency(estimatedCost)}
+          title="Total Cost"
+          value={formatCurrency(data.stats.totalAICost || 0)}
           icon={<DollarSign className="w-5 h-5" />}
           color="green"
         />
         <StatCard
-          title="Avg Tokens/Gen"
-          value={formatTokens(avgTokens)}
+          title="Avg Cost/Gen"
+          value={formatCurrency(data.stats.avgCostPerGeneration || 0)}
           icon={<Hash className="w-5 h-5" />}
           color="purple"
         />
@@ -620,25 +648,15 @@ function AITab({ data, viewMode }: TabContentProps) {
 
       {viewMode === 'charts' && (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-          {/* Placeholder charts for AI - would need real data */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={springTransitions.springMedium}
-            className="bg-[var(--glass-bg)] border border-[var(--glass-border)] rounded-xl p-4 md:p-5 backdrop-blur-xl"
-          >
-            <div className="flex items-center gap-2.5 mb-4">
-              <Zap className="w-5 h-5 text-foreground" />
-              <h3 className="text-base font-semibold text-foreground">AI Usage Over Time</h3>
-            </div>
-            <div className="h-[180px] flex items-center justify-center text-silver text-sm">
-              <div className="text-center">
-                <Zap className="w-8 h-8 mx-auto mb-2 opacity-30" />
-                <p>Time series data coming soon</p>
-              </div>
-            </div>
-          </motion.div>
+          {/* AI Usage Trend */}
+          <LineChartCard
+            title="AI Usage Over Time"
+            icon={<Zap className="w-5 h-5" />}
+            data={data.aiUsageTrend || []}
+            color="#8b5cf6"
+          />
           
+          {/* Spend by Model */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -647,14 +665,166 @@ function AITab({ data, viewMode }: TabContentProps) {
           >
             <div className="flex items-center gap-2.5 mb-4">
               <BarChart3 className="w-5 h-5 text-foreground" />
-              <h3 className="text-base font-semibold text-foreground">Generations by Type</h3>
+              <h3 className="text-base font-semibold text-foreground">Usage by Model</h3>
             </div>
-            <div className="h-[180px] flex items-center justify-center text-silver text-sm">
-              <div className="text-center">
-                <BarChart3 className="w-8 h-8 mx-auto mb-2 opacity-30" />
-                <p>Type breakdown coming soon</p>
+            {modelChartData.length > 0 ? (
+              <ResponsiveContainer width="100%" height={180}>
+                <PieChart>
+                  <Pie
+                    data={modelChartData}
+                    cx="50%"
+                    cy="50%"
+                    labelLine={false}
+                    label={({ name, percent }) => `${name} (${(percent * 100).toFixed(0)}%)`}
+                    outerRadius={60}
+                    fill="#8884d8"
+                    dataKey="value"
+                  >
+                    {modelChartData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} />
+                    ))}
+                  </Pie>
+                  <Tooltip 
+                    content={({ active, payload }) => {
+                      if (active && payload && payload.length) {
+                        const data = payload[0].payload
+                        return (
+                          <div className="bg-popover border border-border rounded-lg p-3 shadow-lg">
+                            <p className="font-semibold text-foreground">{data.name}</p>
+                            <p className="text-sm text-muted-foreground">Generations: {data.value}</p>
+                            <p className="text-sm text-muted-foreground">Cost: {formatCurrency(data.cost)}</p>
+                            <p className="text-sm text-muted-foreground">Tokens: {formatTokens(data.tokens)}</p>
+                          </div>
+                        )
+                      }
+                      return null
+                    }}
+                  />
+                </PieChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="h-[180px] flex items-center justify-center text-silver text-sm">
+                <div className="text-center">
+                  <BarChart3 className="w-8 h-8 mx-auto mb-2 opacity-30" />
+                  <p>No AI usage data yet</p>
+                </div>
               </div>
+            )}
+          </motion.div>
+
+          {/* Usage by Client */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={springTransitions.springMedium}
+            className="bg-[var(--glass-bg)] border border-[var(--glass-border)] rounded-xl p-4 md:p-5 backdrop-blur-xl"
+          >
+            <div className="flex items-center gap-2.5 mb-4">
+              <Users className="w-5 h-5 text-foreground" />
+              <h3 className="text-base font-semibold text-foreground">Usage by Client</h3>
             </div>
+            {clientChartData.length > 0 ? (
+              <ResponsiveContainer width="100%" height={180}>
+                <BarChart data={clientChartData}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
+                  <XAxis 
+                    dataKey="name" 
+                    stroke="#71717a" 
+                    fontSize={11}
+                    angle={-45}
+                    textAnchor="end"
+                    height={80}
+                  />
+                  <YAxis stroke="#71717a" fontSize={11} />
+                  <Tooltip 
+                    content={({ active, payload }) => {
+                      if (active && payload && payload.length) {
+                        const data = payload[0].payload
+                        return (
+                          <div className="bg-popover border border-border rounded-lg p-3 shadow-lg">
+                            <p className="font-semibold text-foreground">{data.name}</p>
+                            <p className="text-sm text-muted-foreground">Generations: {data.value}</p>
+                            <p className="text-sm text-muted-foreground">Cost: {formatCurrency(data.cost)}</p>
+                            <p className="text-sm text-muted-foreground">Tokens: {formatTokens(data.tokens)}</p>
+                          </div>
+                        )
+                      }
+                      return null
+                    }}
+                  />
+                  <Bar dataKey="value" fill="#3b82f6" radius={[4, 4, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="h-[180px] flex items-center justify-center text-silver text-sm">
+                <div className="text-center">
+                  <Users className="w-8 h-8 mx-auto mb-2 opacity-30" />
+                  <p>No client usage data yet</p>
+                </div>
+              </div>
+            )}
+          </motion.div>
+
+          {/* Model Cost Breakdown Table */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={springTransitions.springMedium}
+            className="bg-[var(--glass-bg)] border border-[var(--glass-border)] rounded-xl p-4 md:p-5 backdrop-blur-xl lg:col-span-2"
+          >
+            <div className="flex items-center gap-2.5 mb-4">
+              <DollarSign className="w-5 h-5 text-foreground" />
+              <h3 className="text-base font-semibold text-foreground">Cost Breakdown by Model</h3>
+            </div>
+            {modelChartData.length > 0 ? (
+              <div className="space-y-2">
+                {modelChartData.map((model, index) => {
+                  const percentage = data.stats.totalAICost > 0 
+                    ? (model.cost / data.stats.totalAICost * 100).toFixed(1) 
+                    : 0
+                  return (
+                    <div key={index} className="flex items-center gap-3">
+                      <div 
+                        className="w-3 h-3 rounded-full flex-shrink-0"
+                        style={{ backgroundColor: CHART_COLORS[index % CHART_COLORS.length] }}
+                      />
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between mb-1">
+                          <span className="text-sm font-medium text-foreground">{model.name}</span>
+                          <span className="text-sm text-muted-foreground">
+                            {formatCurrency(model.cost)} ({percentage}%)
+                          </span>
+                        </div>
+                        <div className="h-2 bg-muted/30 rounded-full overflow-hidden">
+                          <div 
+                            className="h-full rounded-full transition-all"
+                            style={{ 
+                              width: `${percentage}%`,
+                              backgroundColor: CHART_COLORS[index % CHART_COLORS.length]
+                            }}
+                          />
+                        </div>
+                        <div className="flex items-center justify-between mt-1">
+                          <span className="text-xs text-muted-foreground">
+                            {model.value} generations
+                          </span>
+                          <span className="text-xs text-muted-foreground">
+                            {formatTokens(model.tokens)} tokens
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            ) : (
+              <div className="h-[180px] flex items-center justify-center text-silver text-sm">
+                <div className="text-center">
+                  <DollarSign className="w-8 h-8 mx-auto mb-2 opacity-30" />
+                  <p>No cost data yet</p>
+                </div>
+              </div>
+            )}
           </motion.div>
         </div>
       )}
