@@ -56,9 +56,9 @@ console.log(`Cost: ${formatCost(cost)}`) // "$0.0105"
 ### Get User Spend
 
 ```typescript
-import { getUserAISpend } from '@/lib/ai/pricing'
+import { getMyAISpend } from '@/app/actions/ai'
 
-const spend = await getUserAISpend(userId)
+const spend = await getMyAISpend()
 console.log(`Total: $${spend.totalCost}`)
 console.log(`Tokens: ${spend.totalTokens}`)
 console.log(`Executions: ${spend.executionCount}`)

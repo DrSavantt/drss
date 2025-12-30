@@ -5,11 +5,10 @@ import { searchFrameworks } from '@/lib/ai/rag';
 import { createClient } from '@/lib/supabase/server';
 import { revalidatePath } from 'next/cache';
 import { 
-  getUserAISpend, 
-  getClientAISpend, 
-  getRecentAISpend,
   formatCost,
-  getModelLabel
+  getModelLabel,
+  AI_PRICING,
+  AIModelId
 } from '@/lib/ai/pricing';
 
 export interface GenerateContentParams {
@@ -267,12 +266,81 @@ export async function getMyAISpend(options?: {
     return { totalCost: 0, totalTokens: 0, executionCount: 0, byModel: {} };
   }
   
-  return getUserAISpend(user.id, options);
+  let query = supabase
+    .from('ai_executions')
+    .select('model_id, input_tokens, output_tokens, total_cost_usd')
+    .eq('user_id', user.id);
+  
+  if (options?.clientId) {
+    query = query.eq('client_id', options.clientId);
+  }
+  
+  if (options?.startDate) {
+    query = query.gte('created_at', options.startDate.toISOString());
+  }
+  
+  if (options?.endDate) {
+    query = query.lte('created_at', options.endDate.toISOString());
+  }
+  
+  const { data: executions, error } = await query;
+  
+  if (error || !executions) {
+    console.error('Error fetching AI spend:', error);
+    return { totalCost: 0, totalTokens: 0, executionCount: 0, byModel: {} };
+  }
+  
+  const byModel: Record<string, { cost: number; tokens: number; count: number }> = {};
+  let totalCost = 0;
+  let totalTokens = 0;
+  
+  executions.forEach(exec => {
+    const cost = exec.total_cost_usd || 0;
+    const tokens = (exec.input_tokens || 0) + (exec.output_tokens || 0);
+    
+    totalCost += cost;
+    totalTokens += tokens;
+    
+    const modelId = exec.model_id || 'unknown';
+    if (!byModel[modelId]) {
+      byModel[modelId] = { cost: 0, tokens: 0, count: 0 };
+    }
+    byModel[modelId].cost += cost;
+    byModel[modelId].tokens += tokens;
+    byModel[modelId].count += 1;
+  });
+  
+  return {
+    totalCost: Math.round(totalCost * 1000000) / 1000000,
+    totalTokens,
+    executionCount: executions.length,
+    byModel
+  };
 }
 
 // Get AI spend for a specific client
 export async function getClientAICost(clientId: string) {
-  return getClientAISpend(clientId);
+  const supabase = await createClient();
+  
+  if (!supabase) {
+    return { totalCost: 0, totalTokens: 0, executionCount: 0 };
+  }
+  
+  const { data, error } = await supabase
+    .from('ai_executions')
+    .select('input_tokens, output_tokens, total_cost_usd')
+    .eq('client_id', clientId);
+  
+  if (error || !data) {
+    console.error('Error fetching client AI spend:', error);
+    return { totalCost: 0, totalTokens: 0, executionCount: 0 };
+  }
+  
+  return {
+    totalCost: data.reduce((sum, e) => sum + (e.total_cost_usd || 0), 0),
+    totalTokens: data.reduce((sum, e) => sum + (e.input_tokens || 0) + (e.output_tokens || 0), 0),
+    executionCount: data.length
+  };
 }
 
 // Get recent AI spend (last 30 days)
@@ -287,7 +355,10 @@ export async function getMyRecentAISpend() {
     return { totalCost: 0, totalTokens: 0, executionCount: 0, byModel: {} };
   }
   
-  return getRecentAISpend(user.id);
+  const thirtyDaysAgo = new Date();
+  thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+  
+  return getMyAISpend({ startDate: thirtyDaysAgo });
 }
 
 // Format cost for display

@@ -1,6 +1,6 @@
-import { createClient } from '@/lib/supabase/server'
-
 // Cost per 1K tokens (as of Dec 2024)
+// NOTE: This file contains ONLY client-safe utilities
+// Server-side functions (getUserAISpend, etc.) are in app/actions/ai.ts
 export const AI_PRICING = {
   // Anthropic Claude
   'claude-opus-4-20250514': { 
@@ -84,129 +84,7 @@ export function getModelLabel(modelId: string): string {
 }
 
 /**
- * Get user's AI spend with optional filters
- * @param userId - User ID to query
- * @param options - Optional filters (clientId, startDate, endDate)
- * @returns Aggregated spend data
- */
-export async function getUserAISpend(
-  userId: string, 
-  options?: {
-    clientId?: string
-    startDate?: Date
-    endDate?: Date
-  }
-): Promise<{
-  totalCost: number
-  totalTokens: number
-  executionCount: number
-  byModel: Record<string, { cost: number; tokens: number; count: number }>
-}> {
-  const supabase = await createClient()
-  
-  if (!supabase) {
-    return { totalCost: 0, totalTokens: 0, executionCount: 0, byModel: {} }
-  }
-  
-  let query = supabase
-    .from('ai_executions')
-    .select('model_id, input_tokens, output_tokens, total_cost_usd')
-    .eq('user_id', userId)
-  
-  if (options?.clientId) {
-    query = query.eq('client_id', options.clientId)
-  }
-  
-  if (options?.startDate) {
-    query = query.gte('created_at', options.startDate.toISOString())
-  }
-  
-  if (options?.endDate) {
-    query = query.lte('created_at', options.endDate.toISOString())
-  }
-  
-  const { data: executions, error } = await query
-  
-  if (error || !executions) {
-    console.error('Error fetching AI spend:', error)
-    return { totalCost: 0, totalTokens: 0, executionCount: 0, byModel: {} }
-  }
-  
-  const byModel: Record<string, { cost: number; tokens: number; count: number }> = {}
-  let totalCost = 0
-  let totalTokens = 0
-  
-  executions.forEach(exec => {
-    const cost = exec.total_cost_usd || 0
-    const tokens = (exec.input_tokens || 0) + (exec.output_tokens || 0)
-    
-    totalCost += cost
-    totalTokens += tokens
-    
-    const modelId = exec.model_id || 'unknown'
-    if (!byModel[modelId]) {
-      byModel[modelId] = { cost: 0, tokens: 0, count: 0 }
-    }
-    byModel[modelId].cost += cost
-    byModel[modelId].tokens += tokens
-    byModel[modelId].count += 1
-  })
-  
-  return {
-    totalCost: Math.round(totalCost * 1000000) / 1000000, // Round to 6 decimals
-    totalTokens,
-    executionCount: executions.length,
-    byModel
-  }
-}
-
-/**
- * Get AI spend for a specific client
- * @param clientId - Client ID to query
- * @returns Aggregated spend data for the client
- */
-export async function getClientAISpend(clientId: string): Promise<{
-  totalCost: number
-  totalTokens: number
-  executionCount: number
-}> {
-  const supabase = await createClient()
-  
-  if (!supabase) {
-    return { totalCost: 0, totalTokens: 0, executionCount: 0 }
-  }
-  
-  const { data, error } = await supabase
-    .from('ai_executions')
-    .select('input_tokens, output_tokens, total_cost_usd')
-    .eq('client_id', clientId)
-  
-  if (error || !data) {
-    console.error('Error fetching client AI spend:', error)
-    return { totalCost: 0, totalTokens: 0, executionCount: 0 }
-  }
-  
-  return {
-    totalCost: data.reduce((sum, e) => sum + (e.total_cost_usd || 0), 0),
-    totalTokens: data.reduce((sum, e) => sum + (e.input_tokens || 0) + (e.output_tokens || 0), 0),
-    executionCount: data.length
-  }
-}
-
-/**
- * Get recent AI spend summary (last 30 days)
- * @param userId - User ID to query
- * @returns Recent spend summary
- */
-export async function getRecentAISpend(userId: string) {
-  const thirtyDaysAgo = new Date()
-  thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
-  
-  return getUserAISpend(userId, { startDate: thirtyDaysAgo })
-}
-
-/**
- * Estimate cost for a prompt before execution
+ * Estimate cost for a prompt before execution (client-safe)
  * @param modelId - Model to use
  * @param estimatedInputTokens - Estimated input tokens
  * @param estimatedOutputTokens - Estimated output tokens
