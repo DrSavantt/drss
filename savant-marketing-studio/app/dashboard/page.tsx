@@ -79,16 +79,18 @@ export default function DashboardPage() {
   async function fetchDashboardData() {
     try {
       // Fetch all widget data
-      const [clientsRes, projectsRes, contentRes, aiStatsRes] = await Promise.all([
+      const [clientsRes, projectsRes, contentRes, frameworksRes, aiStatsRes] = await Promise.all([
         fetch('/api/clients'),
         fetch('/api/projects'),
         fetch('/api/content'),
+        fetch('/api/frameworks'),
         fetch('/api/analytics?days=30'),
       ])
 
       const clients = await clientsRes.json()
       const projects = await projectsRes.json()
       const content = await contentRes.json()
+      const frameworks = await frameworksRes.json()
       const analytics = await aiStatsRes.json()
 
       // Calculate project counts
@@ -136,8 +138,8 @@ export default function DashboardPage() {
           recent: content.slice(0, 3)
         },
         frameworks: {
-          total: 0, // TODO: Fetch frameworks when available
-          recent: []
+          total: frameworks?.length || 0,
+          recent: frameworks?.slice(0, 3) || []
         },
         ai: {
           generations: analytics.stats?.aiGenerations || 0,
@@ -193,15 +195,16 @@ export default function DashboardPage() {
         </p>
       </div>
 
-      {/* Widget Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      {/* Widget Grid - 4 columns on desktop for asymmetric layout */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         {/* 1. Clients Widget */}
-        <WidgetCard
-          title="Clients"
-          icon={<Users className="w-5 h-5" />}
-          href="/dashboard/clients"
-          index={0}
-        >
+        <div className="lg:col-span-1">
+          <WidgetCard
+            title="Clients"
+            icon={<Users className="w-5 h-5" />}
+            href="/dashboard/clients"
+            index={0}
+          >
           <div className="space-y-4">
             <motion.div
               initial={{ opacity: 0, scale: 0.8 }}
@@ -243,15 +246,17 @@ export default function DashboardPage() {
               <Plus className="w-4 h-4 mr-1" /> Add Client
             </Button>
           </div>
-        </WidgetCard>
+          </WidgetCard>
+        </div>
 
-        {/* 2. Projects Widget */}
-        <WidgetCard
-          title="Projects"
-          icon={<FolderKanban className="w-5 h-5" />}
-          href="/dashboard/projects/board"
-          index={1}
-        >
+        {/* 2. Projects Widget - WIDE (2 columns on desktop) */}
+        <div className="md:col-span-1 lg:col-span-2">
+          <WidgetCard
+            title="Projects"
+            icon={<FolderKanban className="w-5 h-5" />}
+            href="/dashboard/projects/board"
+            index={1}
+          >
           <div className="space-y-4">
             <motion.div
               className="flex items-baseline gap-2"
@@ -306,15 +311,17 @@ export default function DashboardPage() {
               <Plus className="w-4 h-4 mr-1" /> New Project
             </Button>
           </div>
-        </WidgetCard>
+          </WidgetCard>
+        </div>
 
         {/* 3. Deep Research Widget */}
-        <WidgetCard
-          title="Deep Research"
-          icon={<Search className="w-5 h-5" />}
-          href="/dashboard/research"
-          index={2}
-        >
+        <div className="lg:col-span-1">
+          <WidgetCard
+            title="Deep Research"
+            icon={<Search className="w-5 h-5" />}
+            href="/dashboard/research"
+            index={2}
+          >
           <div className="flex flex-col h-full">
             <p className="text-muted-foreground text-sm mb-4">
               AI-powered research assistant for in-depth client and market analysis
@@ -336,10 +343,12 @@ export default function DashboardPage() {
               </Button>
             </div>
           </div>
-        </WidgetCard>
+          </WidgetCard>
+        </div>
 
         {/* 4. Frameworks Widget */}
-        <WidgetCard
+        <div className="lg:col-span-1">
+          <WidgetCard
           title="Frameworks"
           icon={<BookOpen className="w-5 h-5" />}
           href="/dashboard/frameworks"
@@ -351,28 +360,43 @@ export default function DashboardPage() {
               animate={{ opacity: 1, scale: 1 }}
               transition={{ delay: 0.35, duration: 0.4 }}
             >
-              <p className="text-3xl font-bold text-foreground">15+</p>
+              <p className="text-3xl font-bold text-foreground">{data.frameworks.total}</p>
               <p className="text-sm text-muted-foreground">copywriting frameworks</p>
             </motion.div>
 
-            <div>
-              <p className="text-xs text-muted-foreground mb-2">Popular frameworks</p>
-              <div className="space-y-1">
-                <p className="text-sm text-foreground">• AIDA (Attention, Interest, Desire, Action)</p>
-                <p className="text-sm text-foreground">• PAS (Problem, Agitate, Solution)</p>
-                <p className="text-sm text-foreground">• BAB (Before, After, Bridge)</p>
+            {data.frameworks.recent.length > 0 ? (
+              <div>
+                <p className="text-xs text-muted-foreground mb-2">Recent frameworks</p>
+                <div className="space-y-1">
+                  {data.frameworks.recent.map((framework: any) => (
+                    <p key={framework.id} className="text-sm text-foreground truncate">
+                      • {framework.title || framework.name}
+                    </p>
+                  ))}
+                </div>
               </div>
-            </div>
+            ) : (
+              <div>
+                <p className="text-xs text-muted-foreground mb-2">Popular frameworks</p>
+                <div className="space-y-1">
+                  <p className="text-sm text-foreground">• AIDA (Attention, Interest, Desire, Action)</p>
+                  <p className="text-sm text-foreground">• PAS (Problem, Agitate, Solution)</p>
+                  <p className="text-sm text-foreground">• BAB (Before, After, Bridge)</p>
+                </div>
+              </div>
+            )}
           </div>
-        </WidgetCard>
+          </WidgetCard>
+        </div>
 
-        {/* 5. AI Studio Widget */}
-        <WidgetCard
-          title="AI Studio"
-          icon={<Sparkles className="w-5 h-5" />}
-          href="/dashboard/ai/generate"
-          index={4}
-        >
+        {/* 5. AI Studio Widget - WIDE (2 columns on desktop) */}
+        <div className="md:col-span-1 lg:col-span-2">
+          <WidgetCard
+            title="AI Studio"
+            icon={<Sparkles className="w-5 h-5" />}
+            href="/dashboard/ai/generate"
+            index={4}
+          >
           <div className="space-y-4">
             <motion.div
               className="flex justify-between"
@@ -423,15 +447,17 @@ export default function DashboardPage() {
               </div>
             )}
           </div>
-        </WidgetCard>
+          </WidgetCard>
+        </div>
 
         {/* 6. Content Widget */}
-        <WidgetCard
-          title="Content"
-          icon={<FileText className="w-5 h-5" />}
-          href="/dashboard/content"
-          index={5}
-        >
+        <div className="lg:col-span-1">
+          <WidgetCard
+            title="Content"
+            icon={<FileText className="w-5 h-5" />}
+            href="/dashboard/content"
+            index={5}
+          >
           <div className="space-y-4">
             <motion.div
               className="flex items-baseline gap-2"
@@ -476,15 +502,17 @@ export default function DashboardPage() {
               <Plus className="w-4 h-4 mr-1" /> Create Content
             </Button>
           </div>
-        </WidgetCard>
+          </WidgetCard>
+        </div>
 
         {/* 7. Journal Widget */}
-        <WidgetCard
-          title="Journal"
-          icon={<BookMarked className="w-5 h-5" />}
-          href="/dashboard/journal"
-          index={6}
-        >
+        <div className="lg:col-span-1">
+          <WidgetCard
+            title="Journal"
+            icon={<BookMarked className="w-5 h-5" />}
+            href="/dashboard/journal"
+            index={6}
+          >
           <div className="space-y-4">
             <motion.div
               initial={{ opacity: 0, scale: 0.8 }}
@@ -527,15 +555,17 @@ export default function DashboardPage() {
               <Plus className="w-4 h-4 mr-1" /> New Entry
             </Button>
           </div>
-        </WidgetCard>
+          </WidgetCard>
+        </div>
 
         {/* 8. Analytics Widget */}
-        <WidgetCard
-          title="Analytics"
-          icon={<BarChart3 className="w-5 h-5" />}
-          href="/dashboard/analytics"
-          index={7}
-        >
+        <div className="lg:col-span-1">
+          <WidgetCard
+            title="Analytics"
+            icon={<BarChart3 className="w-5 h-5" />}
+            href="/dashboard/analytics"
+            index={7}
+          >
           <div className="space-y-4">
             <p className="text-sm text-muted-foreground">This month summary</p>
 
@@ -575,15 +605,17 @@ export default function DashboardPage() {
               View Full Analytics
             </Button>
           </div>
-        </WidgetCard>
+          </WidgetCard>
+        </div>
 
         {/* 9. Archive Widget */}
-        <WidgetCard
-          title="Archive"
-          icon={<Archive className="w-5 h-5" />}
-          href="/dashboard/archive"
-          index={8}
-        >
+        <div className="lg:col-span-1">
+          <WidgetCard
+            title="Archive"
+            icon={<Archive className="w-5 h-5" />}
+            href="/dashboard/archive"
+            index={8}
+          >
           <div className="space-y-4">
             <motion.div
               initial={{ opacity: 0, scale: 0.8 }}
@@ -615,7 +647,8 @@ export default function DashboardPage() {
               </Button>
             )}
           </div>
-        </WidgetCard>
+          </WidgetCard>
+        </div>
       </div>
     </div>
   )
