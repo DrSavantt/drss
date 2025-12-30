@@ -21,17 +21,17 @@ import {
 import { Button } from "@/components/ui/button"
 import { useSidebar } from "@/contexts/sidebar-context"
 
-// ONLY CHANGE: Updated routes to match existing app structure (/dashboard prefix)
+// Reordered to follow marketer workflow
 const navItems = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/dashboard/analytics", label: "Analytics", icon: BarChart3 },
   { href: "/dashboard/clients", label: "Clients", icon: Users },
   { href: "/dashboard/projects/board", label: "Projects", icon: FolderKanban },
-  { href: "/dashboard/content", label: "Content", icon: FileText },
+  { href: "/dashboard/research", label: "Deep Research", icon: Search },
   { href: "/dashboard/frameworks", label: "Frameworks", icon: BookOpen },
   { href: "/dashboard/ai/generate", label: "AI Studio", icon: Sparkles },
-  { href: "/dashboard/research", label: "Deep Research", icon: SearchIcon },
+  { href: "/dashboard/content", label: "Content", icon: FileText },
   { href: "/dashboard/journal", label: "Journal", icon: BookMarked },
+  { href: "/dashboard/analytics", label: "Analytics", icon: BarChart3 },
   { href: "/dashboard/archive", label: "Archive", icon: Archive },
 ]
 
