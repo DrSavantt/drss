@@ -287,3 +287,4 @@ This will make the popup show all questions (like Settings UI does).
 Keep this card handy for day-to-day development.  
 Last audit: Dec 28, 2025
 
+

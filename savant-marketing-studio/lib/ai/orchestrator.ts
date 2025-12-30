@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server';
 import { ClaudeProvider } from './providers/claude';
 import { GeminiProvider } from './providers/gemini';
 import { BaseAIProvider, AIRequest, AIResponse } from './providers/base-provider';
+import { calculateCost } from './pricing';
 
 export type TaskComplexity = 'simple' | 'medium' | 'complex';
 export type TaskPriority = 'cost' | 'speed' | 'quality';
@@ -84,12 +85,11 @@ export class AIOrchestrator {
       throw new Error('No response from AI');
     }
 
-    // Calculate cost
-    const cost = selection.provider.calculateCost(
+    // Calculate cost using centralized pricing
+    const cost = calculateCost(
+      selection.modelName,
       response.inputTokens,
-      response.outputTokens,
-      selection.costPer1MInput,
-      selection.costPer1MOutput
+      response.outputTokens
     );
 
     // Log execution

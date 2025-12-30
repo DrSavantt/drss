@@ -4,6 +4,13 @@ import { AIOrchestrator, TaskComplexity } from '@/lib/ai/orchestrator';
 import { searchFrameworks } from '@/lib/ai/rag';
 import { createClient } from '@/lib/supabase/server';
 import { revalidatePath } from 'next/cache';
+import { 
+  getUserAISpend, 
+  getClientAISpend, 
+  getRecentAISpend,
+  formatCost,
+  getModelLabel
+} from '@/lib/ai/pricing';
 
 export interface GenerateContentParams {
   clientId: string;
@@ -224,16 +231,173 @@ export async function getAIUsageStats() {
   const supabase = await createClient();
   if (!supabase) return { totalCost: 0, totalTokens: 0, totalGenerations: 0 };
   
+  const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+  
   const { data } = await supabase
     .from('ai_executions')
     .select('total_cost_usd, input_tokens, output_tokens, created_at')
-    .gte('created_at', new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString());
+    .gte('created_at', thirtyDaysAgo.toISOString())
+    .eq('status', 'success');
 
   if (!data) return { totalCost: 0, totalTokens: 0, totalGenerations: 0 };
 
+  const totalCost = data.reduce((sum, e) => sum + Number(e.total_cost_usd || 0), 0);
+  const totalTokens = data.reduce((sum, e) => sum + (e.input_tokens || 0) + (e.output_tokens || 0), 0);
+
   return {
-    totalCost: data.reduce((sum, e) => sum + Number(e.total_cost_usd || 0), 0),
-    totalTokens: data.reduce((sum, e) => sum + (e.input_tokens || 0) + (e.output_tokens || 0), 0),
+    totalCost: Math.round(totalCost * 100) / 100, // Round to 2 decimal places for display
+    totalTokens,
     totalGenerations: data.length,
   };
+}
+
+// Get detailed AI spend for current user
+export async function getMyAISpend(options?: {
+  clientId?: string
+  startDate?: Date
+  endDate?: Date
+}) {
+  const supabase = await createClient();
+  if (!supabase) {
+    return { totalCost: 0, totalTokens: 0, executionCount: 0, byModel: {} };
+  }
+  
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) {
+    return { totalCost: 0, totalTokens: 0, executionCount: 0, byModel: {} };
+  }
+  
+  return getUserAISpend(user.id, options);
+}
+
+// Get AI spend for a specific client
+export async function getClientAICost(clientId: string) {
+  return getClientAISpend(clientId);
+}
+
+// Get recent AI spend (last 30 days)
+export async function getMyRecentAISpend() {
+  const supabase = await createClient();
+  if (!supabase) {
+    return { totalCost: 0, totalTokens: 0, executionCount: 0, byModel: {} };
+  }
+  
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) {
+    return { totalCost: 0, totalTokens: 0, executionCount: 0, byModel: {} };
+  }
+  
+  return getRecentAISpend(user.id);
+}
+
+// Format cost for display
+export async function formatAICost(cost: number): Promise<string> {
+  return formatCost(cost);
+}
+
+// Get model label
+export async function getAIModelLabel(modelId: string): Promise<string> {
+  return getModelLabel(modelId);
+}
+
+// Generate inline edit (for AI prompt bar)
+export interface InlineEditContext {
+  selectedText?: string;
+  fullContent: string;
+  clientId?: string;
+  includeClientContext?: boolean;
+  frameworkId?: string;
+  model?: string;
+}
+
+export async function generateInlineEdit(
+  prompt: string,
+  context: InlineEditContext
+): Promise<{ content: string; error?: string }> {
+  try {
+    const supabase = await createClient();
+    if (!supabase) throw new Error('Supabase not configured');
+
+    // Build context for the AI
+    let systemPrompt = `You are an expert copywriter and content editor. Your task is to help improve, edit, or generate content based on the user's request.`;
+
+    // Add client context if requested and available
+    if (context.includeClientContext && context.clientId) {
+      const { data: client } = await supabase
+        .from('clients')
+        .select('name, brand_data, intake_responses')
+        .eq('id', context.clientId)
+        .single();
+
+      if (client) {
+        systemPrompt += `\n\nCLIENT BRAND CONTEXT for "${client.name}":`;
+        
+        if (client.brand_data) {
+          systemPrompt += `\n${JSON.stringify(client.brand_data, null, 2)}`;
+        }
+        
+        if (client.intake_responses) {
+          systemPrompt += `\n\nClient Questionnaire Responses:\n${JSON.stringify(client.intake_responses, null, 2)}`;
+        }
+      }
+    }
+
+    // Add framework context if requested
+    if (context.frameworkId) {
+      try {
+        const frameworkChunks = await searchFrameworks(prompt, 0.7, 3);
+        if (frameworkChunks.length > 0) {
+          systemPrompt += `\n\nRELEVANT COPYWRITING FRAMEWORKS:\n`;
+          systemPrompt += frameworkChunks.map(chunk => chunk.content).join('\n\n');
+        }
+      } catch (error) {
+        console.error('Framework search failed:', error);
+      }
+    }
+
+    systemPrompt += `\n\nGuidelines:
+1. Respond ONLY with the edited/generated content - no explanations or meta-commentary
+2. Maintain the same format/structure unless asked to change it
+3. If working with selected text, focus on that specific portion
+4. Match any existing brand voice or tone if context is provided
+5. Be concise and direct`;
+
+    // Build the user message
+    let userMessage = prompt;
+    
+    if (context.selectedText) {
+      userMessage += `\n\nSELECTED TEXT TO WORK WITH:\n${context.selectedText}`;
+    }
+    
+    if (context.fullContent && context.fullContent !== context.selectedText) {
+      userMessage += `\n\nFULL CONTENT FOR CONTEXT:\n${context.fullContent}`;
+    }
+
+    // Execute AI task with specified model
+    const orchestrator = new AIOrchestrator();
+    const result = await orchestrator.executeTask({
+      type: 'inline_edit',
+      complexity: 'simple',
+      clientId: context.clientId,
+      forceModel: context.model, // Use specified model if provided
+      request: {
+        messages: [
+          { role: 'user', content: userMessage }
+        ],
+        maxTokens: 2048,
+        temperature: 0.7,
+        systemPrompt,
+      },
+    });
+
+    return {
+      content: result.content,
+    };
+  } catch (error) {
+    console.error('Inline edit generation failed:', error);
+    return {
+      content: '',
+      error: error instanceof Error ? error.message : 'Failed to generate content',
+    };
+  }
 }

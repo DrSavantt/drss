@@ -2,20 +2,29 @@
 
 import { useEditor, EditorContent } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
+import { Sparkles } from 'lucide-react'
+import { AIPromptBar } from '@/components/editor/ai-prompt-bar'
 
 interface TiptapEditorProps {
   content?: string | object
   onChange?: (html: string) => void
   editable?: boolean
+  showAIBar?: boolean
+  clientId?: string
 }
 
 export function TiptapEditor({
   content = '',
   onChange,
-  editable = true
+  editable = true,
+  showAIBar = true,
+  clientId
 }: TiptapEditorProps) {
   const [showHtml, setShowHtml] = useState(false)
+  const [selectedText, setSelectedText] = useState('')
+  const [isGenerating, setIsGenerating] = useState(false)
+  const aiBarRef = useRef<HTMLDivElement>(null)
 
   const editor = useEditor({
     extensions: [StarterKit],
@@ -25,6 +34,11 @@ export function TiptapEditor({
     onUpdate: ({ editor }) => {
       const html = editor.getHTML()
       onChange?.(html)
+    },
+    onSelectionUpdate: ({ editor }) => {
+      const { from, to } = editor.state.selection
+      const text = editor.state.doc.textBetween(from, to, ' ')
+      setSelectedText(text)
     },
     editorProps: {
       attributes: {
@@ -149,7 +163,26 @@ export function TiptapEditor({
             1. List
           </button>
 
-          <div className="ml-auto">
+          <div className="ml-auto flex items-center gap-2">
+            {showAIBar && (
+              <button
+                onClick={() => {
+                  aiBarRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+                  // Focus the AI prompt bar textarea after a short delay
+                  setTimeout(() => {
+                    const textarea = aiBarRef.current?.querySelector('textarea')
+                    textarea?.focus()
+                  }, 300)
+                }}
+                className="px-2.5 py-1 rounded text-xs font-medium bg-red-primary/10 text-red-primary hover:bg-red-primary/20 transition-colors flex items-center gap-1.5"
+                type="button"
+                title="Ask AI to edit or enhance"
+              >
+                <Sparkles className="w-3 h-3" />
+                Ask AI
+              </button>
+            )}
+            
             <button
               onClick={() => setShowHtml(!showHtml)}
               className="px-2.5 py-1 rounded text-xs font-medium text-silver/70 hover:bg-charcoal hover:text-silver transition-colors"
@@ -173,6 +206,56 @@ export function TiptapEditor({
           <pre className="text-xs bg-dark-gray/50 p-3 rounded border border-mid-gray/30 overflow-x-auto text-slate">
             <code>{editor.getHTML()}</code>
           </pre>
+        </div>
+      )}
+
+      {/* AI Prompt Bar - Minimal Cursor Style */}
+      {showAIBar && editable && (
+        <div 
+          ref={aiBarRef}
+          className="border-t border-mid-gray/30 p-4"
+        >
+          <AIPromptBar
+            editorContent={editor.getHTML()}
+            selectedText={selectedText}
+            clientId={clientId}
+            showModelSelector={true}
+            onResponse={(text) => {
+              setIsGenerating(true)
+              
+              try {
+                if (selectedText && selectedText.length > 0) {
+                  // Replace selected text with AI response
+                  editor.chain().focus().deleteSelection().insertContent(text).run()
+                } else {
+                  // Insert at current cursor position or append to end
+                  const { from } = editor.state.selection
+                  if (from > 0) {
+                    editor.chain().focus().insertContent(text).run()
+                  } else {
+                    // Append to end of document
+                    const endPos = editor.state.doc.content.size
+                    editor.chain().focus().insertContentAt(endPos, text).run()
+                  }
+                }
+                
+                // Clear selection after insertion
+                setSelectedText('')
+              } catch (error) {
+                console.error('Failed to insert AI content:', error)
+              } finally {
+                setIsGenerating(false)
+              }
+            }}
+            disabled={isGenerating}
+          />
+          
+          {/* Subtle selection indicator (optional) */}
+          {selectedText && (
+            <div className="mt-2 text-xs text-muted-foreground/60 text-center">
+              {selectedText.length} characters selected
+            </div>
+          )}
         </div>
       )}
     </div>
