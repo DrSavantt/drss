@@ -45,7 +45,18 @@ export async function getContentAsset(id: string) {
     return null
   }
   
-  return content
+  // Fetch journal entries that @mention this content
+  const { data: relatedCaptures } = await supabase
+    .from('journal_entries')
+    .select('id, content, created_at')
+    .contains('mentioned_content', [id])
+    .is('deleted_at', null)
+    .order('created_at', { ascending: false })
+  
+  return {
+    ...content,
+    related_captures: relatedCaptures || []
+  }
 }
 
 export async function createContentAsset(clientId: string, formData: FormData) {

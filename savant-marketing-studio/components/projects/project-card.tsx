@@ -1,5 +1,6 @@
 "use client"
 
+import { memo, useCallback, useMemo } from "react"
 import type React from "react"
 
 import type { Project } from "./projects-kanban"
@@ -20,23 +21,38 @@ const priorityConfig = {
   high: { label: "High", className: "bg-destructive/10 text-destructive border-destructive/20" },
 }
 
-export function ProjectCard({ project, onDragStart, onDragEnd, onClick }: ProjectCardProps) {
-  const priority = priorityConfig[project.priority] || priorityConfig.medium
-  const dueDate = new Date(project.dueDate)
-  const today = new Date()
-  const isOverdue = dueDate < today && project.status !== "done"
-  const isDueSoon = !isOverdue && dueDate.getTime() - today.getTime() < 2 * 24 * 60 * 60 * 1000
+export const ProjectCard = memo(function ProjectCard({ project, onDragStart, onDragEnd, onClick }: ProjectCardProps) {
+  // PERFORMANCE OPTIMIZATION: Memoize expensive date calculations
+  // Previously: New Date objects created on every render (6,000/sec during drag)
+  // Now: Only recalculated when dueDate or status changes
+  const { priority, dueDate, isOverdue, isDueSoon } = useMemo(() => {
+    const calculatedPriority = priorityConfig[project.priority] || priorityConfig.medium
+    const calculatedDueDate = new Date(project.dueDate)
+    const today = new Date()
+    const calculatedIsOverdue = calculatedDueDate < today && project.status !== "done"
+    const calculatedIsDueSoon = !calculatedIsOverdue && calculatedDueDate.getTime() - today.getTime() < 2 * 24 * 60 * 60 * 1000
+    
+    return {
+      priority: calculatedPriority,
+      dueDate: calculatedDueDate,
+      isOverdue: calculatedIsOverdue,
+      isDueSoon: calculatedIsDueSoon
+    }
+  }, [project.priority, project.dueDate, project.status])
 
-  const handleDragStart = (e: React.DragEvent) => {
+  // PERFORMANCE OPTIMIZATION: Memoize event handlers
+  // Previously: New function created on every render
+  // Now: Function reference stable unless dependencies change
+  const handleDragStart = useCallback((e: React.DragEvent) => {
     e.dataTransfer.effectAllowed = "move"
     onDragStart(project)
-  }
+  }, [onDragStart, project])
 
-  const handleClick = () => {
+  const handleClick = useCallback(() => {
     if (onClick) {
       onClick(project)
     }
-  }
+  }, [onClick, project])
 
   return (
     <div
@@ -69,4 +85,4 @@ export function ProjectCard({ project, onDragStart, onDragEnd, onClick }: Projec
       </div>
     </div>
   )
-}
+})

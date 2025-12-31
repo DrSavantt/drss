@@ -1,5 +1,6 @@
 "use client"
 
+import { memo, useCallback } from "react"
 import type React from "react"
 
 import type { Project } from "./projects-kanban"
@@ -17,7 +18,7 @@ interface KanbanColumnProps {
   onProjectClick?: (project: Project) => void
 }
 
-export function KanbanColumn({
+export const KanbanColumn = memo(function KanbanColumn({
   title,
   status,
   projects,
@@ -27,14 +28,17 @@ export function KanbanColumn({
   isDragging,
   onProjectClick,
 }: KanbanColumnProps) {
-  const handleDragOver = (e: React.DragEvent) => {
+  // PERFORMANCE OPTIMIZATION: Memoize event handlers
+  // Previously: New function created on every render
+  // Now: Function reference stable unless dependencies change
+  const handleDragOver = useCallback((e: React.DragEvent) => {
     e.preventDefault()
-  }
+  }, [])
 
-  const handleDrop = (e: React.DragEvent) => {
+  const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault()
     onDrop(status)
-  }
+  }, [onDrop, status])
 
   return (
     <div
@@ -72,4 +76,4 @@ export function KanbanColumn({
       </div>
     </div>
   )
-}
+})

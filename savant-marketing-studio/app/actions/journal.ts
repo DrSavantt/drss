@@ -629,3 +629,92 @@ export async function updateJournalEntry(
   revalidatePath('/dashboard/journal')
   return { success: true, entry: data }
 }
+
+export async function convertEntryToContent(
+  entryId: string,
+  clientId: string,
+  title: string,
+  projectId?: string | null
+) {
+  const supabase = await createClient()
+  
+  if (!supabase) {
+    return { error: 'Database connection not configured' }
+  }
+  
+  // Get the journal entry
+  const { data: entry } = await supabase
+    .from('journal_entries')
+    .select('*')
+    .eq('id', entryId)
+    .single()
+  
+  if (!entry) {
+    return { error: 'Journal entry not found' }
+  }
+  
+  // Check if already converted
+  if (entry.is_converted) {
+    return { error: 'Entry already converted to content' }
+  }
+  
+  // Create content asset
+  const { data: content, error } = await supabase
+    .from('content_assets')
+    .insert({
+      client_id: clientId,
+      project_id: projectId || null,
+      title,
+      asset_type: 'note',
+      content_json: entry.content,
+      metadata: {
+        source: 'journal_capture',
+        original_entry_id: entryId
+      }
+    })
+    .select()
+    .single()
+  
+  if (error) {
+    return { error: 'Failed to create content' }
+  }
+  
+  // Update journal entry to mark as converted
+  await supabase
+    .from('journal_entries')
+    .update({
+      is_converted: true,
+      converted_to_content_id: content.id
+    })
+    .eq('id', entryId)
+  
+  revalidatePath('/dashboard/content')
+  revalidatePath('/dashboard/journal')
+  
+  return { success: true, content }
+}
+
+export async function bulkConvertToContent(
+  entryIds: string[],
+  clientId: string,
+  projectId?: string | null
+) {
+  const results = await Promise.all(
+    entryIds.map(async (entryId, index) => {
+      const title = `Journal Capture ${index + 1} - ${new Date().toLocaleDateString()}`
+      return convertEntryToContent(entryId, clientId, title, projectId)
+    })
+  )
+  
+  const errors = results.filter(r => r.error)
+  const successes = results.filter(r => r.success)
+  
+  revalidatePath('/dashboard/content')
+  revalidatePath('/dashboard/journal')
+  
+  return { 
+    success: successes.length > 0, 
+    converted: successes.length, 
+    failed: errors.length 
+  }
+}

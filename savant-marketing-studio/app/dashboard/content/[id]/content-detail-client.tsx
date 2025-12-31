@@ -18,7 +18,9 @@ import {
   FileText,
   Check,
   X,
-  Pencil
+  Pencil,
+  ArrowRight,
+  Zap
 } from 'lucide-react'
 import { format } from 'date-fns'
 import { updateContentAsset, deleteContentAsset } from '@/app/actions/content'
@@ -41,6 +43,11 @@ interface ContentDetailClientProps {
     updated_at: string
     clients?: { id: string; name: string } | null
     projects?: { id: string; name: string } | null
+    related_captures?: Array<{
+      id: string
+      content: string
+      created_at: string
+    }>
   }
 }
 
@@ -321,6 +328,40 @@ export function ContentDetailClient({ content }: ContentDetailClientProps) {
                     <p className="text-xs text-muted-foreground">{format(new Date(content.updated_at), 'h:mm a')}</p>
                   </div>
                 </div>
+
+                {/* Related Captures */}
+                {content.related_captures && content.related_captures.length > 0 && (
+                  <div className="flex items-start gap-2 pt-4 border-t border-border">
+                    <Zap className="h-4 w-4 text-amber-500 mt-0.5" />
+                    <div className="flex-1">
+                      <div className="flex items-center justify-between mb-2">
+                        <p className="text-xs text-muted-foreground">Related Captures</p>
+                        <Badge variant="outline" className="text-xs bg-amber-500/10 text-amber-600 border-amber-500/20">
+                          {content.related_captures.length}
+                        </Badge>
+                      </div>
+                      <div className="space-y-2">
+                        {content.related_captures.map((capture) => (
+                          <Link
+                            key={capture.id}
+                            href={`/dashboard/journal?entry=${capture.id}`}
+                            className="group flex items-start gap-1 hover:text-primary transition-colors p-2 -mx-2 rounded hover:bg-muted/50"
+                          >
+                            <div className="flex-1 min-w-0">
+                              <p className="font-medium text-sm leading-snug line-clamp-2">
+                                "{capture.content.substring(0, 80)}{capture.content.length > 80 ? '...' : ''}"
+                              </p>
+                              <p className="text-xs text-muted-foreground mt-0.5">
+                                {format(new Date(capture.created_at), 'MMM d, yyyy')}
+                              </p>
+                            </div>
+                            <ArrowRight className="h-3 w-3 flex-shrink-0 mt-0.5 opacity-0 group-hover:opacity-100 transition-opacity" />
+                          </Link>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                )}
               </CardContent>
             </Card>
           </div>

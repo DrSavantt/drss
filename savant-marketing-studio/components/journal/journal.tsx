@@ -2,7 +2,8 @@
 
 import type React from "react"
 import { useState, useEffect, useRef } from "react"
-import { Plus, Hash, AtSign, Send, Users, FolderKanban, FileText, Trash2, X, Pin, PinOff } from "lucide-react"
+import Link from "next/link"
+import { Plus, Hash, AtSign, Send, Users, FolderKanban, FileText, Trash2, X, Pin, PinOff, Check, ArrowRight } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -29,6 +30,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { JournalBulkActionBar } from "@/app/components/journal-bulk-action-bar"
 import { Checkbox } from "@/components/ui/checkbox"
+import { ConvertToContentDialog } from "./convert-to-content-dialog"
 
 // ============================================================================
 // EXACT v0 CODE - Only data fetching added, UI unchanged
@@ -42,6 +44,8 @@ interface JournalEntry {
   mentions: string[]
   mentionedClientNames?: string[]
   is_pinned?: boolean
+  is_converted?: boolean
+  converted_to_content_id?: string | null
 }
 
 interface Chat {
@@ -99,6 +103,11 @@ export function Journal() {
   const [selectedEntries, setSelectedEntries] = useState<Set<string>>(new Set())
   const [showBulkTagInput, setShowBulkTagInput] = useState(false)
   const [bulkTags, setBulkTags] = useState("")
+  
+  // Convert to content state
+  const [convertDialogOpen, setConvertDialogOpen] = useState(false)
+  const [entriesToConvert, setEntriesToConvert] = useState<string[]>([])
+  const [convertEntryContent, setConvertEntryContent] = useState<string>('')
 
   // Fetch clients, projects, and content
   useEffect(() => {
@@ -177,6 +186,8 @@ export function Journal() {
                 mentions: extractMentions(e.content),
                 mentionedClientNames: [], // Will be populated from DB when we add that field
                 is_pinned: e.is_pinned || false,
+                is_converted: e.is_converted || false,
+                converted_to_content_id: e.converted_to_content_id || null,
               }))
             }
           })
@@ -336,6 +347,8 @@ export function Journal() {
               mentions: extractMentions(e.content),
               mentionedClientNames: [],
               is_pinned: e.is_pinned || false,
+              is_converted: e.is_converted || false,
+              converted_to_content_id: e.converted_to_content_id || null,
             }))
           }
         })
@@ -529,6 +542,8 @@ export function Journal() {
             mentions: extractMentions(e.content),
             mentionedClientNames: [],
             is_pinned: e.is_pinned || false,
+            is_converted: e.is_converted || false,
+            converted_to_content_id: e.converted_to_content_id || null,
           }))
         
         setActiveChat({ ...activeChat, entries: updatedEntries })
@@ -544,6 +559,46 @@ export function Journal() {
       console.error('Failed to add tags:', error)
       alert('Failed to add tags')
     }
+  }
+
+  // Handler: Individual convert to content
+  const handleConvertToContent = (entryId: string, content: string) => {
+    setEntriesToConvert([entryId])
+    setConvertEntryContent(content)
+    setConvertDialogOpen(true)
+  }
+
+  // Handler: Bulk convert to content
+  const handleBulkConvertToContent = () => {
+    setEntriesToConvert(Array.from(selectedEntries))
+    setConvertEntryContent('')
+    setConvertDialogOpen(true)
+  }
+
+  // Handler: After successful conversion
+  const handleConversionSuccess = async () => {
+    // Refresh the active chat to show updated is_converted status
+    if (activeChat) {
+      const entries = await getJournalEntries(activeChat.id)
+      const updatedEntries = entries.map(e => ({
+        id: e.id,
+        content: e.content,
+        timestamp: new Date(e.created_at),
+        tags: e.tags || [],
+        mentions: extractMentions(e.content),
+        mentionedClientNames: [],
+        is_pinned: e.is_pinned || false,
+        is_converted: e.is_converted || false,
+        converted_to_content_id: e.converted_to_content_id || null,
+      }))
+      
+      setActiveChat({ ...activeChat, entries: updatedEntries })
+      setChats((prev) =>
+        prev.map((chat) => chat.id === activeChat.id ? { ...chat, entries: updatedEntries } : chat)
+      )
+    }
+    
+    setSelectedEntries(new Set())
   }
 
   // Handle keyboard events and click outside
@@ -740,7 +795,7 @@ export function Journal() {
                   <button
                     onClick={() => handleTogglePin(entry.id, entry.is_pinned || false)}
                     className={cn(
-                      "absolute top-2 right-10 p-1.5 rounded hover:bg-amber-500/20 transition-opacity z-10",
+                      "absolute top-2 right-20 p-1.5 rounded hover:bg-amber-500/20 transition-opacity z-10",
                       entry.is_pinned ? "opacity-100" : "opacity-0 group-hover:opacity-100"
                     )}
                     title={entry.is_pinned ? "Unpin entry" : "Pin entry"}
@@ -751,6 +806,17 @@ export function Journal() {
                       <Pin className="w-4 h-4 text-muted-foreground" />
                     )}
                   </button>
+                  
+                  {/* Convert to Content button (appears on hover, hidden if already converted) */}
+                  {!entry.is_converted && (
+                    <button
+                      onClick={() => handleConvertToContent(entry.id, entry.content)}
+                      className="absolute top-2 right-10 p-1.5 rounded hover:bg-green-500/10 opacity-0 group-hover:opacity-100 transition-opacity z-10"
+                      title="Convert to content"
+                    >
+                      <FileText className="w-4 h-4 text-green-500" />
+                    </button>
+                  )}
                   
                   {/* Delete button (appears on hover) */}
                   <button
@@ -774,6 +840,18 @@ export function Journal() {
                       className="text-sm text-foreground whitespace-pre-wrap"
                       dangerouslySetInnerHTML={{ __html: renderContent(entry.content, entry.mentionedClientNames) }}
                     />
+                    
+                    {/* Converted to Content Badge */}
+                    {entry.is_converted && entry.converted_to_content_id && (
+                      <Link
+                        href={`/dashboard/content/${entry.converted_to_content_id}`}
+                        className="inline-flex items-center gap-1.5 mt-3 px-3 py-1.5 rounded-full bg-green-500/10 border border-green-500/20 text-green-600 dark:text-green-400 text-xs font-medium hover:bg-green-500/20 transition-colors"
+                      >
+                        <Check className="h-3 w-3" />
+                        <span>Converted to Content</span>
+                        <ArrowRight className="h-3 w-3" />
+                      </Link>
+                    )}
                   </div>
                 </div>
               ))}
@@ -1049,10 +1127,20 @@ export function Journal() {
         onPin={handleBulkPin}
         onUnpin={handleBulkUnpin}
         onAddTags={handleBulkAddTags}
+        onConvertToContent={handleBulkConvertToContent}
         onCancel={() => setSelectedEntries(new Set())}
         hasPinnedItems={
           activeChat?.entries.some(e => selectedEntries.has(e.id) && e.is_pinned) || false
         }
+      />
+      
+      {/* Convert to Content Dialog */}
+      <ConvertToContentDialog
+        open={convertDialogOpen}
+        onOpenChange={setConvertDialogOpen}
+        entryIds={entriesToConvert}
+        entryContent={convertEntryContent}
+        onSuccess={handleConversionSuccess}
       />
     </div>
   )

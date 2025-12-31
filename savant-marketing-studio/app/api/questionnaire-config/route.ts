@@ -18,12 +18,28 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Database unavailable' }, { status: 500 });
     }
     
-    console.log('[API] Fetching sections...');
-    const { data: sections, error: sectionsError } = await supabase
-      .from('questionnaire_sections')
-      .select('*')
-      .order('sort_order');
+    // PERFORMANCE OPTIMIZATION: Execute all queries in parallel
+    console.log('[API] Fetching all questionnaire data in parallel...');
     
+    // Build query array - conditionally include overrides query if clientId provided
+    const queries = [
+      supabase.from('questionnaire_sections').select('*').order('sort_order'),
+      supabase.from('questionnaire_questions').select('*').order('section_id, sort_order'),
+      supabase.from('questionnaire_help').select('*'),
+      ...(clientId ? [supabase.from('client_questionnaire_overrides').select('*').eq('client_id', clientId)] : [])
+    ];
+    
+    // Execute all queries simultaneously
+    const results = await Promise.all(queries);
+    
+    // Destructure results
+    const { data: sections, error: sectionsError } = results[0];
+    const { data: questions, error: questionsError } = results[1];
+    const { data: help, error: helpError } = results[2];
+    const overridesResult = results[3] || { data: null, error: null };
+    const { data: overrides, error: overridesError } = overridesResult;
+    
+    // Error handling for all queries
     if (sectionsError) {
       console.error('[API] Sections error:', sectionsError);
       return NextResponse.json({ 
@@ -31,14 +47,6 @@ export async function GET(request: NextRequest) {
         code: sectionsError.code 
       }, { status: 500 });
     }
-    
-    console.log('[API] Sections fetched:', sections?.length);
-    
-    console.log('[API] Fetching questions...');
-    const { data: questions, error: questionsError } = await supabase
-      .from('questionnaire_questions')
-      .select('*')
-      .order('section_id, sort_order');
     
     if (questionsError) {
       console.error('[API] Questions error:', questionsError);
@@ -48,13 +56,6 @@ export async function GET(request: NextRequest) {
       }, { status: 500 });
     }
     
-    console.log('[API] Questions fetched:', questions?.length);
-    
-    console.log('[API] Fetching help...');
-    const { data: help, error: helpError } = await supabase
-      .from('questionnaire_help')
-      .select('*');
-    
     if (helpError) {
       console.error('[API] Help error:', helpError);
       return NextResponse.json({ 
@@ -63,40 +64,37 @@ export async function GET(request: NextRequest) {
       }, { status: 500 });
     }
     
-    console.log('[API] Help fetched:', help?.length);
+    if (overridesError) {
+      console.error('[API] Overrides error:', overridesError);
+      // Don't fail - just continue without overrides
+    }
     
-    // Fetch client-specific overrides if clientId provided
+    // Log successful fetches
+    console.log('[API] Sections fetched:', sections?.length);
+    console.log('[API] Questions fetched:', questions?.length);
+    console.log('[API] Help fetched:', help?.length);
+    if (clientId) {
+      console.log('[API] Overrides fetched:', overrides?.length || 0);
+    }
+    
+    // Build override lookup maps
     let sectionOverrides: Record<number, { is_enabled: boolean; custom_text?: string; custom_help?: Record<string, unknown> }> = {};
     let questionOverrides: Record<string, { is_enabled: boolean; custom_text?: string; custom_help?: Record<string, unknown> }> = {};
     
-    if (clientId) {
-      console.log('[API] Fetching client overrides for:', clientId);
-      const { data: overrides, error: overridesError } = await supabase
-        .from('client_questionnaire_overrides')
-        .select('*')
-        .eq('client_id', clientId);
-      
-      if (overridesError) {
-        console.error('[API] Overrides error:', overridesError);
-        // Don't fail - just continue without overrides
-      } else if (overrides) {
-        console.log('[API] Overrides fetched:', overrides.length);
-        
-        // Build override lookup maps
-        for (const o of overrides) {
-          if (o.section_id && o.override_type === 'section') {
-            sectionOverrides[o.section_id] = {
-              is_enabled: o.is_enabled,
-              custom_text: o.custom_text || undefined,
-              custom_help: o.custom_help || undefined
-            };
-          } else if (o.question_id) {
-            questionOverrides[o.question_id] = {
-              is_enabled: o.is_enabled,
-              custom_text: o.custom_text || undefined,
-              custom_help: o.custom_help || undefined
-            };
-          }
+    if (overrides) {
+      for (const o of overrides) {
+        if (o.section_id && o.override_type === 'section') {
+          sectionOverrides[o.section_id] = {
+            is_enabled: o.is_enabled,
+            custom_text: o.custom_text || undefined,
+            custom_help: o.custom_help || undefined
+          };
+        } else if (o.question_id) {
+          questionOverrides[o.question_id] = {
+            is_enabled: o.is_enabled,
+            custom_text: o.custom_text || undefined,
+            custom_help: o.custom_help || undefined
+          };
         }
       }
     }

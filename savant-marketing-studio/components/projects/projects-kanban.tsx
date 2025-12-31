@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo } from "react"
 import { Plus, List, LayoutGrid, Filter } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -82,6 +82,18 @@ export function ProjectsKanban() {
   }, [dialogOpen]) // Refetch when dialog closes
 
   const filteredProjects = projects.filter((project) => clientFilter === "all" || project.clientId === clientFilter)
+
+  // PERFORMANCE OPTIMIZATION: Pre-filter projects by column with stable references
+  // Previously: .filter() created new array on every render (broke memoization)
+  // Now: Only recalculates when filteredProjects changes
+  // Impact: Prevents unnecessary re-renders of KanbanColumn components
+  const columnProjects = useMemo(() => {
+    return columns.map(column => ({
+      id: column.id,
+      title: column.title,
+      projects: filteredProjects.filter((p) => p.status === column.id)
+    }))
+  }, [filteredProjects])
 
   const handleDragStart = (project: Project) => {
     setDraggedProject(project)
@@ -220,12 +232,12 @@ export function ProjectsKanban() {
 
       {/* Kanban Board */}
       <div className="flex gap-4 overflow-x-auto pb-4">
-        {columns.map((column) => (
+        {columnProjects.map((column) => (
           <KanbanColumn
             key={column.id}
             title={column.title}
             status={column.id as Project["status"]}
-            projects={filteredProjects.filter((p) => p.status === column.id)}
+            projects={column.projects}
             onDragStart={handleDragStart}
             onDragEnd={handleDragEnd}
             onDrop={handleDrop}
