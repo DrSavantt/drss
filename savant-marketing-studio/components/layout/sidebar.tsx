@@ -123,10 +123,12 @@ export function Sidebar() {
         className={cn(
           "fixed left-0 top-0 z-50 h-screen border-r border-sidebar-border bg-sidebar",
           "w-64 transition-transform duration-300 ease-out",
-          // Mobile: controlled by mobileOpen
-          mobileOpen ? "translate-x-0" : "-translate-x-full",
-          // Desktop: always visible
-          "lg:translate-x-0",
+          // Mobile default: HIDDEN (off-screen to the left)
+          "-translate-x-full",
+          // Mobile when open: visible
+          mobileOpen && "translate-x-0",
+          // Desktop: ALWAYS visible (override mobile hidden)
+          "lg:!translate-x-0",
           // Desktop: width based on collapsed
           collapsed ? "lg:w-16" : "lg:w-64",
           "lg:transition-[width] lg:duration-200"
