@@ -23,18 +23,11 @@ export const viewport: Viewport = {
   maximumScale: 1,
   userScalable: false,
   viewportFit: "cover",
-  themeColor: "#fb7185",
 };
 
 export const metadata: Metadata = {
   title: "DRSS Marketing Studio",
   description: "Internal marketing agency management",
-  manifest: "/manifest.json",
-  appleWebApp: {
-    capable: true,
-    statusBarStyle: "black-translucent",
-    title: "DRSS",
-  },
   formatDetection: {
     telephone: false,
   },
@@ -48,13 +41,6 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning className={`dark ${roboto.variable} ${geistMono.variable}`}>
       <head>
-        {/* PWA meta tags */}
-        <link rel="manifest" href="/manifest.json" />
-        <meta name="apple-mobile-web-app-capable" content="yes" />
-        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-        <meta name="apple-mobile-web-app-title" content="DRSS" />
-        <meta name="theme-color" content="#fb7185" />
-        
         {/* Prevent FOUC - set dark mode immediately */}
         <script
           dangerouslySetInnerHTML={{
