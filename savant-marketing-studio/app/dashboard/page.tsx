@@ -1,655 +1,803 @@
+// Force rebuild: v2.0 - January 2026
 'use client'
 
-import { useEffect, useState } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
-import { WidgetCard } from '@/components/dashboard/widget-card'
-import { PulsingDot } from '@/components/dashboard/pulsing-dot'
+import { useEffect, useState, useRef } from 'react'
+import { motion } from 'framer-motion'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
+import { Textarea } from '@/components/ui/textarea'
+import { Checkbox } from '@/components/ui/checkbox'
+import { Badge } from '@/components/ui/badge'
 import {
+  AlertCircle,
+  Clock,
   Users,
   FolderKanban,
-  Search,
-  BookOpen,
-  Sparkles,
   FileText,
-  BookMarked,
-  BarChart3,
-  Archive,
-  Plus,
+  Sparkles,
+  ChevronRight,
+  Send,
+  Calendar as CalendarIcon,
   TrendingUp,
-  AlertCircle,
+  TrendingDown,
   CheckCircle2,
-  ArrowRight,
+  Zap,
 } from 'lucide-react'
-import { formatDistanceToNow, format } from 'date-fns'
-import { useRouter } from 'next/navigation'
 import { cn } from '@/lib/utils'
+import { format, addDays, startOfWeek, isSameDay, isToday, formatDistanceToNow } from 'date-fns'
+import { createJournalEntry, getOrCreateInbox } from '@/app/actions/journal'
+import { getClients } from '@/app/actions/clients'
+import { getAllProjects, getAllContentAssets } from '@/app/actions/content'
+import Link from 'next/link'
+import { PulsingDot } from '@/components/dashboard/pulsing-dot'
 
 interface DashboardData {
-  clients: {
-    total: number
-    active: number
-    recent: Array<{ id: string; name: string; projectCount: number }>
-  }
-  projects: {
-    total: number
-    active: number
-    overdue: number
-    byStatus: { backlog: number; in_progress: number; in_review: number; done: number }
-  }
-  content: {
-    total: number
-    thisWeek: number
-    recent: Array<{ id: string; title: string; asset_type: string }>
-  }
-  frameworks: {
-    total: number
-    recent: Array<{ id: string; title: string }>
-  }
-  ai: {
-    generations: number
-    spend: number
-    tokensUsed: number
-  }
-  journal: {
-    totalEntries: number
-    lastEntry: { id: string; content: string; created_at: string } | null
-  }
-  analytics: {
-    clients: number
-    projects: number
-    content: number
-    aiSpend: number
-  }
-  archive: {
-    total: number
-    recent: Array<{ id: string; name: string; type: string }>
-  }
+  totalClients: number
+  totalProjects: number
+  totalContent: number
+  projectsByStatus: { backlog: number; in_progress: number; in_review: number; done: number }
+  urgentItems: Array<{ id: string; title: string; subtitle?: string; dueDate?: string; type: string; href: string }>
+  recentActivity: any[]
+  contentThisWeek: number
+  activeClients: number
+  dueThisWeek: number
+  overdue: number
+  completionPercentage: number
+  weeklyContent: number
+  completedThisMonth: number
+  storageUsed: number
+  filesCount: number
 }
 
 export default function DashboardPage() {
-  const router = useRouter()
   const [data, setData] = useState<DashboardData | null>(null)
   const [loading, setLoading] = useState(true)
+  const [quickCapture, setQuickCapture] = useState('')
+  const [submitting, setSubmitting] = useState(false)
+  const [clients, setClients] = useState<Array<{ id: string; name: string }>>([])
+  const [projects, setProjects] = useState<Array<{ id: string; name: string; clientName?: string }>>([])
+  const [contentItems, setContentItems] = useState<Array<{ id: string; title: string; clientName?: string }>>([])
+  const [showMentionPopup, setShowMentionPopup] = useState(false)
+  const [mentionSearch, setMentionSearch] = useState('')
+  const [filteredClients, setFilteredClients] = useState<Array<{ id: string; name: string }>>([])
+  const [filteredProjects, setFilteredProjects] = useState<Array<{ id: string; name: string; clientName?: string }>>([])
+  const [filteredContent, setFilteredContent] = useState<Array<{ id: string; title: string; clientName?: string }>>([])
+  const [mentionedClientIds, setMentionedClientIds] = useState<string[]>([])
+  const [mentionedProjectIds, setMentionedProjectIds] = useState<string[]>([])
+  const [mentionedContentIds, setMentionedContentIds] = useState<string[]>([])
+  const inputRef = useRef<HTMLTextAreaElement>(null)
 
   useEffect(() => {
-    fetchDashboardData()
+    fetchDashboard()
+    fetchMentionableItems()
   }, [])
 
-  async function fetchDashboardData() {
+  async function fetchMentionableItems() {
     try {
-      // Fetch all widget data
-      const [clientsRes, projectsRes, contentRes, frameworksRes, aiStatsRes] = await Promise.all([
-        fetch('/api/clients'),
-        fetch('/api/projects'),
-        fetch('/api/content'),
-        fetch('/api/frameworks'),
-        fetch('/api/analytics?days=30'),
+      const [clientsData, projectsData, contentData] = await Promise.all([
+        getClients(),
+        getAllProjects(),
+        getAllContentAssets()
       ])
-
-      const clients = await clientsRes.json()
-      const projects = await projectsRes.json()
-      const content = await contentRes.json()
-      const frameworks = await frameworksRes.json()
-      const analytics = await aiStatsRes.json()
-
-      // Calculate project counts
-      const projectsByStatus = {
-        backlog: projects.filter((p: any) => p.status === 'backlog').length,
-        in_progress: projects.filter((p: any) => p.status === 'in_progress').length,
-        in_review: projects.filter((p: any) => p.status === 'in_review').length,
-        done: projects.filter((p: any) => p.status === 'done').length,
-      }
-
-      const activeProjects = projects.filter((p: any) => p.status !== 'done')
-      const overdueProjects = projects.filter((p: any) => 
-        p.due_date && new Date(p.due_date) < new Date() && p.status !== 'done'
-      )
-
-      // Get client project counts
-      const clientProjectCounts = clients.map((client: any) => ({
-        id: client.id,
-        name: client.name,
-        projectCount: projects.filter((p: any) => p.client_id === client.id).length
-      }))
-
-      // Content this week
-      const oneWeekAgo = new Date()
-      oneWeekAgo.setDate(oneWeekAgo.getDate() - 7)
-      const contentThisWeek = content.filter((c: any) => 
-        new Date(c.created_at) > oneWeekAgo
-      ).length
-
-      setData({
-        clients: {
-          total: clients.length,
-          active: clients.filter((c: any) => !c.deleted_at).length,
-          recent: clientProjectCounts.slice(0, 3)
-        },
-        projects: {
-          total: projects.length,
-          active: activeProjects.length,
-          overdue: overdueProjects.length,
-          byStatus: projectsByStatus
-        },
-        content: {
-          total: content.length,
-          thisWeek: contentThisWeek,
-          recent: content.slice(0, 3)
-        },
-        frameworks: {
-          total: frameworks?.length || 0,
-          recent: frameworks?.slice(0, 3) || []
-        },
-        ai: {
-          generations: analytics.stats?.aiGenerations || 0,
-          spend: analytics.stats?.totalAICost || 0,
-          tokensUsed: analytics.stats?.totalTokens || 0
-        },
-        journal: {
-          totalEntries: analytics.stats?.journalEntries || 0,
-          lastEntry: null // TODO: Fetch last journal entry
-        },
-        analytics: {
-          clients: clients.length,
-          projects: projects.length,
-          content: content.length,
-          aiSpend: analytics.stats?.totalAICost || 0
-        },
-        archive: {
-          total: analytics.stats?.archivedClients || 0,
-          recent: []
+      
+      setClients(clientsData.map(c => ({ id: c.id, name: c.name })))
+      
+      setProjects(projectsData.map(p => {
+        const clientName = Array.isArray(p.clients) && p.clients.length > 0 
+          ? (p.clients[0] as any)?.name 
+          : undefined
+        return {
+          id: p.id,
+          name: p.name,
+          clientName
         }
-      })
+      }))
+      
+      setContentItems(contentData.map(c => {
+        const clientName = Array.isArray(c.clients) && c.clients.length > 0 
+          ? (c.clients[0] as any)?.name 
+          : undefined
+        return {
+          id: c.id,
+          title: c.title,
+          clientName
+        }
+      }))
     } catch (error) {
-      console.error('Failed to fetch dashboard data:', error)
+      console.error('Failed to fetch mentionable items:', error)
+    }
+  }
+
+  // Filter all items based on mention search
+  useEffect(() => {
+    const search = mentionSearch.toLowerCase()
+    setFilteredClients(clients.filter(c => c.name.toLowerCase().includes(search)))
+    setFilteredProjects(projects.filter(p => p.name.toLowerCase().includes(search)))
+    setFilteredContent(contentItems.filter(c => (c.title || '').toLowerCase().includes(search)))
+  }, [mentionSearch, clients, projects, contentItems])
+
+  // Handle keyboard shortcuts and click outside for mention popup
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && showMentionPopup) {
+        setShowMentionPopup(false)
+      }
+    }
+
+    const handleClickOutside = (e: MouseEvent) => {
+      if (showMentionPopup && inputRef.current && !inputRef.current.contains(e.target as Node)) {
+        const target = e.target as HTMLElement
+        if (!target.closest('.mention-popup')) {
+          setShowMentionPopup(false)
+        }
+      }
+    }
+
+    document.addEventListener('keydown', handleKeyDown)
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown)
+      document.removeEventListener('mousedown', handleClickOutside)
+    }
+  }, [showMentionPopup])
+
+  async function fetchDashboard() {
+    try {
+      const response = await fetch('/api/dashboard')
+      const dashboardData = await response.json()
+      setData(dashboardData)
+    } catch (error) {
+      console.error('Failed to fetch dashboard:', error)
     } finally {
       setLoading(false)
     }
   }
 
-  const formatTokens = (tokens: number): string => {
-    if (tokens >= 1000000) return `${(tokens / 1000000).toFixed(1)}M`
-    if (tokens >= 1000) return `${(tokens / 1000).toFixed(1)}K`
-    return tokens.toString()
+  const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const value = e.target.value
+    setQuickCapture(value)
+
+    // Check for @ mention trigger
+    const cursorPos = e.target.selectionStart
+    const textBeforeCursor = value.substring(0, cursorPos)
+    const lastAtIndex = textBeforeCursor.lastIndexOf('@')
+    
+    if (lastAtIndex !== -1) {
+      const textAfterAt = textBeforeCursor.substring(lastAtIndex + 1)
+      const charBeforeAt = lastAtIndex > 0 ? textBeforeCursor[lastAtIndex - 1] : ' '
+      
+      if ((charBeforeAt === ' ' || charBeforeAt === '\n' || lastAtIndex === 0) && 
+          !textAfterAt.includes(' ') && !textAfterAt.includes('\n')) {
+        setMentionSearch(textAfterAt)
+        setShowMentionPopup(true)
+        return
+      }
+    }
+    setShowMentionPopup(false)
+  }
+
+  const insertMention = (
+    type: 'client' | 'project' | 'content', 
+    item: { id: string; name?: string; title?: string }
+  ) => {
+    const name = 'name' in item && item.name ? item.name : (item as any).title
+    const cursorPos = inputRef.current?.selectionStart || 0
+    const textBeforeCursor = quickCapture.substring(0, cursorPos)
+    const textAfterCursor = quickCapture.substring(cursorPos)
+    const lastAtIndex = textBeforeCursor.lastIndexOf('@')
+    
+    const before = quickCapture.substring(0, lastAtIndex)
+    const after = textAfterCursor
+    const newText = `${before}@${name} ${after}`
+    
+    setQuickCapture(newText)
+    setShowMentionPopup(false)
+    
+    // Track by type
+    if (type === 'client') {
+      setMentionedClientIds(prev => [...new Set([...prev, item.id])])
+    } else if (type === 'project') {
+      setMentionedProjectIds(prev => [...new Set([...prev, item.id])])
+    } else if (type === 'content') {
+      setMentionedContentIds(prev => [...new Set([...prev, item.id])])
+    }
+    
+    // Focus input and set cursor position after mention
+    setTimeout(() => {
+      inputRef.current?.focus()
+      const newCursorPos = lastAtIndex + name.length + 2 // @ + name + space
+      inputRef.current?.setSelectionRange(newCursorPos, newCursorPos)
+    }, 0)
+  }
+
+  const handleQuickCapture = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!quickCapture.trim() || submitting) return
+
+    setSubmitting(true)
+    try {
+      const inboxId = await getOrCreateInbox()
+      const tags = (quickCapture.match(/#(\w+)/g) || []).map(tag => tag.slice(1))
+      await createJournalEntry(
+        quickCapture, 
+        inboxId, 
+        mentionedClientIds, 
+        mentionedProjectIds, 
+        mentionedContentIds, 
+        tags
+      )
+      setQuickCapture('')
+      setMentionedClientIds([])
+      setMentionedProjectIds([])
+      setMentionedContentIds([])
+    } catch (error) {
+      console.error('Failed to save capture:', error)
+      alert('Failed to save capture')
+    } finally {
+      setSubmitting(false)
+    }
   }
 
   if (loading || !data) {
     return (
       <div className="flex items-center justify-center h-screen">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-red-primary mx-auto mb-4"></div>
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4" />
           <p className="text-muted-foreground">Loading dashboard...</p>
         </div>
       </div>
     )
   }
 
+  const weekStart = startOfWeek(new Date(), { weekStartsOn: 1 })
+  const weekDays = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i))
+
+  // Calculate AI spend (estimate from generations)
+  const estimatedAISpend = Math.round(data.totalProjects * 0.15 * 100) / 100
+
+  // Time-based greeting
+  const hour = new Date().getHours()
+  const greeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening'
+
   return (
-    <div className="p-6 space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-foreground">Dashboard</h1>
-        <p className="text-muted-foreground">
+    <div className="p-6 space-y-6 max-w-7xl mx-auto">
+      {/* Header with Personalized Greeting */}
+      <motion.div
+        initial={{ opacity: 0, y: -10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4 }}
+        className="flex items-center justify-between"
+      >
+        <div>
+          <h1 className="text-3xl font-bold text-foreground">{greeting}</h1>
+          <p className="text-muted-foreground">
+            {data.urgentItems.length > 0 
+              ? `You have ${data.urgentItems.length} ${data.urgentItems.length === 1 ? 'item' : 'items'} that need attention` 
+              : "Everything's on track today"}
+          </p>
+        </div>
+        <p className="text-sm text-muted-foreground hidden sm:block">
           {format(new Date(), 'EEEE, MMMM d, yyyy')}
         </p>
+      </motion.div>
+
+      {/* At A Glance Stats */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <StatCard
+          icon={<Users className="h-4 w-4" />}
+          label="Active Clients"
+          value={data.activeClients}
+          color="text-blue-500"
+          trend={data.activeClients > 0 ? `${data.totalClients} total` : undefined}
+        />
+        <StatCard
+          icon={<FolderKanban className="h-4 w-4" />}
+          label="Active Projects"
+          value={data.projectsByStatus.in_progress + data.projectsByStatus.in_review}
+          color="text-purple-500"
+          trend={data.completedThisMonth > 0 ? `${data.completedThisMonth} done this month` : undefined}
+        />
+        <StatCard
+          icon={<FileText className="h-4 w-4" />}
+          label="Content This Month"
+          value={data.weeklyContent}
+          color="text-green-500"
+          trend={data.contentThisWeek > 0 ? `+${data.contentThisWeek} this week` : undefined}
+        />
+        <StatCard
+          icon={<Sparkles className="h-4 w-4" />}
+          label="Storage Used"
+          value={`${data.storageUsed}MB`}
+          color="text-amber-500"
+          trend={data.filesCount > 0 ? `${data.filesCount} files` : undefined}
+        />
       </div>
 
-      {/* Widget Grid - 4 columns on desktop for asymmetric layout */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        {/* 1. Clients Widget */}
-        <div className="lg:col-span-1">
-          <WidgetCard
-            title="Clients"
-            icon={<Users className="w-5 h-5" />}
-            href="/dashboard/clients"
-            index={0}
+      <div className="grid lg:grid-cols-3 gap-6">
+        {/* Left Column: Needs Attention + This Week */}
+        <div className="lg:col-span-2 space-y-6">
+          {/* Needs Attention */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2, duration: 0.4 }}
           >
-          <div className="space-y-4">
-            <motion.div
-              initial={{ opacity: 0, scale: 0.8 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ delay: 0.2, duration: 0.4 }}
-            >
-              <p className="text-3xl font-bold text-foreground">{data.clients.active}</p>
-              <p className="text-sm text-muted-foreground">active clients</p>
-            </motion.div>
-
-            {data.clients.recent.length > 0 && (
-              <div className="space-y-2">
-                {data.clients.recent.map((client) => (
-                  <div
-                    key={client.id}
-                    className="flex justify-between items-center text-sm"
+            <Card className={cn(
+              "transition-all",
+              data.overdue > 0 && "border-destructive/50 shadow-destructive/10 shadow-lg"
+            )}>
+              <CardHeader className="pb-3">
+                <div className="flex items-center justify-between">
+                  <CardTitle className="flex items-center gap-2">
+                    {data.overdue > 0 && <PulsingDot color="red" />}
+                    {data.overdue === 0 && data.urgentItems.length > 0 && <AlertCircle className="h-5 w-5 text-amber-500" />}
+                    {data.urgentItems.length === 0 && <CheckCircle2 className="h-5 w-5 text-green-500" />}
+                    Needs Attention
+                  </CardTitle>
+                  <Badge 
+                    variant={data.overdue > 0 ? "destructive" : data.urgentItems.length > 0 ? "secondary" : "outline"}
+                    className={cn(data.overdue > 0 && "animate-pulse")}
                   >
-                    <span className="text-foreground truncate">{client.name}</span>
-                    <span className="text-muted-foreground flex-shrink-0 ml-2">
-                      {client.projectCount} {client.projectCount === 1 ? 'project' : 'projects'}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            )}
-
-            <Button
-              variant="ghost"
-              size="sm"
-              className={cn(
-                "w-full mt-auto transition-all duration-200",
-                "hover:bg-red-500/10 hover:text-red-500"
+                    {data.urgentItems.length}
+                  </Badge>
+                </div>
+              </CardHeader>
+            <CardContent>
+              {data.urgentItems.length === 0 ? (
+                <div className="text-center py-8">
+                  <p className="text-muted-foreground">All clear! 🎉</p>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {data.urgentItems.slice(0, 5).map((item, i) => {
+                    const isOverdue = item.dueDate && new Date(item.dueDate) < new Date()
+                    const isDueToday = item.dueDate && isToday(new Date(item.dueDate))
+                    
+                    return (
+                      <motion.div
+                        key={item.id}
+                        initial={{ opacity: 0, x: -10 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: i * 0.05 }}
+                        className={cn(
+                          "group flex items-center justify-between p-3 rounded-lg border transition-all hover:shadow-sm",
+                          isOverdue 
+                            ? "border-destructive/50 bg-destructive/5 hover:bg-destructive/10" 
+                            : isDueToday
+                            ? "border-amber-500/50 bg-amber-500/5 hover:bg-amber-500/10"
+                            : "border-border hover:bg-muted/50"
+                        )}
+                      >
+                        <div className="flex items-center gap-3 flex-1 min-w-0">
+                          {isOverdue ? (
+                            <AlertCircle className="h-4 w-4 text-destructive flex-shrink-0" />
+                          ) : (
+                            <Clock className={cn(
+                              "h-4 w-4 flex-shrink-0",
+                              isDueToday ? "text-amber-500" : "text-muted-foreground"
+                            )} />
+                          )}
+                          <div className="flex-1 min-w-0">
+                            <p className="font-medium text-sm truncate">{item.title}</p>
+                            {item.subtitle && (
+                              <p className="text-xs text-muted-foreground truncate">{item.subtitle}</p>
+                            )}
+                            {item.dueDate && (
+                              <p className={cn(
+                                "text-xs font-medium",
+                                isOverdue ? "text-destructive" : isDueToday ? "text-amber-600" : "text-muted-foreground"
+                              )}>
+                                {isOverdue 
+                                  ? 'Overdue' 
+                                  : isDueToday 
+                                  ? 'Due today' 
+                                  : `Due ${format(new Date(item.dueDate), 'MMM d')}`}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                        <Link href={item.href}>
+                          <Button 
+                            size="sm" 
+                            variant={isOverdue ? "destructive" : "ghost"} 
+                            className="opacity-0 group-hover:opacity-100"
+                          >
+                            <ChevronRight className="h-4 w-4" />
+                          </Button>
+                        </Link>
+                      </motion.div>
+                    )
+                  })}
+                  {data.urgentItems.length > 5 && (
+                    <Link href="/dashboard/projects/board">
+                      <Button variant="ghost" size="sm" className="w-full mt-2">
+                        View all {data.urgentItems.length} items
+                      </Button>
+                    </Link>
+                  )}
+                </div>
               )}
-              onClick={(e) => {
-                e.preventDefault()
-                router.push('/dashboard/clients')
-              }}
-            >
-              <Plus className="w-4 h-4 mr-1" /> Add Client
-            </Button>
-          </div>
-          </WidgetCard>
-        </div>
+            </CardContent>
+          </Card>
+          </motion.div>
 
-        {/* 2. Projects Widget - WIDE (2 columns on desktop) */}
-        <div className="md:col-span-1 lg:col-span-2">
-          <WidgetCard
-            title="Projects"
-            icon={<FolderKanban className="w-5 h-5" />}
-            href="/dashboard/projects/board"
-            index={1}
+          {/* This Week Calendar */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.3, duration: 0.4 }}
           >
-          <div className="space-y-4">
-            <motion.div
-              className="flex items-baseline gap-2"
-              initial={{ opacity: 0, scale: 0.8 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ delay: 0.25, duration: 0.4 }}
-            >
-              <span className="text-3xl font-bold text-foreground">{data.projects.active}</span>
-              <span className="text-sm text-muted-foreground">active</span>
-              {data.projects.overdue > 0 && (
-                <span className="text-red-500 text-sm flex items-center gap-1">
-                  <span className="relative flex h-2 w-2">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-500 opacity-75"></span>
-                    <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
-                  </span>
-                  {data.projects.overdue} overdue
-                </span>
-              )}
-            </motion.div>
+            <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="flex items-center gap-2">
+                <CalendarIcon className="h-5 w-5" />
+                This Week
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-7 gap-2 mb-4">
+                {weekDays.map((day) => {
+                  const dayProjects = data.urgentItems.filter(item => 
+                    item.dueDate && isSameDay(new Date(item.dueDate), day)
+                  )
+                  return (
+                    <div
+                      key={day.toString()}
+                      className={cn(
+                        "text-center p-2 rounded-lg border transition-colors",
+                        isToday(day) 
+                          ? "bg-primary/10 border-primary" 
+                          : "border-border hover:bg-muted/50"
+                      )}
+                    >
+                      <p className="text-xs text-muted-foreground">
+                        {format(day, 'EEE')}
+                      </p>
+                      <p className={cn(
+                        "text-lg font-bold",
+                        isToday(day) ? "text-primary" : "text-foreground"
+                      )}>
+                        {format(day, 'd')}
+                      </p>
+                      {dayProjects.length > 0 && (
+                        <div className="flex justify-center gap-0.5 mt-1">
+                          {dayProjects.slice(0, 3).map((_, i) => (
+                            <div key={i} className="h-1 w-1 rounded-full bg-destructive" />
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
 
-            <div className="grid grid-cols-4 gap-2 text-center">
-              <div>
-                <p className="text-lg font-semibold text-foreground">{data.projects.byStatus.backlog}</p>
-                <p className="text-xs text-muted-foreground">Backlog</p>
-              </div>
-              <div>
-                <p className="text-lg font-semibold text-foreground">{data.projects.byStatus.in_progress}</p>
-                <p className="text-xs text-muted-foreground">Active</p>
-              </div>
-              <div>
-                <p className="text-lg font-semibold text-foreground">{data.projects.byStatus.in_review}</p>
-                <p className="text-xs text-muted-foreground">Review</p>
-              </div>
-              <div>
-                <p className="text-lg font-semibold text-foreground">{data.projects.byStatus.done}</p>
-                <p className="text-xs text-muted-foreground">Done</p>
-              </div>
-            </div>
-
-            <Button
-              variant="ghost"
-              size="sm"
-              className={cn(
-                "w-full transition-all duration-200",
-                "hover:bg-red-500/10 hover:text-red-500"
-              )}
-              onClick={(e) => {
-                e.preventDefault()
-                router.push('/dashboard/projects/board')
-              }}
-            >
-              <Plus className="w-4 h-4 mr-1" /> New Project
-            </Button>
-          </div>
-          </WidgetCard>
-        </div>
-
-        {/* 3. Deep Research Widget */}
-        <div className="lg:col-span-1">
-          <WidgetCard
-            title="Deep Research"
-            icon={<Search className="w-5 h-5" />}
-            href="/dashboard/research"
-            index={2}
-          >
-          <div className="flex flex-col h-full">
-            <p className="text-muted-foreground text-sm mb-4">
-              AI-powered research assistant for in-depth client and market analysis
-            </p>
-            <div className="flex-1 flex items-center justify-center">
-              <Button
-                variant="outline"
-                className={cn(
-                  "transition-all duration-200",
-                  "hover:bg-red-500 hover:text-white hover:border-red-500"
+              {/* Today's Tasks */}
+              <div className="space-y-2">
+                <p className="text-sm font-medium text-muted-foreground">Today's Tasks</p>
+                {data.urgentItems
+                  .filter(item => item.dueDate && isToday(new Date(item.dueDate)))
+                  .map((item) => (
+                    <div key={item.id} className="flex items-center gap-2 p-2 rounded border border-border">
+                      <Checkbox />
+                      <span className="text-sm flex-1">{item.title}</span>
+                      <Link href={item.href}>
+                        <Button size="sm" variant="ghost">
+                          <ChevronRight className="h-4 w-4" />
+                        </Button>
+                      </Link>
+                    </div>
+                  ))}
+                {data.urgentItems.filter(item => item.dueDate && isToday(new Date(item.dueDate))).length === 0 && (
+                  <p className="text-sm text-muted-foreground text-center py-4">
+                    No tasks due today
+                  </p>
                 )}
-                onClick={(e) => {
-                  e.preventDefault()
-                  router.push('/dashboard/research')
-                }}
-              >
-                <Search className="w-4 h-4 mr-2" />
-                Start Research
-              </Button>
-            </div>
-          </div>
-          </WidgetCard>
+              </div>
+            </CardContent>
+          </Card>
+          </motion.div>
         </div>
 
-        {/* 4. Frameworks Widget */}
-        <div className="lg:col-span-1">
-          <WidgetCard
-          title="Frameworks"
-          icon={<BookOpen className="w-5 h-5" />}
-          href="/dashboard/frameworks"
-          index={3}
-        >
-          <div className="space-y-4">
-            <motion.div
-              initial={{ opacity: 0, scale: 0.8 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ delay: 0.35, duration: 0.4 }}
-            >
-              <p className="text-3xl font-bold text-foreground">{data.frameworks.total}</p>
-              <p className="text-sm text-muted-foreground">copywriting frameworks</p>
-            </motion.div>
+        {/* Right Column: Quick Capture + Recent Activity */}
+        <div className="space-y-6">
+          {/* Quick Capture */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.4, duration: 0.4 }}
+          >
+            <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base flex items-center gap-2">
+                <Zap className="h-4 w-4 text-amber-500" />
+                Quick Capture
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <form onSubmit={handleQuickCapture} className="space-y-3">
+                <div className="relative">
+                  <Textarea
+                    ref={inputRef}
+                    placeholder="Capture a quick thought... Use @client or #tag"
+                    value={quickCapture}
+                    onChange={handleInputChange}
+                    className="min-h-[120px] resize-none"
+                    disabled={submitting}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && !e.shiftKey && !showMentionPopup) {
+                        e.preventDefault()
+                        handleQuickCapture(e)
+                      }
+                    }}
+                  />
+                  
+                  {/* Mention Autocomplete Popup */}
+                  {showMentionPopup && (filteredClients.length > 0 || filteredProjects.length > 0 || filteredContent.length > 0) && (
+                    <div className="mention-popup absolute bottom-full left-0 mb-2 w-full max-w-sm bg-card border border-border rounded-lg shadow-xl overflow-hidden z-50">
+                      {/* Header */}
+                      <div className="px-3 py-2 border-b border-border bg-muted/50">
+                        <span className="text-xs text-muted-foreground">
+                          {mentionSearch ? `Searching "${mentionSearch}"` : 'Link to...'}
+                        </span>
+                      </div>
+                      
+                      {/* Categories */}
+                      <div className="max-h-64 overflow-y-auto">
+                        {/* Clients Section */}
+                        {filteredClients.length > 0 && (
+                          <div>
+                            <div className="px-3 py-1.5 text-xs font-medium text-muted-foreground flex items-center gap-2 bg-background/50 sticky top-0">
+                              <Users className="w-3 h-3" />
+                              Clients
+                            </div>
+                            {filteredClients.slice(0, 4).map(client => (
+                              <button
+                                key={client.id}
+                                type="button"
+                                onClick={() => insertMention('client', client)}
+                                className="w-full px-3 py-2 text-left text-sm hover:bg-muted flex items-center gap-2 transition-colors"
+                              >
+                                <span className="w-2 h-2 rounded-full bg-cyan-400 flex-shrink-0" />
+                                <span className="text-foreground truncate">{client.name}</span>
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                        
+                        {/* Projects Section */}
+                        {filteredProjects.length > 0 && (
+                          <div>
+                            <div className="px-3 py-1.5 text-xs font-medium text-muted-foreground flex items-center gap-2 bg-background/50 sticky top-0">
+                              <FolderKanban className="w-3 h-3" />
+                              Projects
+                            </div>
+                            {filteredProjects.slice(0, 4).map(project => (
+                              <button
+                                key={project.id}
+                                type="button"
+                                onClick={() => insertMention('project', project)}
+                                className="w-full px-3 py-2 text-left text-sm hover:bg-muted flex items-center gap-2 transition-colors"
+                              >
+                                <span className="w-2 h-2 rounded-full bg-green-400 flex-shrink-0" />
+                                <div className="flex items-center gap-2 flex-1 min-w-0">
+                                  <span className="text-foreground truncate">{project.name}</span>
+                                  {project.clientName && (
+                                    <span className="text-xs text-muted-foreground ml-auto flex-shrink-0">{project.clientName}</span>
+                                  )}
+                                </div>
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                        
+                        {/* Content Section */}
+                        {filteredContent.length > 0 && (
+                          <div>
+                            <div className="px-3 py-1.5 text-xs font-medium text-muted-foreground flex items-center gap-2 bg-background/50 sticky top-0">
+                              <FileText className="w-3 h-3" />
+                              Content
+                            </div>
+                            {filteredContent.slice(0, 4).map(content => (
+                              <button
+                                key={content.id}
+                                type="button"
+                                onClick={() => insertMention('content', content)}
+                                className="w-full px-3 py-2 text-left text-sm hover:bg-muted flex items-center gap-2 transition-colors"
+                              >
+                                <span className="w-2 h-2 rounded-full bg-purple-400 flex-shrink-0" />
+                                <div className="flex items-center gap-2 flex-1 min-w-0">
+                                  <span className="text-foreground truncate">{content.title}</span>
+                                  {content.clientName && (
+                                    <span className="text-xs text-muted-foreground ml-auto flex-shrink-0">{content.clientName}</span>
+                                  )}
+                                </div>
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                        
+                        {/* Empty state */}
+                        {filteredClients.length === 0 && filteredProjects.length === 0 && filteredContent.length === 0 && mentionSearch && (
+                          <div className="px-3 py-6 text-sm text-muted-foreground text-center">
+                            No matches found for "{mentionSearch}"
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+                <Button 
+                  type="submit" 
+                  className="w-full" 
+                  disabled={!quickCapture.trim() || submitting}
+                >
+                  {submitting ? (
+                    'Saving...'
+                  ) : (
+                    <>
+                      <Send className="h-4 w-4 mr-2" />
+                      Save to Journal
+                    </>
+                  )}
+                </Button>
+              </form>
+            </CardContent>
+          </Card>
+          </motion.div>
 
-            {data.frameworks.recent.length > 0 ? (
-              <div>
-                <p className="text-xs text-muted-foreground mb-2">Recent frameworks</p>
-                <div className="space-y-1">
-                  {data.frameworks.recent.map((framework: any) => (
-                    <p key={framework.id} className="text-sm text-foreground truncate">
-                      • {framework.title || framework.name}
-                    </p>
+          {/* Recent Activity */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.5, duration: 0.4 }}
+          >
+            <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base">Recent Activity</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {data.recentActivity && data.recentActivity.length > 0 ? (
+                <div className="space-y-2">
+                  {data.recentActivity.slice(0, 6).map((activity, i) => (
+                    <Link key={activity.id} href={activity.href}>
+                      <motion.div
+                        initial={{ opacity: 0, x: -10 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: i * 0.05 }}
+                        className="group flex items-start gap-3 p-2 -mx-2 rounded-lg hover:bg-muted/50 transition-all cursor-pointer"
+                      >
+                        <div className={cn(
+                          "mt-0.5 p-1.5 rounded-md flex-shrink-0",
+                          activity.type === 'project' ? "bg-purple-500/10" : "bg-green-500/10"
+                        )}>
+                          {activity.type === 'project' ? (
+                            <FolderKanban className="h-3.5 w-3.5 text-purple-500" />
+                          ) : (
+                            <FileText className="h-3.5 w-3.5 text-green-500" />
+                          )}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-foreground truncate group-hover:text-primary transition-colors">
+                            {activity.title}
+                          </p>
+                          <div className="flex items-center gap-2 mt-0.5">
+                            {activity.client && (
+                              <p className="text-xs text-muted-foreground truncate">
+                                {activity.client}
+                              </p>
+                            )}
+                            <span className="text-xs text-muted-foreground flex-shrink-0">
+                              •
+                            </span>
+                            <span className="text-xs text-muted-foreground flex-shrink-0">
+                              {formatDistanceToNow(new Date(activity.created_at), { addSuffix: true })}
+                            </span>
+                          </div>
+                        </div>
+                        <ChevronRight className="h-4 w-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0" />
+                      </motion.div>
+                    </Link>
                   ))}
                 </div>
-              </div>
-            ) : (
-              <div>
-                <p className="text-xs text-muted-foreground mb-2">Popular frameworks</p>
-                <div className="space-y-1">
-                  <p className="text-sm text-foreground">• AIDA (Attention, Interest, Desire, Action)</p>
-                  <p className="text-sm text-foreground">• PAS (Problem, Agitate, Solution)</p>
-                  <p className="text-sm text-foreground">• BAB (Before, After, Bridge)</p>
-                </div>
-              </div>
-            )}
-          </div>
-          </WidgetCard>
-        </div>
-
-        {/* 5. AI Studio Widget - WIDE (2 columns on desktop) */}
-        <div className="md:col-span-1 lg:col-span-2">
-          <WidgetCard
-            title="AI Studio"
-            icon={<Sparkles className="w-5 h-5" />}
-            href="/dashboard/ai/generate"
-            index={4}
-          >
-          <div className="space-y-4">
-            <motion.div
-              className="flex justify-between"
-              initial={{ opacity: 0, scale: 0.8 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ delay: 0.4, duration: 0.4 }}
-            >
-              <div>
-                <p className="text-2xl font-bold text-foreground">{data.ai.generations}</p>
-                <p className="text-xs text-muted-foreground">generations</p>
-              </div>
-              <div className="text-right">
-                <p className="text-2xl font-bold text-foreground">
-                  ${data.ai.spend.toFixed(2)}
+              ) : (
+                <p className="text-sm text-muted-foreground text-center py-8">
+                  No recent activity
                 </p>
-                <p className="text-xs text-muted-foreground">this month</p>
-              </div>
-            </motion.div>
-
-            <div>
-              <p className="text-xs text-muted-foreground mb-2">Quick generate</p>
-              <div className="flex flex-wrap gap-2">
-                {['Email', 'Ad', 'Blog', 'Landing'].map((type) => (
-                  <Button
-                    key={type}
-                    variant="outline"
-                    size="sm"
-                    className={cn(
-                      "transition-all duration-200",
-                      "hover:bg-red-500 hover:text-white hover:border-red-500"
-                    )}
-                    onClick={(e) => {
-                      e.preventDefault()
-                      router.push(`/dashboard/ai/generate?type=${type.toLowerCase()}`)
-                    }}
-                  >
-                    {type}
-                  </Button>
-                ))}
-              </div>
-            </div>
-
-            {data.ai.tokensUsed > 0 && (
-              <div className="pt-2 border-t border-border">
-                <p className="text-xs text-muted-foreground">
-                  {formatTokens(data.ai.tokensUsed)} tokens used
-                </p>
-              </div>
-            )}
-          </div>
-          </WidgetCard>
-        </div>
-
-        {/* 6. Content Widget */}
-        <div className="lg:col-span-1">
-          <WidgetCard
-            title="Content"
-            icon={<FileText className="w-5 h-5" />}
-            href="/dashboard/content"
-            index={5}
-          >
-          <div className="space-y-4">
-            <motion.div
-              className="flex items-baseline gap-2"
-              initial={{ opacity: 0, scale: 0.8 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ delay: 0.45, duration: 0.4 }}
-            >
-              <span className="text-3xl font-bold text-foreground">{data.content.total}</span>
-              <span className="text-sm text-muted-foreground">pieces</span>
-              {data.content.thisWeek > 0 && (
-                <span className="text-green-500 text-sm flex items-center gap-1">
-                  <TrendingUp className="w-3 h-3" />
-                  {data.content.thisWeek} this week
-                </span>
               )}
-            </motion.div>
+            </CardContent>
+          </Card>
+          </motion.div>
 
-            {data.content.recent.length > 0 && (
-              <div className="space-y-2">
-                <p className="text-xs text-muted-foreground">Recent content</p>
-                {data.content.recent.map((item) => (
-                  <div key={item.id} className="flex items-center gap-2 text-sm">
-                    <FileText className="w-4 h-4 text-muted-foreground flex-shrink-0" />
-                    <span className="truncate text-foreground">{item.title}</span>
-                  </div>
-                ))}
-              </div>
-            )}
-
-            <Button
-              variant="ghost"
-              size="sm"
-              className={cn(
-                "w-full transition-all duration-200",
-                "hover:bg-red-500/10 hover:text-red-500"
-              )}
-              onClick={(e) => {
-                e.preventDefault()
-                router.push('/dashboard/content')
-              }}
-            >
-              <Plus className="w-4 h-4 mr-1" /> Create Content
-            </Button>
-          </div>
-          </WidgetCard>
-        </div>
-
-        {/* 7. Journal Widget */}
-        <div className="lg:col-span-1">
-          <WidgetCard
-            title="Journal"
-            icon={<BookMarked className="w-5 h-5" />}
-            href="/dashboard/journal"
-            index={6}
+          {/* Quick Links */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.6, duration: 0.4 }}
           >
-          <div className="space-y-4">
-            <motion.div
-              initial={{ opacity: 0, scale: 0.8 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ delay: 0.5, duration: 0.4 }}
-            >
-              <p className="text-3xl font-bold text-foreground">{data.journal.totalEntries}</p>
-              <p className="text-sm text-muted-foreground">entries</p>
-            </motion.div>
-
-            {data.journal.lastEntry ? (
-              <>
-                <div>
-                  <p className="text-xs text-muted-foreground mb-2">
-                    Last entry: {formatDistanceToNow(new Date(data.journal.lastEntry.created_at), { addSuffix: true })}
-                  </p>
-                  <div className="p-3 bg-muted/30 rounded-lg">
-                    <p className="text-sm text-foreground line-clamp-3">
-                      {data.journal.lastEntry.content}
-                    </p>
-                  </div>
-                </div>
-              </>
-            ) : (
-              <p className="text-sm text-muted-foreground">No entries yet. Start capturing ideas!</p>
-            )}
-
-            <Button
-              variant="ghost"
-              size="sm"
-              className={cn(
-                "w-full transition-all duration-200",
-                "hover:bg-red-500/10 hover:text-red-500"
-              )}
-              onClick={(e) => {
-                e.preventDefault()
-                router.push('/dashboard/journal')
-              }}
-            >
-              <Plus className="w-4 h-4 mr-1" /> New Entry
-            </Button>
-          </div>
-          </WidgetCard>
-        </div>
-
-        {/* 8. Analytics Widget */}
-        <div className="lg:col-span-1">
-          <WidgetCard
-            title="Analytics"
-            icon={<BarChart3 className="w-5 h-5" />}
-            href="/dashboard/analytics"
-            index={7}
-          >
-          <div className="space-y-4">
-            <p className="text-sm text-muted-foreground">This month summary</p>
-
-            <div className="space-y-3">
-              <div className="flex justify-between items-center">
-                <span className="text-sm text-muted-foreground">Clients</span>
-                <span className="text-lg font-semibold text-foreground">{data.analytics.clients}</span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-sm text-muted-foreground">Projects</span>
-                <span className="text-lg font-semibold text-foreground">{data.analytics.projects}</span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-sm text-muted-foreground">Content</span>
-                <span className="text-lg font-semibold text-foreground">{data.analytics.content}</span>
-              </div>
-              <div className="flex justify-between items-center pt-2 border-t border-border">
-                <span className="text-sm text-muted-foreground">AI Spend</span>
-                <span className="text-lg font-semibold text-foreground">
-                  ${data.analytics.aiSpend.toFixed(2)}
-                </span>
-              </div>
-            </div>
-
-            <Button
-              variant="ghost"
-              size="sm"
-              className={cn(
-                "w-full transition-all duration-200",
-                "hover:bg-red-500/10 hover:text-red-500"
-              )}
-              onClick={(e) => {
-                e.preventDefault()
-                router.push('/dashboard/analytics')
-              }}
-            >
-              View Full Analytics
-            </Button>
-          </div>
-          </WidgetCard>
-        </div>
-
-        {/* 9. Archive Widget */}
-        <div className="lg:col-span-1">
-          <WidgetCard
-            title="Archive"
-            icon={<Archive className="w-5 h-5" />}
-            href="/dashboard/archive"
-            index={8}
-          >
-          <div className="space-y-4">
-            <motion.div
-              initial={{ opacity: 0, scale: 0.8 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ delay: 0.6, duration: 0.4 }}
-            >
-              <p className="text-3xl font-bold text-foreground">{data.archive.total}</p>
-              <p className="text-sm text-muted-foreground">archived items</p>
-            </motion.div>
-
-            <p className="text-sm text-muted-foreground">
-              Archived clients, projects, and content you've moved to storage
-            </p>
-
-            {data.archive.total > 0 && (
-              <Button
-                variant="outline"
-                size="sm"
-                className={cn(
-                  "w-full transition-all duration-200",
-                  "hover:bg-red-500/10 hover:text-red-500 hover:border-red-500"
-                )}
-                onClick={(e) => {
-                  e.preventDefault()
-                  router.push('/dashboard/archive')
-                }}
-              >
-                View Archive
-              </Button>
-            )}
-          </div>
-          </WidgetCard>
+            <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base">Quick Links</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-2">
+              <Link href="/dashboard/clients" className="block">
+                <Button variant="ghost" size="sm" className="w-full justify-start">
+                  <Users className="h-4 w-4 mr-2" />
+                  {data.activeClients} Active Clients
+                </Button>
+              </Link>
+              <Link href="/dashboard/projects/board" className="block">
+                <Button variant="ghost" size="sm" className="w-full justify-start">
+                  <FolderKanban className="h-4 w-4 mr-2" />
+                  {data.projectsByStatus.in_progress} In Progress
+                </Button>
+              </Link>
+              <Link href="/dashboard/content" className="block">
+                <Button variant="ghost" size="sm" className="w-full justify-start">
+                  <FileText className="h-4 w-4 mr-2" />
+                  {data.totalContent} Content Items
+                </Button>
+              </Link>
+              <Link href="/dashboard/journal" className="block">
+                <Button variant="ghost" size="sm" className="w-full justify-start">
+                  <CalendarIcon className="h-4 w-4 mr-2" />
+                  Open Journal
+                </Button>
+              </Link>
+            </CardContent>
+          </Card>
+          </motion.div>
         </div>
       </div>
     </div>
+  )
+}
+
+// ============================================================================
+// STAT CARD COMPONENT
+// ============================================================================
+
+interface StatCardProps {
+  icon: React.ReactNode
+  label: string
+  value: string | number
+  color?: string
+  trend?: string
+}
+
+function StatCard({ icon, label, value, color = 'text-primary', trend }: StatCardProps) {
+  const isPositiveTrend = trend && trend.includes('+')
+  const isNegativeTrend = trend && trend.includes('-')
+  
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.3 }}
+      whileHover={{ scale: 1.02 }}
+    >
+      <Card className="overflow-hidden transition-shadow hover:shadow-lg">
+        <CardContent className="p-4">
+          <div className="flex items-center justify-between mb-3">
+            <div className={cn("p-2 rounded-lg bg-muted/50", color)}>
+              {icon}
+            </div>
+            {trend && (
+              <div className={cn(
+                "flex items-center gap-1 text-xs font-medium px-2 py-1 rounded-full",
+                isPositiveTrend && "bg-green-500/10 text-green-600",
+                isNegativeTrend && "bg-red-500/10 text-red-600",
+                !isPositiveTrend && !isNegativeTrend && "bg-muted text-muted-foreground"
+              )}>
+                {isPositiveTrend && <TrendingUp className="h-3 w-3" />}
+                {isNegativeTrend && <TrendingDown className="h-3 w-3" />}
+                <span>{trend}</span>
+              </div>
+            )}
+          </div>
+          <p className="text-2xl font-bold text-foreground mb-1">{value}</p>
+          <p className="text-xs text-muted-foreground">{label}</p>
+        </CardContent>
+      </Card>
+    </motion.div>
   )
 }
