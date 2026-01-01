@@ -47,7 +47,11 @@ export function AppShell({ children }: AppShellProps) {
           <Button
             variant="ghost"
             size="icon"
-            onClick={toggleMobile}
+            onClick={(e) => {
+              e.stopPropagation()
+              e.preventDefault()
+              toggleMobile()
+            }}
             className="text-foreground hover:bg-muted"
           >
             <Menu className="h-5 w-5" />

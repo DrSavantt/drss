@@ -22,7 +22,7 @@ import {
 import { Button } from "@/components/ui/button"
 import { useSidebar } from "@/contexts/sidebar-context"
 import { CommandPalette } from "@/components/command-palette"
-import { motion, AnimatePresence } from "framer-motion"
+import { AnimatePresence, motion } from "framer-motion"
 
 // Reordered to follow marketer workflow
 const navItems = [
@@ -44,17 +44,6 @@ export function Sidebar() {
   const pathname = usePathname()
   const { collapsed, toggleCollapsed, mobileOpen, setMobileOpen } = useSidebar()
   const [commandOpen, setCommandOpen] = useState(false)
-  const [isMobile, setIsMobile] = useState(false)
-
-  // Detect if we're on mobile screen size
-  useEffect(() => {
-    const checkMobile = () => {
-      setIsMobile(window.innerWidth < 1024)
-    }
-    checkMobile()
-    window.addEventListener('resize', checkMobile)
-    return () => window.removeEventListener('resize', checkMobile)
-  }, [])
 
   // Global keyboard shortcut for command palette
   useEffect(() => {
@@ -103,27 +92,26 @@ export function Sidebar() {
           exit={{ opacity: 0 }}
           transition={{ duration: 0.2 }}
           className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 lg:hidden"
-          onClick={() => setMobileOpen(false)}
+          onClick={(e) => {
+            e.stopPropagation()
+            setMobileOpen(false)
+          }}
         />
       )}
     </AnimatePresence>
 
-    <motion.aside
-      initial={false}
-      animate={isMobile ? { x: mobileOpen ? 0 : -256 } : { x: 0 }}
-      transition={{
-        type: "spring",
-        stiffness: 300,
-        damping: 30,
-      }}
+    <aside
       className={cn(
         "fixed left-0 top-0 z-50 h-screen border-r border-sidebar-border bg-sidebar",
-        // Mobile: fixed width, slide in/out
-        "w-64",
-        // Desktop: width changes based on collapsed state
-        "lg:transition-[width] lg:duration-200 lg:ease-in-out",
+        "w-64 transition-transform duration-300 ease-in-out",
+        // Desktop: always visible, width changes
+        "lg:translate-x-0",
         collapsed && "lg:w-16",
         !collapsed && "lg:w-64",
+        // Mobile: slide based on mobileOpen
+        mobileOpen ? "translate-x-0" : "-translate-x-full",
+        // Override mobile transform on desktop
+        "lg:!translate-x-0"
       )}
     >
       <div className="flex h-full flex-col">
@@ -238,7 +226,7 @@ export function Sidebar() {
           </Button>
         </div>
       </div>
-    </motion.aside>
+    </aside>
 
     {/* Command Palette */}
     <CommandPalette open={commandOpen} onOpenChange={setCommandOpen} />
