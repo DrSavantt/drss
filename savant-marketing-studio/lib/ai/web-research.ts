@@ -3,7 +3,7 @@
  * This uses actual web search, not just AI training data
  */
 
-import { GoogleGenerativeAI, SchemaType } from '@google/generative-ai';
+import { GoogleGenerativeAI } from '@google/generative-ai';
 
 export interface WebSource {
   title: string;
@@ -65,7 +65,6 @@ export async function performWebResearch(
       tools: [{
         googleSearchRetrieval: {
           dynamicRetrievalConfig: {
-            mode: 'MODE_DYNAMIC',
             dynamicThreshold,
           }
         }
@@ -93,7 +92,7 @@ export async function performWebResearch(
           sources.push({
             title: chunk.web.title || 'Untitled',
             url: chunk.web.uri || '',
-            snippet: chunk.web.snippet,
+            // Note: snippet not available in current SDK version
           });
         }
       }
