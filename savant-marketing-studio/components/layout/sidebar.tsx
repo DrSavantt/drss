@@ -22,7 +22,6 @@ import {
 import { Button } from "@/components/ui/button"
 import { useSidebar } from "@/contexts/sidebar-context"
 import { CommandPalette } from "@/components/command-palette"
-import { AnimatePresence, motion } from "framer-motion"
 
 // Reordered to follow marketer workflow
 const navItems = [
@@ -84,21 +83,16 @@ export function Sidebar() {
   return (
     <>
     {/* Backdrop overlay - only on mobile when open */}
-    <AnimatePresence>
-      {mobileOpen && (
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: 0.2 }}
-          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 lg:hidden"
-          onClick={(e) => {
-            e.stopPropagation()
-            setMobileOpen(false)
-          }}
-        />
-      )}
-    </AnimatePresence>
+    {mobileOpen && (
+      <div
+        className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 lg:hidden transition-opacity duration-200"
+        onClick={(e) => {
+          e.stopPropagation()
+          setMobileOpen(false)
+        }}
+        aria-hidden="true"
+      />
+    )}
 
     <aside
       className={cn(
