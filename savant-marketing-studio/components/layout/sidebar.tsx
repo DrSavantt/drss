@@ -17,11 +17,12 @@ import {
   Search,
   Archive,
   BarChart3,
-  SearchIcon,
+  X,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { useSidebar } from "@/contexts/sidebar-context"
 import { CommandPalette } from "@/components/command-palette"
+import { motion, AnimatePresence } from "framer-motion"
 
 // Reordered to follow marketer workflow
 const navItems = [
@@ -41,8 +42,19 @@ const bottomNavItems = [{ href: "/dashboard/settings", label: "Settings", icon: 
 
 export function Sidebar() {
   const pathname = usePathname()
-  const { collapsed, toggleCollapsed } = useSidebar()
+  const { collapsed, toggleCollapsed, mobileOpen, setMobileOpen } = useSidebar()
   const [commandOpen, setCommandOpen] = useState(false)
+  const [isMobile, setIsMobile] = useState(false)
+
+  // Detect if we're on mobile screen size
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 1024)
+    }
+    checkMobile()
+    window.addEventListener('resize', checkMobile)
+    return () => window.removeEventListener('resize', checkMobile)
+  }, [])
 
   // Global keyboard shortcut for command palette
   useEffect(() => {
@@ -57,19 +69,68 @@ export function Sidebar() {
     return () => document.removeEventListener('keydown', handleKeyDown)
   }, [])
 
+  // Close mobile sidebar on route change
+  useEffect(() => {
+    setMobileOpen(false)
+  }, [pathname, setMobileOpen])
+
+  // Close mobile sidebar on escape key
+  useEffect(() => {
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && mobileOpen) {
+        setMobileOpen(false)
+      }
+    }
+    window.addEventListener('keydown', handleEscape)
+    return () => window.removeEventListener('keydown', handleEscape)
+  }, [mobileOpen, setMobileOpen])
+
+  const handleNavClick = () => {
+    // Only close on mobile (screen < lg)
+    if (window.innerWidth < 1024) {
+      setMobileOpen(false)
+    }
+  }
+
   return (
     <>
-    <aside
+    {/* Backdrop overlay - only on mobile when open */}
+    <AnimatePresence>
+      {mobileOpen && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.2 }}
+          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 lg:hidden"
+          onClick={() => setMobileOpen(false)}
+        />
+      )}
+    </AnimatePresence>
+
+    <motion.aside
+      initial={false}
+      animate={isMobile ? { x: mobileOpen ? 0 : -256 } : { x: 0 }}
+      transition={{
+        type: "spring",
+        stiffness: 300,
+        damping: 30,
+      }}
       className={cn(
-        "fixed left-0 top-0 z-40 h-screen border-r border-sidebar-border bg-sidebar transition-[width] duration-200 ease-in-out",
-        collapsed ? "w-16" : "w-64",
+        "fixed left-0 top-0 z-50 h-screen border-r border-sidebar-border bg-sidebar",
+        // Mobile: fixed width, slide in/out
+        "w-64",
+        // Desktop: width changes based on collapsed state
+        "lg:transition-[width] lg:duration-200 lg:ease-in-out",
+        collapsed && "lg:w-16",
+        !collapsed && "lg:w-64",
       )}
     >
       <div className="flex h-full flex-col">
-        {/* Logo */}
+        {/* Logo + Close Button */}
         <div className="flex h-16 items-center justify-between border-b border-sidebar-border px-4">
           {!collapsed && (
-            <Link href="/dashboard" className="flex items-center gap-2">
+            <Link href="/dashboard" className="flex items-center gap-2" onClick={handleNavClick}>
               <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary">
                 <span className="text-sm font-bold text-primary-foreground">D</span>
               </div>
@@ -77,10 +138,23 @@ export function Sidebar() {
             </Link>
           )}
           {collapsed && (
-            <div className="mx-auto flex h-8 w-8 items-center justify-center rounded-lg bg-primary">
+            <Link 
+              href="/dashboard" 
+              className="mx-auto flex h-8 w-8 items-center justify-center rounded-lg bg-primary"
+              onClick={handleNavClick}
+            >
               <span className="text-sm font-bold text-primary-foreground">D</span>
-            </div>
+            </Link>
           )}
+          
+          {/* Close button - mobile only */}
+          <button
+            onClick={() => setMobileOpen(false)}
+            className="lg:hidden p-2 -mr-2 text-muted-foreground hover:text-foreground transition-colors rounded-lg hover:bg-muted/50"
+            aria-label="Close sidebar"
+          >
+            <X className="h-5 w-5" />
+          </button>
         </div>
 
         {/* Search - Opens Command Palette */}
@@ -98,13 +172,14 @@ export function Sidebar() {
         )}
 
         {/* Main Nav */}
-        <nav className="flex-1 space-y-1 px-3 py-2">
+        <nav className="flex-1 space-y-1 px-3 py-2 overflow-y-auto">
           {navItems.map((item) => {
             const isActive = pathname === item.href
             return (
               <Link
                 key={item.href}
                 href={item.href}
+                onClick={handleNavClick}
                 className={cn(
                   "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors duration-150",
                   isActive
@@ -131,6 +206,7 @@ export function Sidebar() {
               <Link
                 key={item.href}
                 href={item.href}
+                onClick={handleNavClick}
                 className={cn(
                   "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors duration-150",
                   isActive
@@ -149,8 +225,8 @@ export function Sidebar() {
           })}
         </div>
 
-        {/* Collapse Toggle */}
-        <div className="border-t border-sidebar-border p-3">
+        {/* Collapse Toggle - Desktop only */}
+        <div className="hidden lg:block border-t border-sidebar-border p-3">
           <Button
             variant="ghost"
             size="sm"
@@ -162,7 +238,7 @@ export function Sidebar() {
           </Button>
         </div>
       </div>
-    </aside>
+    </motion.aside>
 
     {/* Command Palette */}
     <CommandPalette open={commandOpen} onOpenChange={setCommandOpen} />
