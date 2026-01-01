@@ -37,10 +37,12 @@ export function SidebarProvider({ children }: { children: ReactNode }) {
   };
 
   const setMobileOpen = (value: boolean) => {
+    console.log('[Context] setMobileOpen called with:', value);
     setMobileOpenState(value);
   };
 
   const toggleMobile = () => {
+    console.log('[Context] toggleMobile called, current:', mobileOpen, 'will set to:', !mobileOpen);
     setMobileOpenState(!mobileOpen);
   };
 
