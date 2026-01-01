@@ -2,6 +2,7 @@
 
 import { AIOrchestrator, TaskComplexity } from '@/lib/ai/orchestrator';
 import { searchFrameworks } from '@/lib/ai/rag';
+import { performWebResearch, WebSource } from '@/lib/ai/web-research';
 import { createClient } from '@/lib/supabase/server';
 import { revalidatePath } from 'next/cache';
 
@@ -19,6 +20,7 @@ export interface ResearchParams {
   topic: string;
   clientId?: string;
   depth?: 'quick' | 'standard' | 'comprehensive';
+  useWebSearch?: boolean; // NEW: Enable real web search via Gemini grounding
 }
 
 export interface ResearchResult {
@@ -29,6 +31,9 @@ export interface ResearchResult {
   outputTokens: number;
   savedAssetId?: string;
   frameworksUsed: string[];
+  webSources?: WebSource[]; // NEW: Actual web sources if web search was used
+  searchQueries?: string[]; // NEW: Search queries performed
+  groundingSupport?: number; // NEW: How much of response is grounded (0-1)
   clientContext?: {
     name: string;
     hasIntakeData: boolean;
@@ -37,16 +42,131 @@ export interface ResearchResult {
 }
 
 /**
+ * Generate a research plan before execution (Gemini-style)
+ */
+export async function generateResearchPlan(
+  topic: string,
+  mode: 'quick' | 'standard' | 'comprehensive'
+): Promise<{ items: string[]; estimatedTime: string; estimatedSources: string }> {
+  const supabase = await createClient();
+  if (!supabase) throw new Error('Supabase not configured');
+
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error('User not authenticated');
+
+  // Mode-specific configuration
+  const modeConfig = {
+    quick: {
+      itemCount: 3,
+      instruction: 'Focus on the 3 most important points only. Be concise and prioritize key insights.',
+      estimatedTime: '~30 seconds',
+      estimatedSources: '3-5',
+    },
+    standard: {
+      itemCount: 5,
+      instruction: 'Cover the main aspects comprehensively with balanced depth.',
+      estimatedTime: '~1-2 minutes',
+      estimatedSources: '8-12',
+    },
+    comprehensive: {
+      itemCount: 7,
+      instruction: 'Provide exhaustive coverage including edge cases, statistics, expert opinions, and counterarguments.',
+      estimatedTime: '~3-5 minutes',
+      estimatedSources: '15-20',
+    },
+  }[mode];
+
+  const planPrompt = `You are a research planning assistant. Create a focused research plan for this topic.
+
+Topic: ${topic}
+Research Mode: ${mode}
+
+Generate EXACTLY ${modeConfig.itemCount} specific subtopics or angles to research. Each should be a complete sentence describing what you'll investigate.
+
+${modeConfig.instruction}
+
+Format your response as a numbered list:
+1. [First subtopic]
+2. [Second subtopic]
+etc.
+
+Be specific and actionable. Focus on what's most important for this topic.`;
+
+  const orchestrator = new AIOrchestrator();
+  const result = await orchestrator.executeTask({
+    type: 'research_planning',
+    complexity: 'simple',
+    request: {
+      messages: [{ role: 'user', content: planPrompt }],
+      maxTokens: 500,
+      temperature: 0.7,
+    },
+  });
+
+  // Parse the response into plan items
+  const lines = result.content
+    .split('\n')
+    .map(line => line.trim())
+    .filter(line => /^\d+\./.test(line)) // Lines starting with numbers
+    .map(line => line.replace(/^\d+\.\s*/, '')); // Remove numbers
+
+  const items = lines.slice(0, modeConfig.itemCount); // Mode-specific count
+
+  // Fallback if parsing fails - use mode-specific defaults
+  if (items.length === 0) {
+    const fallbackItems = {
+      quick: [
+        'Key best practices and current trends',
+        'Industry benchmarks and standards',
+        'Critical success factors',
+      ],
+      standard: [
+        'Current best practices and emerging trends',
+        'Industry standards and benchmarks',
+        'Successful case studies and examples',
+        'Common challenges and proven solutions',
+        'Key metrics and KPIs to track',
+      ],
+      comprehensive: [
+        'Historical context and evolution of the field',
+        'Current best practices with statistical backing',
+        'Industry standards and regulatory considerations',
+        'Detailed case studies from leading organizations',
+        'Common challenges with multiple solution approaches',
+        'Advanced strategies and cutting-edge techniques',
+        'Future trends and expert predictions',
+      ],
+    }[mode];
+
+    return {
+      items: fallbackItems,
+      estimatedTime: modeConfig.estimatedTime,
+      estimatedSources: modeConfig.estimatedSources,
+    };
+  }
+
+  return {
+    items,
+    estimatedTime: modeConfig.estimatedTime,
+    estimatedSources: modeConfig.estimatedSources,
+  };
+}
+
+/**
  * Perform deep research on a topic using AI, frameworks, and optionally client context
+ * NEW: Can use real web search via Gemini grounding
  */
 export async function performDeepResearch(params: ResearchParams): Promise<ResearchResult> {
-  const { topic, clientId, depth = 'standard' } = params;
+  const { topic, clientId, depth = 'standard', useWebSearch = true } = params;
 
   const supabase = await createClient();
   if (!supabase) throw new Error('Supabase not configured');
 
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error('User not authenticated');
+
+  // Create mutable variable for web search decision (can be changed on fallback)
+  let shouldUseWebSearch = useWebSearch;
 
   // PHASE 1: Get client data if specified
   let clientContext: ResearchResult['clientContext'];
@@ -90,32 +210,87 @@ export async function performDeepResearch(params: ResearchParams): Promise<Resea
     console.error('RAG search failed (continuing without framework context):', error);
   }
 
-  // PHASE 3: Build comprehensive research prompt
-  const complexity: TaskComplexity = depth === 'comprehensive' ? 'complex' : depth === 'standard' ? 'medium' : 'simple';
+  // PHASE 3: Execute research - WEB SEARCH or AI-only
+  let result: any;
+  let webSources: WebSource[] | undefined;
+  let searchQueries: string[] | undefined;
+  let groundingSupport: number | undefined;
+  let modelUsed: string = 'unknown'; // Initialize with default
 
-  const systemPrompt = buildResearchSystemPrompt(depth);
-  const userPrompt = buildResearchUserPrompt({
-    topic,
-    clientData,
-    frameworkContext,
-    depth,
-  });
+  if (shouldUseWebSearch) {
+    // NEW: Use REAL web search via Gemini grounding
+    console.log('🌐 Using REAL web search (Gemini grounding)');
+    
+    try {
+      const webResult = await performWebResearch(topic, depth);
+      
+      // Enhance web research with client context if available
+      let enhancedContent = webResult.content;
+      if (clientData) {
+        enhancedContent = `# Research for ${clientData.name}\n\n${enhancedContent}`;
+      }
+      
+      result = {
+        content: enhancedContent,
+        inputTokens: webResult.inputTokens,
+        outputTokens: webResult.outputTokens,
+        cost: 0, // Will calculate below
+      };
+      
+      webSources = webResult.sources;
+      searchQueries = webResult.searchQueries;
+      groundingSupport = webResult.groundingSupport;
+      
+      // Set model name based on depth (matches web-research.ts logic)
+      const actualModel = depth === 'quick' ? 'gemini-1.5-flash' : 'gemini-1.5-pro';
+      modelUsed = `${actualModel} (web-grounded)`;
+      
+      // Calculate cost based on actual model used
+      // Gemini 1.5 Flash: $0.075/$0.30 per 1M tokens (input/output)
+      // Gemini 1.5 Pro: $1.25/$5.00 per 1M tokens (input/output)
+      const costPer1MInput = depth === 'quick' ? 0.075 : 1.25;
+      const costPer1MOutput = depth === 'quick' ? 0.30 : 5.0;
+      result.cost = (webResult.inputTokens / 1_000_000 * costPer1MInput) + 
+                    (webResult.outputTokens / 1_000_000 * costPer1MOutput);
+    } catch (error) {
+      console.error('Web search failed, falling back to AI-only research:', error);
+      // Fall back to AI-only if web search fails
+      shouldUseWebSearch = false;
+    }
+  }
+  
+  if (!shouldUseWebSearch) {
+    // FALLBACK: Use AI-only research (original implementation)
+    console.log('🤖 Using AI-only research (no web search)');
+    
+    const complexity: TaskComplexity = depth === 'comprehensive' ? 'complex' : depth === 'standard' ? 'medium' : 'simple';
 
-  // PHASE 4: Execute AI research
-  const orchestrator = new AIOrchestrator();
-  const result = await orchestrator.executeTask({
-    type: 'deep_research',
-    complexity,
-    clientId,
-    request: {
-      messages: [
-        { role: 'user', content: userPrompt }
-      ],
-      maxTokens: depth === 'comprehensive' ? 8192 : depth === 'standard' ? 4096 : 2048,
-      temperature: 0.7,
-      systemPrompt,
-    },
-  });
+    const systemPrompt = buildResearchSystemPrompt(depth);
+    const userPrompt = buildResearchUserPrompt({
+      topic,
+      clientData,
+      frameworkContext,
+      depth,
+    });
+
+    // Execute AI research via orchestrator
+    const orchestrator = new AIOrchestrator();
+    result = await orchestrator.executeTask({
+      type: 'deep_research',
+      complexity,
+      clientId,
+      request: {
+        messages: [
+          { role: 'user', content: userPrompt }
+        ],
+        maxTokens: depth === 'comprehensive' ? 8192 : depth === 'standard' ? 4096 : 2048,
+        temperature: 0.7,
+        systemPrompt,
+      },
+    });
+    
+    modelUsed = result.modelUsed;
+  }
 
   // PHASE 5: Save to content_assets as research_report
   let savedAssetId: string | undefined;
@@ -140,11 +315,15 @@ export async function performDeepResearch(params: ResearchParams): Promise<Resea
           research_topic: topic,
           research_depth: depth,
           ai_generated: true,
-          model_used: result.modelUsed,
+          model_used: modelUsed,
           cost_usd: result.cost,
           input_tokens: result.inputTokens,
           output_tokens: result.outputTokens,
           frameworks_used: frameworksUsed,
+          web_sources: webSources || [],
+          search_queries: searchQueries || [],
+          grounding_support: groundingSupport,
+          used_web_search: shouldUseWebSearch,
           generated_at: new Date().toISOString(),
         }
       })
@@ -164,15 +343,21 @@ export async function performDeepResearch(params: ResearchParams): Promise<Resea
     user_id: user.id,
     client_id: clientId || null,
     generation_type: 'research',
-    model_used: result.modelUsed,
+    model_used: modelUsed,
     prompt: topic,
-    output_data: { report: result.content },
+    output_data: { 
+      report: result.content,
+      web_sources: webSources || [],
+      search_queries: searchQueries || [],
+    },
     tokens_used: result.inputTokens + result.outputTokens,
     cost_estimate: result.cost,
     context_used: {
       frameworks_count: frameworksUsed.length,
       had_client_data: !!clientData,
       depth,
+      used_web_search: shouldUseWebSearch,
+      sources_count: webSources?.length || 0,
     },
   });
 
@@ -180,12 +365,15 @@ export async function performDeepResearch(params: ResearchParams): Promise<Resea
 
   return {
     report: result.content,
-    modelUsed: result.modelUsed,
+    modelUsed,
     cost: result.cost,
     inputTokens: result.inputTokens,
     outputTokens: result.outputTokens,
     savedAssetId,
     frameworksUsed,
+    webSources,
+    searchQueries,
+    groundingSupport,
     clientContext,
   };
 }
