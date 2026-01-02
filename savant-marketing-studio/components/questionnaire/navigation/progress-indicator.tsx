@@ -66,7 +66,7 @@ export default function ProgressIndicator({
                     </span>
                   )}
                 </div>
-                <span className="text-xs text-silver whitespace-nowrap hidden sm:block">
+                <span className="text-xs text-silver whitespace-nowrap">
                   {state === 'current' ? 'Current' : state === 'completed' ? 'Done' : ''}
                 </span>
               </button>

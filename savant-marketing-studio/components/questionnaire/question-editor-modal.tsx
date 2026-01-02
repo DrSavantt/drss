@@ -61,7 +61,7 @@ export function QuestionEditorModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={handleOpenChange}>
-      <DialogContent className="sm:max-w-[500px]">
+      <DialogContent className="max-w-[500px]">
         <DialogHeader>
           <DialogTitle>Edit Question</DialogTitle>
           <DialogDescription>for {clientName}</DialogDescription>

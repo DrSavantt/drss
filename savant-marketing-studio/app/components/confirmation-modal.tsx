@@ -1,6 +1,6 @@
 'use client'
 
-import { ResponsiveModal } from '@/components/responsive-modal'
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { AnimatedButton } from '@/components/animated-button'
 
 interface ConfirmationModalProps {
@@ -27,32 +27,33 @@ export function ConfirmationModal({
   isDanger = false
 }: ConfirmationModalProps) {
   return (
-    <ResponsiveModal
-      open={isOpen}
-      onOpenChange={(val) => { if (!val) onCancel() }}
-      title={title}
-    >
-      <div className="space-y-4">
-        <p className="text-silver">{message}</p>
-        <div className="flex gap-3 justify-end pt-2">
-          <AnimatedButton
-            variant="secondary"
-            onClick={onCancel}
-            disabled={isLoading}
-            className="h-11 md:h-10 px-4"
-          >
-            {cancelText}
-          </AnimatedButton>
-          <AnimatedButton
-            variant={isDanger ? 'primary' : 'secondary'}
-            onClick={onConfirm}
-            disabled={isLoading}
-            className={`${isDanger ? '' : 'bg-info text-foreground hover:bg-info/80'} h-11 md:h-10 px-4`}
-          >
-            {isLoading ? 'Processing...' : confirmText}
-          </AnimatedButton>
+    <Dialog open={isOpen} onOpenChange={(val) => { if (!val) onCancel() }}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>{title}</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-4">
+          <p className="text-silver">{message}</p>
+          <div className="flex gap-3 justify-end pt-2">
+            <AnimatedButton
+              variant="secondary"
+              onClick={onCancel}
+              disabled={isLoading}
+              className="h-10 px-4"
+            >
+              {cancelText}
+            </AnimatedButton>
+            <AnimatedButton
+              variant={isDanger ? 'primary' : 'secondary'}
+              onClick={onConfirm}
+              disabled={isLoading}
+              className={`${isDanger ? '' : 'bg-info text-foreground hover:bg-info/80'} h-10 px-4`}
+            >
+              {isLoading ? 'Processing...' : confirmText}
+            </AnimatedButton>
+          </div>
         </div>
-      </div>
-    </ResponsiveModal>
+      </DialogContent>
+    </Dialog>
   )
 }

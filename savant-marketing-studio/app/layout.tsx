@@ -20,17 +20,11 @@ const geistMono = Geist_Mono({
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
-  maximumScale: 1,
-  userScalable: false,
-  viewportFit: "cover",
 };
 
 export const metadata: Metadata = {
   title: "DRSS Marketing Studio",
   description: "Internal marketing agency management",
-  formatDetection: {
-    telephone: false,
-  },
 };
 
 export default function RootLayout({
@@ -56,7 +50,7 @@ export default function RootLayout({
           }}
         />
       </head>
-      <body className={`${roboto.variable} ${geistMono.variable} antialiased font-sans min-h-screen min-h-[100dvh]`}>
+      <body className={`${roboto.variable} ${geistMono.variable} antialiased font-sans min-h-screen`}>
         <ErrorBoundary>
           <ThemeProvider>
             {children}

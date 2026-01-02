@@ -34,7 +34,7 @@ export default function StepFooter({
             className="flex items-center gap-2 px-4 py-2 rounded-lg border border-border hover:bg-surface-highlight disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
             <ArrowLeft className="w-4 h-4" />
-            <span className="hidden sm:inline">Previous</span>
+            <span>Previous</span>
           </button>
 
           {/* Center: Step indicator and Save */}
@@ -52,22 +52,22 @@ export default function StepFooter({
               {saveStatus === 'saving' ? (
                 <>
                   <Loader2 className="w-4 h-4 animate-spin" />
-                  <span className="hidden sm:inline">Saving...</span>
+                  <span>Saving...</span>
                 </>
               ) : saveStatus === 'saved' ? (
                 <>
                   <Check className="w-4 h-4 text-green-500" />
-                  <span className="hidden sm:inline">Saved</span>
+                  <span>Saved</span>
                 </>
               ) : saveStatus === 'error' ? (
                 <>
                   <AlertCircle className="w-4 h-4 text-red-500" />
-                  <span className="hidden sm:inline">Error</span>
+                  <span>Error</span>
                 </>
               ) : (
                 <>
                   <Save className="w-4 h-4" />
-                  <span className="hidden sm:inline">Save Draft</span>
+                  <span>Save Draft</span>
                 </>
               )}
             </button>

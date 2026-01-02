@@ -276,7 +276,7 @@ export default function DashboardPage() {
               : "Everything's on track today"}
           </p>
         </div>
-        <p className="text-sm text-muted-foreground hidden sm:block">
+        <p className="text-sm text-muted-foreground">
           {format(new Date(), 'EEEE, MMMM d, yyyy')}
         </p>
       </motion.div>

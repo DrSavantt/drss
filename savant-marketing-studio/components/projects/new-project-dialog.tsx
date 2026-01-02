@@ -111,7 +111,7 @@ export function NewProjectDialog({ open, onOpenChange, defaultClientId, defaultC
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[500px]">
+      <DialogContent className="max-w-[500px]">
         <DialogHeader>
           <DialogTitle>Create New Project</DialogTitle>
           <DialogDescription>Add a new project to track your client work.</DialogDescription>

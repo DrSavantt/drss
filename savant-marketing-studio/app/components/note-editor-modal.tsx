@@ -1,10 +1,26 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { TiptapEditor } from '@/components/tiptap-editor'
+import dynamic from 'next/dynamic'
+import { Loader2 } from 'lucide-react'
 import { getClientProjects } from '@/app/actions/content'
-import { ResponsiveModal } from '@/components/responsive-modal'
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { AnimatedButton } from '@/components/animated-button'
+
+const TiptapEditor = dynamic(
+  () => import('@/components/tiptap-editor').then(mod => ({ default: mod.TiptapEditor })),
+  {
+    loading: () => (
+      <div className="min-h-[300px] flex items-center justify-center border border-border rounded-lg bg-background">
+        <div className="flex flex-col items-center gap-2">
+          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+          <p className="text-sm text-muted-foreground">Loading editor...</p>
+        </div>
+      </div>
+    ),
+    ssr: false
+  }
+)
 
 interface Client {
   id: string
@@ -120,17 +136,12 @@ export function NoteEditorModal({
   }
 
   return (
-    <ResponsiveModal
-      open={isOpen}
-      onOpenChange={(val) => { if (!val) handleClose() }}
-      title="New Note"
-      className="max-w-2xl"
-    >
-        <form onSubmit={handleSubmit} className="flex flex-col max-h-[85vh]">
-        <div className="flex items-center justify-between pb-4 border-b border-mid-gray/30">
-            <h2 className="text-lg font-semibold text-foreground">New Note</h2>
-          </div>
-
+    <Dialog open={isOpen} onOpenChange={(val) => { if (!val) handleClose() }}>
+      <DialogContent className="max-w-2xl">
+        <DialogHeader>
+          <DialogTitle>New Note</DialogTitle>
+        </DialogHeader>
+        <form onSubmit={handleSubmit} className="flex flex-col max-h-[70vh]">
         <div className="flex-1 overflow-y-auto py-4 space-y-4">
             {error && (
               <div className="bg-red-primary/10 border border-red-primary/30 text-red-primary px-3 py-2 rounded text-sm">
@@ -216,7 +227,7 @@ export function NoteEditorModal({
             variant="secondary"
               onClick={handleClose}
               disabled={loading}
-            className="h-11 md:h-10 px-4"
+            className="h-10 px-4"
             >
               Cancel
           </AnimatedButton>
@@ -224,12 +235,13 @@ export function NoteEditorModal({
               type="submit"
             variant="primary"
               disabled={loading}
-            className="h-11 md:h-10 px-4"
+            className="h-10 px-4"
           >
               {loading ? 'Saving...' : 'Save'}
           </AnimatedButton>
           </div>
         </form>
-    </ResponsiveModal>
+      </DialogContent>
+    </Dialog>
   )
 }

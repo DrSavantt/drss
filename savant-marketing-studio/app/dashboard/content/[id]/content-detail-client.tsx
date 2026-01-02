@@ -25,7 +25,22 @@ import {
 import { format } from 'date-fns'
 import { updateContentAsset, deleteContentAsset } from '@/app/actions/content'
 import { cn } from '@/lib/utils'
-import { TiptapEditor } from '@/components/tiptap-editor'
+import dynamic from 'next/dynamic'
+
+const TiptapEditor = dynamic(
+  () => import('@/components/tiptap-editor').then(mod => ({ default: mod.TiptapEditor })),
+  {
+    loading: () => (
+      <div className="min-h-[300px] flex items-center justify-center border border-border rounded-lg bg-background">
+        <div className="flex flex-col items-center gap-2">
+          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+          <p className="text-sm text-muted-foreground">Loading editor...</p>
+        </div>
+      </div>
+    ),
+    ssr: false
+  }
+)
 
 // ============================================================================
 // FULL CONTENT DETAIL - View and edit notes with TipTap

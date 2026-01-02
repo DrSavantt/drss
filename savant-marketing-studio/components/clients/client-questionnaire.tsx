@@ -387,18 +387,15 @@ export function ClientQuestionnaire({
         <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="view" className="flex items-center gap-2">
             <Eye className="w-4 h-4" />
-            <span className="hidden sm:inline">View Responses</span>
-            <span className="sm:hidden">View</span>
+            <span>View Responses</span>
           </TabsTrigger>
           <TabsTrigger value="fill" className="flex items-center gap-2">
             <PencilLine className="w-4 h-4" />
-            <span className="hidden sm:inline">{hasResponses ? 'Edit Form' : 'Fill Out'}</span>
-            <span className="sm:hidden">{hasResponses ? 'Edit' : 'Fill'}</span>
+            <span>{hasResponses ? 'Edit Form' : 'Fill Out'}</span>
           </TabsTrigger>
           <TabsTrigger value="history" className="flex items-center gap-2">
             <History className="w-4 h-4" />
-            <span className="hidden sm:inline">History</span>
-            <span className="sm:hidden">History</span>
+            <span>History</span>
           </TabsTrigger>
         </TabsList>
 

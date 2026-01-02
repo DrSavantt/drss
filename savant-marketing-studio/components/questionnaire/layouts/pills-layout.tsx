@@ -146,7 +146,7 @@ export function PillsLayout({
                   {index + 1}
                 </span>
               )}
-              <span className="hidden sm:inline">{section.title}</span>
+              <span>{section.title}</span>
             </button>
           );
         })}

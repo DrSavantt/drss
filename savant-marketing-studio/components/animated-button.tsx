@@ -19,7 +19,7 @@ export function AnimatedButton({
   type = 'button',
   disabled = false
 }: AnimatedButtonProps) {
-  const baseStyles = 'px-6 h-11 md:h-10 rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-primary/50 focus-visible:ring-offset-2 focus-visible:ring-offset-background'
+  const baseStyles = 'px-6 h-10 rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-primary/50 focus-visible:ring-offset-2 focus-visible:ring-offset-background'
   
   const variantStyles = {
     primary: 'bg-red-primary text-foreground shadow-premium-sm hover:bg-red-dark',

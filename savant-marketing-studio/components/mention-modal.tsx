@@ -48,7 +48,7 @@ export function MentionModal({ items, onSelect, onClose, position }: Props) {
       onClick={onClose}
     >
       <div
-        className="absolute bg-charcoal rounded-lg shadow-2xl border border-mid-gray w-80 sm:w-96 max-h-96 overflow-hidden"
+        className="absolute bg-charcoal rounded-lg shadow-2xl border border-mid-gray w-96 max-h-96 overflow-hidden"
         style={{ 
           top: Math.min(position.top, window.innerHeight - 400), 
           left: Math.min(position.left, window.innerWidth - 400) 

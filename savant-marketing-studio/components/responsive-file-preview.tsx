@@ -1,7 +1,6 @@
 'use client'
 
 import { useState } from 'react'
-import { useMobile } from '@/hooks/use-mobile'
 import { Download, ZoomIn, ZoomOut, Maximize2, Minimize2, ExternalLink } from 'lucide-react'
 
 interface ResponsiveFilePreviewProps {
@@ -17,7 +16,6 @@ export function ResponsiveFilePreview({
   fileType,
   className = ''
 }: ResponsiveFilePreviewProps) {
-  const isMobile = useMobile()
   const [zoom, setZoom] = useState(1)
   const [isFullscreen, setIsFullscreen] = useState(false)
   
@@ -41,7 +39,7 @@ export function ResponsiveFilePreview({
         
         {/* Action Buttons */}
         <div className="flex items-center gap-2 ml-4">
-          {isImage && !isMobile && (
+          {isImage && (
             <>
               <button
                 onClick={() => setZoom(Math.max(0.5, zoom - 0.25))}
@@ -155,8 +153,8 @@ export function ResponsiveFilePreview({
               className="w-full h-auto object-contain transition-transform duration-200 ease-out"
               style={{
                 transform: `scale(${zoom})`,
-                maxWidth: isFullscreen ? '100%' : isMobile ? '100%' : '900px',
-                maxHeight: isFullscreen ? '100%' : isMobile ? '60vh' : '700px'
+                maxWidth: isFullscreen ? '100%' : '900px',
+                maxHeight: isFullscreen ? '100%' : '700px'
               }}
             />
           </div>
@@ -178,13 +176,13 @@ export function ResponsiveFilePreview({
               data={`https://docs.google.com/viewer?url=${encodeURIComponent(fileUrl)}&embedded=true`}
               type="text/html"
               className="w-full border-0"
-              style={{ height: isMobile ? '500px' : '800px' }}
+              style={{ height: '800px' }}
             >
               {/* Fallback to iframe */}
               <iframe
                 src={`https://docs.google.com/viewer?url=${encodeURIComponent(fileUrl)}&embedded=true`}
                 className="w-full border-0"
-                style={{ height: isMobile ? '500px' : '800px', backgroundColor: 'white' }}
+                style={{ height: '800px', backgroundColor: 'white' }}
                 title={fileName}
                 sandbox="allow-same-origin allow-scripts allow-popups"
               />

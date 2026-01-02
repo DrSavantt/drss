@@ -15,7 +15,7 @@ export function QuickActionButton({ icon: Icon, label, href, variant }: QuickAct
   if (variant === 'primary') {
     return (
       <Link href={href}>
-        <AnimatedButton variant="primary" className="flex items-center gap-2 h-11 md:h-10 px-5">
+        <AnimatedButton variant="primary" className="flex items-center gap-2 h-10 px-5">
         <Icon className="w-4 h-4" />
         <span>{label}</span>
         </AnimatedButton>
@@ -25,7 +25,7 @@ export function QuickActionButton({ icon: Icon, label, href, variant }: QuickAct
   
   return (
     <Link href={href}>
-      <AnimatedButton variant="secondary" className="flex items-center gap-2 h-11 md:h-10 px-5">
+      <AnimatedButton variant="secondary" className="flex items-center gap-2 h-10 px-5">
       <Icon className="w-4 h-4" />
       <span>{label}</span>
       </AnimatedButton>

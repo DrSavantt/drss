@@ -7,12 +7,6 @@
    ======================================== */
 
 :root {
-  /* iOS Safe Area */
-  --sat: env(safe-area-inset-top);
-  --sar: env(safe-area-inset-right);
-  --sab: env(safe-area-inset-bottom);
-  --sal: env(safe-area-inset-left);
-
   /* Dark Mode Primary - Premium Feel */
   --background: 0 0% 4%;
   --foreground: 0 0% 98%;
@@ -164,10 +158,6 @@
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     text-rendering: optimizeLegibility;
-    padding-top: env(safe-area-inset-top);
-    padding-bottom: env(safe-area-inset-bottom);
-    padding-left: env(safe-area-inset-left);
-    padding-right: env(safe-area-inset-right);
   }
   
   /* Headings should be bold */
@@ -206,45 +196,6 @@
   background: hsl(var(--muted));
 }
 
-/* Mobile viewport fixes */
-@media (max-width: 768px) {
-  html {
-    width: 100vw;
-    min-height: -webkit-fill-available;
-    overflow-x: hidden;
-  }
-  
-  body {
-    width: 100vw;
-    min-height: 100vh;
-    min-height: 100dvh;
-    min-height: -webkit-fill-available;
-    overflow-x: hidden;
-    overscroll-behavior: none;
-  }
-  
-  * {
-    touch-action: manipulation;
-  }
-  
-  /* Hide scrollbars on mobile but keep functionality */
-  * {
-    scrollbar-width: none;
-    -ms-overflow-style: none;
-  }
-  
-  *::-webkit-scrollbar {
-    display: none;
-  }
-  
-  /* Keep smooth scroll functionality */
-  .overflow-y-auto,
-  .overflow-x-auto,
-  .overflow-auto {
-    -webkit-overflow-scrolling: touch;
-  }
-}
-
 /* Desktop smooth scrollbar */
 @media (min-width: 1024px) {
   * {
@@ -280,15 +231,6 @@ select:focus-visible {
   outline-offset: 2px;
 }
 
-/* Prevent iOS zoom on input focus */
-input,
-textarea,
-select,
-.ProseMirror {
-  font-size: 16px !important;
-  touch-action: manipulation;
-}
-
 /* Allow text selection in form fields */
 input,
 textarea,
@@ -309,24 +251,6 @@ textarea,
   margin: 0.75em 0;
 }
 
-/* Prevent text selection on mobile (optional) */
-* {
-  -webkit-tap-highlight-color: transparent;
-}
-
-/* PWA full-screen support */
-@media (display-mode: standalone) {
-  html, body {
-    width: 100vw;
-    min-height: 100vh;
-    min-height: 100dvh;
-  }
-  
-  body {
-    -webkit-tap-highlight-color: transparent;
-  }
-}
-
 /* Navigation header fix */
 nav {
   background: hsl(var(--background) / 0.95) !important;
@@ -339,26 +263,6 @@ nav {
   position: sticky;
   top: 0;
   z-index: 50;
-}
-
-/* iOS Safari specific fixes */
-@supports (-webkit-touch-callout: none) {
-  .min-h-screen {
-    min-height: 100dvh;
-  }
-  
-  .h-screen {
-    height: 100dvh;
-  }
-  
-  .fixed {
-    transform: translateZ(0);
-    -webkit-transform: translateZ(0);
-  }
-  
-  .fixed-no-bounce {
-    overscroll-behavior: none;
-  }
 }
 
 /* Reduce motion for accessibility */

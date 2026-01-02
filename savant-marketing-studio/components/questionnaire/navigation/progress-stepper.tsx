@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useRef, useEffect, useMemo } from 'react';
+import React, { useMemo } from 'react';
 import { Check } from 'lucide-react';
 import { QuestionnaireConfigLike } from '@/lib/questionnaire/questionnaire-config-context';
 
@@ -11,7 +11,7 @@ interface ProgressStepperProps {
   config: QuestionnaireConfigLike; // Required: use database config
 }
 
-// Short names for mobile display
+// Short names for step display
 const SHORT_NAMES: Record<string, string> = {
   avatar_definition: 'Avatar',
   dream_outcome: 'Dream',
@@ -29,8 +29,6 @@ export function ProgressStepper({
   onSectionClick,
   config,
 }: ProgressStepperProps) {
-  const scrollRef = useRef<HTMLDivElement>(null);
-  
   // Get enabled sections from database config
   const sections = useMemo(() => {
     const enabledSections = config.getEnabledSections();
@@ -53,67 +51,11 @@ export function ProgressStepper({
     return index >= 0 ? index + 1 : 1;
   }, [sections, currentSection]);
 
-  // Scroll to current section on mobile
-  useEffect(() => {
-    if (scrollRef.current) {
-      const currentButton = scrollRef.current.querySelector(`[data-section="${currentSection}"]`);
-      if (currentButton) {
-        currentButton.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
-      }
-    }
-  }, [currentSection]);
-
   return (
     <div className="w-full bg-surface border-b border-border">
-      <div className="max-w-5xl mx-auto px-2 sm:px-4 py-4 sm:py-6">
-        {/* Mobile: Horizontal scroll pills */}
-        <div className="block lg:hidden">
-          <div 
-            ref={scrollRef}
-            className="overflow-x-auto pb-2 -mx-2 px-2 questionnaire-stepper"
-          >
-            <div className="flex gap-2 min-w-max">
-              {sections.map((section) => (
-                <button
-                  key={section.number}
-                  data-section={section.number}
-                  onClick={() => onSectionClick(section.number)}
-                  className={`
-                    px-3 py-2 rounded-lg whitespace-nowrap text-sm font-medium
-                    transition-all min-h-[44px] flex items-center gap-2
-                    ${isCompleted(section.number)
-                      ? 'bg-green-500/10 text-green-500 border border-green-500/30'
-                      : isCurrent(section.number)
-                        ? 'bg-red-primary text-white'
-                        : 'bg-surface-highlight text-silver border border-border'
-                    }
-                  `}
-                >
-                  {isCompleted(section.number) && (
-                    <Check className="w-4 h-4" strokeWidth={3} />
-                  )}
-                  <span className="hidden xs:inline">{section.number}.</span>
-                  <span>{section.name}</span>
-                </button>
-              ))}
-            </div>
-          </div>
-          
-          {/* Mobile Step Counter */}
-          <div className="text-center mt-3 pt-3 border-t border-border/50">
-            <span className="text-xs sm:text-sm text-silver">
-              Step <span className="text-foreground font-semibold">{currentPosition}</span> of{' '}
-              <span className="text-foreground font-semibold">{totalSections}</span>
-              <span className="mx-2 text-border">•</span>
-              <span className="text-silver">
-                {sections.find(s => s.number === currentSection)?.fullName}
-              </span>
-            </span>
-          </div>
-        </div>
-
+      <div className="max-w-5xl mx-auto px-4 py-6">
         {/* Desktop: Full stepper track */}
-        <div className="hidden lg:block">
+        <div>
           <div className="flex items-center justify-between pb-2">
             {sections.map((section, index) => (
               <React.Fragment key={section.number}>
@@ -173,7 +115,7 @@ export function ProgressStepper({
             ))}
           </div>
 
-          {/* Desktop Step Counter */}
+          {/* Step Counter */}
           <div className="text-center mt-4 pt-4 border-t border-border/50">
             <span className="text-sm text-silver">
               Step <span className="text-foreground font-semibold">{currentPosition}</span> of{' '}

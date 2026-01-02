@@ -1,7 +1,20 @@
 'use client'
 
 import { useState } from 'react'
-import { TiptapEditor } from '@/components/tiptap-editor'
+import dynamic from 'next/dynamic'
+import { Loader2 } from 'lucide-react'
+
+const TiptapEditor = dynamic(
+  () => import('@/components/tiptap-editor').then(mod => ({ default: mod.TiptapEditor })),
+  {
+    loading: () => (
+      <div className="min-h-[400px] flex items-center justify-center border border-border rounded-lg">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+    ),
+    ssr: false
+  }
+)
 
 export default function TestTiptapAIPage() {
   const [content, setContent] = useState(`<h1>Welcome to the AI-Powered Editor</h1>

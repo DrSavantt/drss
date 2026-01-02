@@ -54,7 +54,7 @@ export function WidgetCard({ title, icon, href, children, className, index = 0 }
           </div>
 
           {/* Content */}
-          <div className="flex-1 p-4 overflow-y-auto scrollbar-hide">
+          <div className="flex-1 p-4 overflow-y-auto">
             {children}
           </div>
         </div>

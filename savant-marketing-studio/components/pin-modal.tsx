@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { ResponsiveModal } from '@/components/responsive-modal';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { AnimatedButton } from '@/components/animated-button';
 
 export default function PinModal({ open, onClose }: { open: boolean; onClose: () => void }) {
@@ -62,41 +62,41 @@ export default function PinModal({ open, onClose }: { open: boolean; onClose: ()
   const remaining = lockout ? Math.max(0, Math.floor((lockout - Date.now())/1000)) : 0;
 
   return (
-    <ResponsiveModal
-      open={open}
-      onOpenChange={(val) => { if (!val) onClose() }}
-      title="Admin PIN"
-      className="max-w-sm"
-    >
-      <div className="text-center">
-        {lockout ? (
-          <div className="text-error mb-2 font-semibold">Locked for {Math.ceil(remaining/60)}m {remaining%60}s</div>
-        ) : null}
-        <div>
-          <input
-            ref={inputRef}
-            type="password"
-            inputMode="numeric"
-            pattern="[0-9]*"
-            disabled={loading || !!lockout}
-            value={pin}
-            onChange={handleInput}
-            autoFocus
-            className="mb-3 block w-full text-center text-2xl tracking-widest px-4 py-2 rounded-lg border border-mid-gray bg-dark-gray text-foreground"
-            placeholder="••••••"
-            maxLength={6}
-          />
-          {loading && (
-            <div className="text-sm text-silver mb-3">Checking...</div>
-          )}
+    <Dialog open={open} onOpenChange={(val) => { if (!val) onClose() }}>
+      <DialogContent className="max-w-sm">
+        <DialogHeader>
+          <DialogTitle>Admin PIN</DialogTitle>
+        </DialogHeader>
+        <div className="text-center">
+          {lockout ? (
+            <div className="text-error mb-2 font-semibold">Locked for {Math.ceil(remaining/60)}m {remaining%60}s</div>
+          ) : null}
+          <div>
+            <input
+              ref={inputRef}
+              type="password"
+              inputMode="numeric"
+              pattern="[0-9]*"
+              disabled={loading || !!lockout}
+              value={pin}
+              onChange={handleInput}
+              autoFocus
+              className="mb-3 block w-full text-center text-2xl tracking-widest px-4 py-2 rounded-lg border border-mid-gray bg-dark-gray text-foreground"
+              placeholder="••••••"
+              maxLength={6}
+            />
+            {loading && (
+              <div className="text-sm text-silver mb-3">Checking...</div>
+            )}
+          </div>
+          <div className="mt-3 text-sm min-h-[20px] text-error">{error}</div>
+          <div className="mt-4 flex justify-center">
+            <AnimatedButton variant="secondary" onClick={onClose} className="h-10 px-4">
+              Close
+            </AnimatedButton>
+          </div>
         </div>
-        <div className="mt-3 text-sm min-h-[20px] text-error">{error}</div>
-        <div className="mt-4 flex justify-center">
-          <AnimatedButton variant="secondary" onClick={onClose} className="h-11 md:h-10 px-4">
-            Close
-          </AnimatedButton>
-        </div>
-      </div>
-    </ResponsiveModal>
+      </DialogContent>
+    </Dialog>
   );
 }

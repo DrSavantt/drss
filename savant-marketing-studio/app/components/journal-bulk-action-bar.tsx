@@ -26,7 +26,7 @@ export function JournalBulkActionBar({
   return (
     <div className="fixed bottom-0 left-0 right-0 z-40 bg-charcoal border-t-2 border-red-primary shadow-2xl">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="py-4 flex flex-col sm:flex-row items-center justify-between gap-4">
+        <div className="py-4 flex flex-row items-center justify-between gap-4">
           {/* Selection Count */}
           <div className="flex items-center gap-2">
             <div className="w-2 h-2 bg-red-primary rounded-full animate-pulse" />

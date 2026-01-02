@@ -1,10 +1,26 @@
 'use client'
 
 import { createContentAsset, getClientProjects } from '@/app/actions/content'
-import { TiptapEditor } from '@/components/tiptap-editor'
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { useParams } from 'next/navigation'
+import dynamic from 'next/dynamic'
+import { Loader2 } from 'lucide-react'
+
+const TiptapEditor = dynamic(
+  () => import('@/components/tiptap-editor').then(mod => ({ default: mod.TiptapEditor })),
+  {
+    loading: () => (
+      <div className="min-h-[300px] flex items-center justify-center border border-border rounded-lg bg-background">
+        <div className="flex flex-col items-center gap-2">
+          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+          <p className="text-sm text-muted-foreground">Loading editor...</p>
+        </div>
+      </div>
+    ),
+    ssr: false
+  }
+)
 
 export default function NewContentPage() {
   const params = useParams()

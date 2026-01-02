@@ -135,9 +135,8 @@ module.exports = {
         },
       },
       screens: {
-        'xs': '320px',
-        'sm': '375px',
-        'md': '428px',
+        'sm': '640px',
+        'md': '768px',
         'lg': '1024px',
         'xl': '1280px',
         '2xl': '1536px',
@@ -147,19 +146,5 @@ module.exports = {
   plugins: [
     require("tailwindcss-animate"), 
     require("@tailwindcss/typography"),
-    function({ addUtilities }) {
-      addUtilities({
-        '.scrollbar-hide': {
-          /* Firefox */
-          'scrollbar-width': 'none',
-          /* IE and Edge */
-          '-ms-overflow-style': 'none',
-          /* Chrome, Safari and Opera */
-          '&::-webkit-scrollbar': {
-            display: 'none',
-          },
-        },
-      })
-    },
   ],
 }

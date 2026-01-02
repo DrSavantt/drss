@@ -6,7 +6,7 @@ import { getJournalEntriesByProject } from '@/app/actions/journal'
 import { highlightMentions } from '@/lib/utils/mentions'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { ResponsiveModal } from '@/components/responsive-modal'
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { AnimatedButton } from '@/components/animated-button'
 
 interface Project {
@@ -139,13 +139,12 @@ export function ProjectModal({ project, onClose, onUpdate, onDelete }: ProjectMo
 
   return (
     <>
-      <ResponsiveModal
-        open={true}
-        onOpenChange={(val) => { if (!val) onClose() }}
-        title={isEditing ? 'Edit Project' : 'Project Details'}
-        className="max-w-md"
-      >
-        <div className="space-y-6">
+      <Dialog open={true} onOpenChange={(val) => { if (!val) onClose() }}>
+        <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>{isEditing ? 'Edit Project' : 'Project Details'}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-6">
           {error && (
             <div className="mb-6 rounded-md bg-error/10 border border-error/30 p-4">
               <p className="text-sm text-error">{error}</p>
@@ -326,14 +325,14 @@ export function ProjectModal({ project, onClose, onUpdate, onDelete }: ProjectMo
                 <AnimatedButton
                   variant="primary"
                   onClick={() => setIsEditing(true)}
-                  className="flex-1 h-11 md:h-10"
+                  className="flex-1 h-10"
                 >
                   Edit Project
                 </AnimatedButton>
                 <AnimatedButton
                   variant="secondary"
                   onClick={() => setIsDeleting(true)}
-                  className="h-11 md:h-10"
+                  className="h-10"
                 >
                   Delete
                 </AnimatedButton>
@@ -428,7 +427,7 @@ export function ProjectModal({ project, onClose, onUpdate, onDelete }: ProjectMo
                   type="submit"
                   variant="primary"
                   disabled={loading}
-                  className="flex-1 h-11 md:h-10"
+                  className="flex-1 h-10"
                 >
                   {loading ? 'Saving...' : 'Save Changes'}
                 </AnimatedButton>
@@ -437,47 +436,48 @@ export function ProjectModal({ project, onClose, onUpdate, onDelete }: ProjectMo
                   variant="secondary"
                   onClick={() => setIsEditing(false)}
                   disabled={loading}
-                  className="h-11 md:h-10"
+                  className="h-10"
                 >
                   Cancel
                 </AnimatedButton>
               </div>
             </form>
           )}
-        </div>
-      </ResponsiveModal>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {isDeleting && (
-        <ResponsiveModal
-          open={isDeleting}
-          onOpenChange={(val) => { if (!val) setIsDeleting(false) }}
-          title={`Delete ${project.name}?`}
-          className="max-w-md"
-        >
-          <div className="space-y-4">
-            <p className="text-sm text-silver">
-              This will permanently delete this project. This action cannot be undone.
-            </p>
-            <div className="flex gap-4">
-              <AnimatedButton
-                variant="primary"
-                onClick={handleDelete}
-                disabled={loading}
-                className="flex-1 h-11 md:h-10"
-              >
-                {loading ? 'Deleting...' : 'Delete'}
-              </AnimatedButton>
-              <AnimatedButton
-                variant="secondary"
-                onClick={() => setIsDeleting(false)}
-                disabled={loading}
-                className="flex-1 h-11 md:h-10"
-              >
-                Cancel
-              </AnimatedButton>
+        <Dialog open={isDeleting} onOpenChange={(val) => { if (!val) setIsDeleting(false) }}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle>Delete {project.name}?</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              <p className="text-sm text-silver">
+                This will permanently delete this project. This action cannot be undone.
+              </p>
+              <div className="flex gap-4">
+                <AnimatedButton
+                  variant="primary"
+                  onClick={handleDelete}
+                  disabled={loading}
+                  className="flex-1 h-10"
+                >
+                  {loading ? 'Deleting...' : 'Delete'}
+                </AnimatedButton>
+                <AnimatedButton
+                  variant="secondary"
+                  onClick={() => setIsDeleting(false)}
+                  disabled={loading}
+                  className="flex-1 h-10"
+                >
+                  Cancel
+                </AnimatedButton>
+              </div>
             </div>
-          </div>
-        </ResponsiveModal>
+          </DialogContent>
+        </Dialog>
       )}
     </>
   )
