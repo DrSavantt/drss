@@ -261,7 +261,6 @@ export function useQuestionnaireForm(
       const isCurrentSectionValid = dbEnabledSections.some(s => s.id === currentSection);
       
       if (!isCurrentSectionValid && dbEnabledSections.length > 0) {
-        console.log('[useQuestionnaireForm] Current section not valid in DB config, switching to first enabled section:', dbEnabledSections[0].id);
         setCurrentSection(dbEnabledSections[0].id);
       }
     }

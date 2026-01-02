@@ -1,6 +1,8 @@
 // ============================================
 // QUESTIONNAIRE COMPONENT EXPORTS
 // ============================================
+// NOTE: Using explicit exports (no `export * from`) to improve tree-shaking
+// and reduce bundle size. Only commonly used components are exported.
 
 // Main unified form component
 export { UnifiedQuestionnaireForm } from './unified-questionnaire-form';
@@ -21,19 +23,25 @@ export { default as StepFooter } from './navigation/step-footer';
 export { QuestionRenderer } from './question-renderer';
 export { default as SectionRenderer } from './section-renderer';
 
-// Question types
-export * from './question-types';
+// Question types - explicit exports (no barrel re-export)
+export { default as QuestionWrapper } from './question-types/question-wrapper';
+export { default as ShortTextQuestion } from './question-types/short-text-question';
+export { default as LongTextQuestion } from './question-types/long-text-question';
+export { default as MultipleChoiceQuestion } from './question-types/multiple-choice-question';
 
-// Help system
-export * from './help-system';
+// Help system - explicit exports
+export { default as HelpPanel } from './help-system/help-panel';
+export { default as HelpTrigger } from './help-system/help-trigger';
+export { ConfigHelpContent } from './help-system/config-help-content';
 
-// Sections
-export * from './sections';
+// Sections - explicit exports
+export { default as SectionHeader } from './sections/section-header';
+export { default as SectionContainer } from './sections/section-container';
 
-// Review components
-export * from './review';
+// Review components - explicit exports
+export { default as QuestionnaireReview } from './review/questionnaire-review';
+export { default as ReviewSectionCard } from './review/review-section-card';
 
 // Response viewing
 export { ResponseViewer } from './response-viewer';
 export { ResponseHistory, type ResponseVersion } from './response-history';
-

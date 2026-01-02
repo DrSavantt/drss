@@ -1,5 +1,13 @@
 # DRSS / Savant Marketing Studio - Cursor AI Rules
 
+## 🚀 SERVER LAUNCH RULES - CRITICAL
+
+When launching development servers:
+1. **ALWAYS** kill all running servers first: `lsof -ti:3000,3001,3002,3003 | xargs kill -9 2>/dev/null`
+2. **ALWAYS** launch on port 3000 only
+3. **NEVER** run multiple instances simultaneously
+4. Use command: `cd savant-marketing-studio && npm run dev` (defaults to 3000)
+
 ## 🎨 DESIGN SYSTEM ENFORCEMENT - CRITICAL
 
 ### ❌ NEVER USE HARDCODED COLORS

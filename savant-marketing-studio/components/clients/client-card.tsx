@@ -1,3 +1,4 @@
+import { memo, useMemo } from "react"
 import Link from "next/link"
 import { Badge } from "@/components/ui/badge"
 import { Building2, FolderKanban, FileText, Sparkles } from "lucide-react"
@@ -24,8 +25,11 @@ const statusConfig = {
   new: { label: "New", className: "bg-info/10 text-info border-info/20" },
 }
 
-export function ClientCard({ client }: ClientCardProps) {
-  const status = statusConfig[client.status]
+// PERFORMANCE OPTIMIZATION: Memoized to prevent re-renders when parent state changes
+// Only re-renders when the specific client prop changes
+export const ClientCard = memo(function ClientCard({ client }: ClientCardProps) {
+  // Memoize status lookup to prevent recalculation every render
+  const status = useMemo(() => statusConfig[client.status], [client.status])
 
   return (
     <Link href={`/dashboard/clients/${client.id}`}>
@@ -77,4 +81,6 @@ export function ClientCard({ client }: ClientCardProps) {
       </div>
     </Link>
   )
-}
+})
+
+ClientCard.displayName = 'ClientCard'

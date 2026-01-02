@@ -76,17 +76,7 @@ export function NewProjectDialog({ open, onOpenChange, defaultClientId, defaultC
       formData.set('due_date', formData.get('due') as string)
       formData.set('priority', priority)
       
-      console.log('Creating project with:', {
-        clientId: selectedClient,
-        name: formData.get('name'),
-        due_date: formData.get('due_date'),
-        priority,
-        description: formData.get('description')
-      })
-      
       const result = await createProject(selectedClient, formData)
-      
-      console.log('Create project result:', result)
       
       if (result.error) {
         alert(result.error)

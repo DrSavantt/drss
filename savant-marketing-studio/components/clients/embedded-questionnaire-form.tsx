@@ -168,7 +168,6 @@ export function EmbeddedQuestionnaireForm({
           const responseData = await responsesResponse.json();
           if (responseData.data?.response_data) {
             setExistingData(responseData.data.response_data);
-            console.log('[EmbeddedQuestionnaireForm] Loaded existing responses from database');
           }
         }
       } catch (err) {
@@ -199,7 +198,6 @@ export function EmbeddedQuestionnaireForm({
       throw new Error(errorData.error || 'Failed to save progress');
     }
 
-    console.log('[EmbeddedQuestionnaireForm] Draft saved to database');
   }, [clientId]);
 
   // Submit handler - marks as completed
@@ -219,7 +217,6 @@ export function EmbeddedQuestionnaireForm({
       throw new Error(errorData.error || 'Failed to submit questionnaire');
     }
     
-    console.log('[EmbeddedQuestionnaireForm] Questionnaire submitted');
     onComplete?.();
   }, [clientId, handleSave, onComplete]);
 

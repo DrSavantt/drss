@@ -35,7 +35,16 @@ export async function GET() {
       })
     );
 
-    return NextResponse.json(frameworksWithChunks);
+    const response = NextResponse.json(frameworksWithChunks);
+    
+    // Cache for 60 seconds, allow stale-while-revalidate for 120 seconds
+    // Frameworks change less frequently, so we can use longer cache
+    response.headers.set(
+      'Cache-Control',
+      'private, s-maxage=60, stale-while-revalidate=120'
+    );
+    
+    return response;
   } catch (error) {
     console.error('Unexpected error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });

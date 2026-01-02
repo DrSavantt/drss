@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from "react"
+import { useState, useRef, useEffect } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import {
   Search,
@@ -51,6 +51,19 @@ export default function DeepResearchPage() {
   const [liveUpdates, setLiveUpdates] = useState<LiveUpdate[]>([])
   const [progress, setProgress] = useState(0)
   const [result, setResult] = useState<ResearchResult | null>(null)
+  
+  // Track intervals and timeouts for cleanup
+  const intervalsRef = useRef<{ progress?: NodeJS.Timeout; update?: NodeJS.Timeout }>({})
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null)
+  
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (intervalsRef.current.progress) clearInterval(intervalsRef.current.progress)
+      if (intervalsRef.current.update) clearInterval(intervalsRef.current.update)
+      if (timeoutRef.current) clearTimeout(timeoutRef.current)
+    }
+  }, [])
 
   const handleStartPlanning = async () => {
     if (!query.trim()) return
@@ -84,7 +97,7 @@ export default function DeepResearchPage() {
 
     setLiveUpdates(updates)
 
-    // Simulate progress
+    // Simulate progress - store interval for cleanup
     const progressInterval = setInterval(() => {
       setProgress(prev => {
         if (prev >= 90) {
@@ -94,8 +107,9 @@ export default function DeepResearchPage() {
         return prev + Math.random() * 10
       })
     }, 500)
+    intervalsRef.current.progress = progressInterval
 
-    // Update statuses
+    // Update statuses - store interval for cleanup
     const updateInterval = setInterval(() => {
       setLiveUpdates(prev => {
         const nextLoading = prev.findIndex(u => u.status === 'loading')
@@ -111,6 +125,7 @@ export default function DeepResearchPage() {
         return prev
       })
     }, 1500)
+    intervalsRef.current.update = updateInterval
 
     try {
       const researchResult = await performDeepResearch({
@@ -121,17 +136,21 @@ export default function DeepResearchPage() {
 
       clearInterval(progressInterval)
       clearInterval(updateInterval)
+      intervalsRef.current = {}
       
       setProgress(100)
       setLiveUpdates(prev => prev.map(u => ({ ...u, status: 'complete' })))
       
-      setTimeout(() => {
+      // Store timeout for cleanup
+      timeoutRef.current = setTimeout(() => {
         setResult(researchResult)
         setPhase('complete')
+        timeoutRef.current = null
       }, 500)
     } catch (error) {
       clearInterval(progressInterval)
       clearInterval(updateInterval)
+      intervalsRef.current = {}
       console.error('Research failed:', error)
       alert(error instanceof Error ? error.message : 'Research failed')
       setPhase('idle')

@@ -144,27 +144,19 @@ export function QuestionnaireConfigProvider({
 
   // Fetch on mount if not pre-loaded - ONLY ONCE
   useEffect(() => {
-    console.log('[Context] useEffect RAN - state:', { isLoaded: state.isLoaded, isLoading: state.isLoading });
-    
     // Skip if already loaded or currently loading
     if (state.isLoaded || state.isLoading) {
-      console.log('[Context] Skipping fetch - already loaded or loading');
       return;
     }
 
-    console.log('[Context] Proceeding with fetch...');
     let isMounted = true;
     let timeoutId: NodeJS.Timeout;
 
     const fetchConfig = async () => {
-      console.log('[Context] FETCH START - using API route');
-      
       if (!isMounted) return;
       setState(prev => ({ ...prev, isLoading: true, error: null }));
       
       try {
-        console.log('[Context] Calling /api/questionnaire-config...');
-        
         // Create timeout promise (10 seconds for API route)
         const timeoutPromise = new Promise<never>((_, reject) => {
           timeoutId = setTimeout(() => {
@@ -185,18 +177,12 @@ export function QuestionnaireConfigProvider({
         // Clear timeout if fetch succeeded
         clearTimeout(timeoutId);
         
-        console.log('[Context] API response status:', response.status);
-        
         if (!response.ok) {
           const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
           throw new Error(errorData.error || `API returned ${response.status}`);
         }
         
         const data = await response.json();
-        console.log('[Context] API data received:', {
-          sectionsCount: data.sections?.length,
-          questionsCount: data.questions?.length,
-        });
         
         if (!isMounted) return;
         
@@ -207,13 +193,6 @@ export function QuestionnaireConfigProvider({
         const sections = data.sections.map(transformSection);
         const questions = data.questions.map(transformQuestion);
         
-        console.log('[Context] TRANSFORM COMPLETE:', {
-          sectionsCount: sections.length,
-          questionsCount: questions.length,
-          enabledSections: sections.filter((s: SectionConfig) => s.enabled).length,
-          enabledSectionIds: sections.filter((s: SectionConfig) => s.enabled).map((s: SectionConfig) => s.id)
-        });
-        
         setState({
           sections,
           questions,
@@ -221,22 +200,18 @@ export function QuestionnaireConfigProvider({
           isLoading: false,
           error: null,
         });
-        
-        console.log('[Context] STATE UPDATED - isLoaded should be TRUE now');
       } catch (error) {
-        console.error('[Context] FETCH FAILED:', error);
+        console.error('[QuestionnaireConfig] Fetch failed:', error);
         
         if (!isMounted) return;
         
         // Set error state - components should handle gracefully
         setState(prev => ({
           ...prev,
-          isLoaded: false, // Mark as not loaded since fetch failed
+          isLoaded: false,
           isLoading: false,
           error: error instanceof Error ? error.message : 'Failed to load config',
         }));
-        
-        console.log('[Context] Config fetch failed - error state set');
       }
     };
 
@@ -339,7 +314,6 @@ export function QuestionnaireConfigProvider({
 
   // Manual refresh function (for settings page or manual reload)
   const refresh = useCallback(async () => {
-    console.log('[Context] Manual refresh requested');
     setState(prev => ({ ...prev, isLoading: true, error: null }));
     
     try {
@@ -369,10 +343,8 @@ export function QuestionnaireConfigProvider({
         isLoading: false,
         error: null,
       });
-      
-      console.log('[Context] Manual refresh complete');
     } catch (error) {
-      console.error('[Context] Manual refresh failed:', error);
+      console.error('[QuestionnaireConfig] Refresh failed:', error);
       setState(prev => ({
         ...prev,
         isLoading: false,

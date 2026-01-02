@@ -103,7 +103,6 @@ export function sanitizeResponses(data: unknown): Record<string, any> | null {
       if (typeof value === 'object' && !Array.isArray(value)) {
         // Skip empty objects
         if (Object.keys(value).length === 0) {
-          console.log(`Removing empty object at key: ${key}`)
           continue
         }
         

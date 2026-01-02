@@ -4,8 +4,8 @@ import { useState, useRef, useEffect, KeyboardEvent } from 'react'
 import { Send, Loader2, AtSign, Command, ChevronDown, Check } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { MentionAutocomplete } from './mention-autocomplete'
-import { MentionOption } from '@/lib/editor/types'
-import { AutocompleteType } from '@/lib/editor/types'
+import { MentionOption, AutocompleteType } from '@/lib/editor/types'
+import { filterMentions } from '@/lib/editor/ai-commands'
 import { generateInlineEdit } from '@/app/actions/ai'
 import { toast } from 'sonner'
 import {
@@ -209,7 +209,6 @@ export function AIPromptBar({
   const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
     // Handle autocomplete navigation
     if (autocompleteType === 'mention') {
-      const { filterMentions } = require('@/lib/editor/ai-commands')
       const mentions = filterMentions(autocompleteQuery)
       
       if (e.key === 'ArrowDown') {

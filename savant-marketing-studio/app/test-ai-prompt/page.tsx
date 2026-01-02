@@ -9,7 +9,6 @@ export default function TestAIPromptPage() {
   const [responses, setResponses] = useState<Array<{ response: string; timestamp: Date }>>([])
 
   const handleResponse = (text: string) => {
-    console.log('AI Response:', text)
     setResponses([...responses, { response: text, timestamp: new Date() }])
   }
 

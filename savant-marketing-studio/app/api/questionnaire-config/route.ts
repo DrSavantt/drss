@@ -8,8 +8,6 @@ export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const clientId = searchParams.get('clientId');
   
-  console.log('[API] /api/questionnaire-config called', clientId ? `with clientId: ${clientId}` : '(global)');
-  
   try {
     const supabase = await createClient();
     
@@ -19,7 +17,6 @@ export async function GET(request: NextRequest) {
     }
     
     // PERFORMANCE OPTIMIZATION: Execute all queries in parallel
-    console.log('[API] Fetching all questionnaire data in parallel...');
     
     // Build query array - conditionally include overrides query if clientId provided
     const queries = [
@@ -67,14 +64,6 @@ export async function GET(request: NextRequest) {
     if (overridesError) {
       console.error('[API] Overrides error:', overridesError);
       // Don't fail - just continue without overrides
-    }
-    
-    // Log successful fetches
-    console.log('[API] Sections fetched:', sections?.length);
-    console.log('[API] Questions fetched:', questions?.length);
-    console.log('[API] Help fetched:', help?.length);
-    if (clientId) {
-      console.log('[API] Overrides fetched:', overrides?.length || 0);
     }
     
     // Build override lookup maps
@@ -145,8 +134,6 @@ export async function GET(request: NextRequest) {
         help: questionHelp
       };
     });
-    
-    console.log('[API] Returning data successfully');
     
     return NextResponse.json({
       sections: mergedSections,

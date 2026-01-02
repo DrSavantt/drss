@@ -1,6 +1,7 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, Suspense } from "react"
+import dynamic from 'next/dynamic'
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -9,10 +10,37 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
-import { QuestionnaireSettings } from "@/components/settings/questionnaire-settings"
+import { Skeleton } from "@/components/ui/skeleton"
 import { updateUserProfile } from "@/app/actions/settings"
 import { Download, Upload, Loader2 } from "lucide-react"
 import { useSidebar } from "@/contexts/sidebar-context"
+
+// Dynamic import for QuestionnaireSettings to reduce initial bundle
+// dnd-kit (~30kb) only loads when the Questionnaire tab is clicked
+const QuestionnaireSettings = dynamic(
+  () => import("@/components/settings/questionnaire-settings").then(mod => mod.QuestionnaireSettings),
+  {
+    loading: () => (
+      <div className="space-y-6">
+        <div className="grid gap-4 md:grid-cols-3">
+          {[...Array(3)].map((_, i) => (
+            <div key={i} className="rounded-lg border border-border bg-card p-4">
+              <Skeleton className="h-4 w-32 mb-3" />
+              <Skeleton className="h-8 w-20" />
+            </div>
+          ))}
+        </div>
+        <div className="rounded-lg border border-border bg-card p-6 space-y-4">
+          <Skeleton className="h-6 w-48" />
+          {[...Array(4)].map((_, i) => (
+            <Skeleton key={i} className="h-16 w-full" />
+          ))}
+        </div>
+      </div>
+    ),
+    ssr: false
+  }
+)
 
 // ============================================================================
 // EXACT v0 CODE - Only user data fetching added + Questionnaire tab

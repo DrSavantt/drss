@@ -3,6 +3,9 @@ import { notFound, redirect } from 'next/navigation'
 import { PublicFormWrapper } from '@/components/questionnaire/public-form-wrapper'
 import { getSectionsForClient, getQuestionsForClient } from '@/app/actions/questionnaire-config'
 
+// Force dynamic - each token needs fresh config and response data
+export const dynamic = 'force-dynamic'
+
 interface PageProps {
   params: Promise<{ token: string }>
 }

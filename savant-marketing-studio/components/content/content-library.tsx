@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo } from "react"
 import Link from "next/link"
 import { Plus, Search, Filter, Mail, Megaphone, FileText, PenTool, Sparkles, Trash2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -49,13 +49,30 @@ export function ContentLibrary() {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)
   const router = useRouter()
 
-  // Fetch content and clients
+  // Fetch content and clients - OPTIMIZED: Parallel fetches with AbortController
   useEffect(() => {
+    const abortController = new AbortController()
+    
     async function fetchData() {
       try {
-        // Fetch content
-        const contentRes = await fetch('/api/content')
-        const contentData = await contentRes.json()
+        // OPTIMIZED: Parallel fetches instead of sequential waterfall
+        // Previously: content fetched THEN clients - sequential
+        // Now: Both fetch simultaneously - parallel
+        const [contentRes, clientsRes] = await Promise.all([
+          fetch('/api/content', { signal: abortController.signal }),
+          fetch('/api/clients', { signal: abortController.signal })
+        ])
+        
+        // Check if aborted before processing
+        if (abortController.signal.aborted) return
+        
+        const [contentData, clientsData] = await Promise.all([
+          contentRes.json(),
+          clientsRes.json()
+        ])
+        
+        // Check if aborted before updating state
+        if (abortController.signal.aborted) return
         
         // Transform to v0 format
         const transformedContent: ContentItem[] = contentData.map((c: any) => ({
@@ -71,10 +88,6 @@ export function ContentLibrary() {
         
         setContent(transformedContent)
         
-        // Fetch clients for filter
-        const clientsRes = await fetch('/api/clients')
-        const clientsData = await clientsRes.json()
-        
         const clientOptions = [
           { id: "all", name: "All Clients" },
           ...clientsData.map((c: any) => ({ id: c.id, name: c.name }))
@@ -82,24 +95,37 @@ export function ContentLibrary() {
         
         setClients(clientOptions)
       } catch (error) {
+        // Ignore abort errors - component unmounted
+        if (error instanceof Error && error.name === 'AbortError') return
         console.error('Failed to fetch data:', error)
       } finally {
-        setLoading(false)
+        if (!abortController.signal.aborted) {
+          setLoading(false)
+        }
       }
     }
     fetchData()
+    
+    // Cleanup: abort on unmount
+    return () => {
+      abortController.abort()
+    }
   }, [])
 
-  const filteredContent = content.filter((item) => {
-    const matchesSearch =
-      item.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      item.preview.toLowerCase().includes(searchQuery.toLowerCase())
-    const matchesClient = clientFilter === "all" || item.clientId === clientFilter
-    const matchesType = typeFilter === "all" || item.type === typeFilter
-    const matchesAi =
-      aiFilter === "all" || (aiFilter === "yes" && item.aiGenerated) || (aiFilter === "no" && !item.aiGenerated)
-    return matchesSearch && matchesClient && matchesType && matchesAi
-  })
+  // PERFORMANCE OPTIMIZATION: Memoize filtered content
+  // Prevents recalculation on every render - only recalculates when dependencies change
+  const filteredContent = useMemo(() => {
+    return content.filter((item) => {
+      const matchesSearch =
+        item.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        item.preview.toLowerCase().includes(searchQuery.toLowerCase())
+      const matchesClient = clientFilter === "all" || item.clientId === clientFilter
+      const matchesType = typeFilter === "all" || item.type === typeFilter
+      const matchesAi =
+        aiFilter === "all" || (aiFilter === "yes" && item.aiGenerated) || (aiFilter === "no" && !item.aiGenerated)
+      return matchesSearch && matchesClient && matchesType && matchesAi
+    })
+  }, [content, searchQuery, clientFilter, typeFilter, aiFilter])
 
   const toggleSelectAll = () => {
     if (selectedItems.length === filteredContent.length) {
@@ -142,7 +168,7 @@ export function ContentLibrary() {
         </div>
         <div className="space-y-2">
           {[...Array(5)].map((_, i) => (
-            <div key={i} className="h-24 rounded-lg border border-border bg-card animate-pulse" />
+            <div key={`skeleton-content-${i}`} className="h-24 rounded-lg border border-border bg-card animate-pulse" />
           ))}
         </div>
       </div>

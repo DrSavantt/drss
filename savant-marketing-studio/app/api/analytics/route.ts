@@ -322,8 +322,8 @@ export async function GET(request: Request) {
       // No AI executions, generate empty trend
       aiTrend = generateFlatLine(days, 0)
     }
-  } catch (e) {
-    console.log('Error fetching AI metrics:', e)
+  } catch {
+    // AI metrics unavailable - use empty trend
     aiTrend = generateFlatLine(days, 0)
   }
   
@@ -343,8 +343,8 @@ export async function GET(request: Request) {
           .eq('user_id', user.id)
           .gte('created_at', sevenDaysAgo)
         entriesThisWeek = count || 0
-      } catch (e2) {
-        console.log('journal_entries query failed, defaulting to 0')
+      } catch {
+        // journal_entries query failed, defaulting to 0
       }
     }
   }

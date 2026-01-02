@@ -35,6 +35,16 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning className={`dark ${roboto.variable} ${geistMono.variable}`}>
       <head>
+        {/* Preconnect to Supabase for faster first API call */}
+        <link 
+          rel="preconnect" 
+          href={process.env.NEXT_PUBLIC_SUPABASE_URL || ''} 
+          crossOrigin="anonymous"
+        />
+        <link 
+          rel="dns-prefetch" 
+          href={process.env.NEXT_PUBLIC_SUPABASE_URL || ''} 
+        />
         {/* Prevent FOUC - set dark mode immediately */}
         <script
           dangerouslySetInnerHTML={{

@@ -33,7 +33,15 @@ export async function GET() {
       client_name: item.clients?.name || 'Unknown Client'
     })) || [];
 
-    return NextResponse.json(transformedContent);
+    const response = NextResponse.json(transformedContent);
+    
+    // Cache for 30 seconds, allow stale-while-revalidate for 60 seconds
+    response.headers.set(
+      'Cache-Control',
+      'private, s-maxage=30, stale-while-revalidate=60'
+    );
+    
+    return response;
   } catch (error) {
     console.error('Unexpected error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });

@@ -167,7 +167,7 @@ export async function GET() {
     file: allContent?.filter(c => c.file_url).length || 0,
   }
 
-  return NextResponse.json({
+  const response = NextResponse.json({
     totalClients,
     totalProjects,
     totalContent,
@@ -189,6 +189,15 @@ export async function GET() {
     dueThisWeek,
     overdue,
     contentTypes,
-  })
+  });
+
+  // Cache for 15 seconds, allow stale-while-revalidate for 30 seconds
+  // Dashboard data changes frequently, so use shorter cache
+  response.headers.set(
+    'Cache-Control',
+    'private, s-maxage=15, stale-while-revalidate=30'
+  );
+
+  return response;
 }
 

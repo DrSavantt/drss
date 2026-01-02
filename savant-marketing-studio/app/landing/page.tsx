@@ -6,6 +6,10 @@ import dynamic from 'next/dynamic'
 
 const PinModal = dynamic(() => import('@/components/pin-modal'), { ssr: false })
 
+// Note: Route segment configs don't work in 'use client' components
+// The landing page is mostly static content, but since it's a client component
+// due to interactivity, it will be handled by Next.js default behavior
+
 export default function LandingPage() {
   const [formStep, setFormStep] = useState(0)
   const [showForm, setShowForm] = useState(false)
@@ -110,9 +114,9 @@ export default function LandingPage() {
               { title: 'Sales Funnels', image: '/portfolio/funnel.jpg', desc: 'End-to-end conversion systems' },
               { title: 'Social Graphics', image: '/portfolio/social.jpg', desc: 'Content that builds authority' },
               { title: 'Lead Magnets', image: '/portfolio/leadmagnet.jpg', desc: 'Resources that attract buyers' },
-            ].map((item, i) => (
+            ].map((item) => (
               <div 
-                key={i}
+                key={item.title}
                 className="flex-shrink-0 w-72 md:w-80 bg-gray-100 rounded-2xl overflow-hidden group cursor-pointer hover:shadow-xl transition-shadow"
               >
                 {/* Placeholder for portfolio image */}
@@ -194,9 +198,9 @@ export default function LandingPage() {
               { num: '1', title: 'Subscribe', desc: 'Pick your plan. Cancel anytime. No contracts, no BS.' },
               { num: '2', title: 'Request', desc: 'Submit unlimited requests. We tackle them one by one.' },
               { num: '3', title: 'Receive', desc: 'Get deliverables in 48 hours. Revise until you love it.' },
-            ].map((step, i) => (
+            ].map((step) => (
               <div 
-                key={i}
+                key={step.num}
                 className="flex gap-4 p-6 bg-gray-50 rounded-2xl"
               >
                 <div className="flex-shrink-0 w-12 h-12 bg-[#FF5A5F] text-white rounded-full flex items-center justify-center font-bold text-lg">
@@ -231,9 +235,9 @@ export default function LandingPage() {
               'Presentation Decks',
               'Website Pages',
               'Blog Graphics',
-            ].map((item, i) => (
+            ].map((item) => (
               <div 
-                key={i}
+                key={item}
                 className="flex items-center gap-3 p-4 bg-white rounded-xl"
               >
                 <svg className="w-5 h-5 text-[#FF5A5F] flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
@@ -301,8 +305,8 @@ export default function LandingPage() {
                   <span className="text-gray-500">/mo</span>
                 </div>
                 <ul className="space-y-3 mb-8 text-sm">
-                  {['1 request at a time', 'Unlimited requests total', '48-hour turnaround', 'Unlimited revisions', 'Pause or cancel anytime'].map((item, i) => (
-                    <li key={i} className="flex items-start gap-2">
+                  {['1 request at a time', 'Unlimited requests total', '48-hour turnaround', 'Unlimited revisions', 'Pause or cancel anytime'].map((item) => (
+                    <li key={`starter-${item}`} className="flex items-start gap-2">
                       <span className="text-[#FF5A5F]">•</span>
                       <span className="text-gray-600">{item}</span>
                     </li>
@@ -331,8 +335,8 @@ export default function LandingPage() {
                   <span className="text-gray-400">/mo</span>
                 </div>
                 <ul className="space-y-3 mb-8 text-sm">
-                  {['2 requests at a time', 'Unlimited requests total', '48-hour turnaround', 'Unlimited revisions', 'Priority support', 'Pause or cancel anytime'].map((item, i) => (
-                    <li key={i} className="flex items-start gap-2">
+                  {['2 requests at a time', 'Unlimited requests total', '48-hour turnaround', 'Unlimited revisions', 'Priority support', 'Pause or cancel anytime'].map((item) => (
+                    <li key={`pro-${item}`} className="flex items-start gap-2">
                       <span className="text-[#FF5A5F]">•</span>
                       <span className="text-gray-300">{item}</span>
                     </li>
@@ -356,8 +360,8 @@ export default function LandingPage() {
                   <span className="text-gray-500">/mo</span>
                 </div>
                 <ul className="space-y-3 mb-8 text-sm">
-                  {['3 requests at a time', 'Unlimited requests total', '24-hour turnaround', 'Unlimited revisions', 'Dedicated Slack channel', 'Strategy calls included', 'Pause or cancel anytime'].map((item, i) => (
-                    <li key={i} className="flex items-start gap-2">
+                  {['3 requests at a time', 'Unlimited requests total', '24-hour turnaround', 'Unlimited revisions', 'Dedicated Slack channel', 'Strategy calls included', 'Pause or cancel anytime'].map((item) => (
+                    <li key={`enterprise-${item}`} className="flex items-start gap-2">
                       <span className="text-[#FF5A5F]">•</span>
                       <span className="text-gray-600">{item}</span>
                     </li>
@@ -391,7 +395,7 @@ export default function LandingPage() {
               { q: 'What counts as "one request"?', a: 'One deliverable = one request. A landing page is one request. A set of 5 social graphics is one request. We keep it simple.' },
               { q: 'Do you only work with Christians?', a: 'We work with businesses that honor God and serve people with integrity. If that\'s you, we\'re probably a fit.' },
             ].map((faq, i) => (
-              <div key={i} className="border-b border-gray-800 last:border-0">
+              <div key={`faq-${i}-${faq.q.slice(0, 20)}`} className="border-b border-gray-800 last:border-0">
                 <button
                   onClick={() => setExpandedFaq(expandedFaq === i ? null : i)}
                   className="w-full py-5 flex items-center justify-between text-left"

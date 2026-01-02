@@ -1,7 +1,7 @@
 "use client"
 
 import type React from "react"
-import { useState, useEffect, useRef } from "react"
+import { useState, useEffect, useRef, useCallback } from "react"
 import Link from "next/link"
 import { Plus, Hash, AtSign, Send, Users, FolderKanban, FileText, Trash2, X, Pin, PinOff, Check, ArrowRight } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -12,6 +12,7 @@ import {
   createJournalEntry, 
   getJournalChats, 
   getJournalEntries, 
+  getJournalChatsWithEntries,
   getOrCreateInbox,
   deleteJournalEntry,
   togglePinJournalEntry,
@@ -108,6 +109,15 @@ export function Journal() {
   const [convertDialogOpen, setConvertDialogOpen] = useState(false)
   const [entriesToConvert, setEntriesToConvert] = useState<string[]>([])
   const [convertEntryContent, setConvertEntryContent] = useState<string>('')
+  
+  // Track mounted state for server actions - prevents state updates on unmounted component
+  const isMountedRef = useRef(true)
+  useEffect(() => {
+    isMountedRef.current = true
+    return () => {
+      isMountedRef.current = false
+    }
+  }, [])
 
   // Fetch clients, projects, and content
   useEffect(() => {
@@ -118,6 +128,9 @@ export function Journal() {
           getAllProjects(),
           getAllContentAssets()
         ])
+        
+        // Only update state if still mounted
+        if (!isMountedRef.current) return
         
         setClients(clientsData.map(c => ({ id: c.id, name: c.name })))
         
@@ -143,7 +156,9 @@ export function Journal() {
           }
         }))
       } catch (error) {
-        console.error('Failed to fetch mentionable items:', error)
+        if (isMountedRef.current) {
+          console.error('Failed to fetch mentionable items:', error)
+        }
       }
     }
     fetchMentionableItems()
@@ -157,50 +172,57 @@ export function Journal() {
     setFilteredContent(contentItems.filter(c => (c.title || '').toLowerCase().includes(search)))
   }, [mentionSearch, clients, projects, contentItems])
 
-  // Fetch chats and entries
+  // Fetch chats and entries - OPTIMIZED: Single query instead of N+1
   useEffect(() => {
     async function fetchData() {
       try {
-        // Fetch all chats
-        let chatsData = await getJournalChats()
+        // OPTIMIZED: Fetch all chats with entries in ONE query
+        // Previously: 1 + N queries (1 for chats, N for entries)
+        // Now: 1 query total
+        let chatsData = await getJournalChatsWithEntries()
         
-        // If no chats exist, create an Inbox
+        // Check if unmounted
+        if (!isMountedRef.current) return
+        
+        // If no chats exist, create an Inbox then refetch
         if (chatsData.length === 0) {
-          const inboxId = await getOrCreateInbox()
-          chatsData = await getJournalChats()
+          await getOrCreateInbox()
+          if (!isMountedRef.current) return
+          chatsData = await getJournalChatsWithEntries()
         }
         
-        // For each chat, fetch its entries
-        const chatsWithEntries = await Promise.all(
-          chatsData.map(async (chat) => {
-            const entries = await getJournalEntries(chat.id)
-            
-            return {
-              id: chat.id,
-              name: chat.name,
-              entries: entries.map(e => ({
-                id: e.id,
-                content: e.content,
-                timestamp: new Date(e.created_at),
-                tags: e.tags || [],
-                mentions: extractMentions(e.content),
-                mentionedClientNames: [], // Will be populated from DB when we add that field
-                is_pinned: e.is_pinned || false,
-                is_converted: e.is_converted || false,
-                converted_to_content_id: e.converted_to_content_id || null,
-              }))
-            }
-          })
-        )
+        // Check if unmounted before updating state
+        if (!isMountedRef.current) return
+        
+        // Transform to UI format (entries already included from single query)
+        const chatsWithEntries = chatsData.map((chat: any) => ({
+          id: chat.id,
+          name: chat.name,
+          entries: (chat.entries || []).map((e: any) => ({
+            id: e.id,
+            content: e.content,
+            timestamp: new Date(e.created_at),
+            tags: e.tags || [],
+            mentions: extractMentions(e.content),
+            mentionedClientNames: [], // Will be populated from DB when we add that field
+            is_pinned: e.is_pinned || false,
+            is_converted: e.is_converted || false,
+            converted_to_content_id: e.converted_to_content_id || null,
+          }))
+        }))
         
         setChats(chatsWithEntries)
         if (chatsWithEntries.length > 0) {
           setActiveChat(chatsWithEntries[0])
         }
       } catch (error) {
-        console.error('Failed to fetch journal data:', error)
+        if (isMountedRef.current) {
+          console.error('Failed to fetch journal data:', error)
+        }
       } finally {
-        setLoading(false)
+        if (isMountedRef.current) {
+          setLoading(false)
+        }
       }
     }
     fetchData()
@@ -331,28 +353,23 @@ export function Journal() {
         }
       }
 
-      // Refresh chats
-      const chatsData = await getJournalChats()
-      const chatsWithEntries = await Promise.all(
-        chatsData.map(async (chat) => {
-          const entries = await getJournalEntries(chat.id)
-          return {
-            id: chat.id,
-            name: chat.name,
-            entries: entries.map(e => ({
-              id: e.id,
-              content: e.content,
-              timestamp: new Date(e.created_at),
-              tags: e.tags || [],
-              mentions: extractMentions(e.content),
-              mentionedClientNames: [],
-              is_pinned: e.is_pinned || false,
-              is_converted: e.is_converted || false,
-              converted_to_content_id: e.converted_to_content_id || null,
-            }))
-          }
-        })
-      )
+      // Refresh chats - OPTIMIZED: Single query
+      const chatsData = await getJournalChatsWithEntries()
+      const chatsWithEntries = chatsData.map((chat: any) => ({
+        id: chat.id,
+        name: chat.name,
+        entries: (chat.entries || []).map((e: any) => ({
+          id: e.id,
+          content: e.content,
+          timestamp: new Date(e.created_at),
+          tags: e.tags || [],
+          mentions: extractMentions(e.content),
+          mentionedClientNames: [],
+          is_pinned: e.is_pinned || false,
+          is_converted: e.is_converted || false,
+          converted_to_content_id: e.converted_to_content_id || null,
+        }))
+      }))
       setChats(chatsWithEntries)
       
       // Set newly created chat as active

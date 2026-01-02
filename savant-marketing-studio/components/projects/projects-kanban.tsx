@@ -41,13 +41,30 @@ export function ProjectsKanban() {
   const [loading, setLoading] = useState(true)
   const [selectedProject, setSelectedProject] = useState<any | null>(null)
 
-  // Fetch projects and clients
+  // Fetch projects and clients - OPTIMIZED: Parallel fetches with AbortController
   useEffect(() => {
+    const abortController = new AbortController()
+    
     async function fetchData() {
       try {
-        // Fetch projects
-        const projectsRes = await fetch('/api/projects')
-        const projectsData = await projectsRes.json()
+        // OPTIMIZED: Parallel fetches instead of sequential waterfall
+        // Previously: projects fetched THEN clients - sequential
+        // Now: Both fetch simultaneously - parallel
+        const [projectsRes, clientsRes] = await Promise.all([
+          fetch('/api/projects', { signal: abortController.signal }),
+          fetch('/api/clients', { signal: abortController.signal })
+        ])
+        
+        // Check if aborted before processing responses
+        if (abortController.signal.aborted) return
+        
+        const [projectsData, clientsData] = await Promise.all([
+          projectsRes.json(),
+          clientsRes.json()
+        ])
+        
+        // Check if aborted before updating state
+        if (abortController.signal.aborted) return
         
         // Transform to v0 Project format
         const transformedProjects: Project[] = projectsData.map((p: any) => ({
@@ -62,10 +79,6 @@ export function ProjectsKanban() {
         
         setProjects(transformedProjects)
         
-        // Fetch clients for filter
-        const clientsRes = await fetch('/api/clients')
-        const clientsData = await clientsRes.json()
-        
         const clientOptions = [
           { id: "all", name: "All Clients" },
           ...clientsData.map((c: any) => ({ id: c.id, name: c.name }))
@@ -73,12 +86,21 @@ export function ProjectsKanban() {
         
         setClients(clientOptions)
       } catch (error) {
+        // Ignore abort errors - component unmounted
+        if (error instanceof Error && error.name === 'AbortError') return
         console.error('Failed to fetch data:', error)
       } finally {
-        setLoading(false)
+        if (!abortController.signal.aborted) {
+          setLoading(false)
+        }
       }
     }
     fetchData()
+    
+    // Cleanup: abort on unmount or dialogOpen change
+    return () => {
+      abortController.abort()
+    }
   }, [dialogOpen]) // Refetch when dialog closes
 
   const filteredProjects = projects.filter((project) => clientFilter === "all" || project.clientId === clientFilter)
@@ -166,7 +188,7 @@ export function ProjectsKanban() {
         </div>
         <div className="flex gap-4">
           {[...Array(4)].map((_, i) => (
-            <div key={i} className="w-72 h-96 rounded-xl border border-border bg-card/50 animate-pulse" />
+            <div key={`skeleton-column-${i}`} className="w-72 h-96 rounded-xl border border-border bg-card/50 animate-pulse" />
           ))}
         </div>
       </div>

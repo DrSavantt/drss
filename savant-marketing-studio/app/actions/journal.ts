@@ -221,6 +221,50 @@ export async function getJournalChats() {
   return data || []
 }
 
+// OPTIMIZED: Get all chats with their entries in ONE query
+// Previously: 1 + N queries (1 for chats, then 1 for each chat's entries)
+// Now: 1 query total using nested select
+export async function getJournalChatsWithEntries() {
+  const supabase = await createClient()
+
+  if (!supabase) {
+    return []
+  }
+
+  // Get current user
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) {
+    return []
+  }
+
+  const { data, error } = await supabase
+    .from('journal_chats')
+    .select(`
+      *,
+      entries:journal_entries(*)
+    `)
+    .eq('user_id', user.id)
+    .is('deleted_at', null)
+    .order('created_at', { ascending: true })
+
+  if (error) {
+    console.error('Error fetching journal chats with entries:', error)
+    throw error
+  }
+
+  // Sort entries within each chat by created_at and filter out soft-deleted
+  const chatsWithSortedEntries = (data || []).map(chat => ({
+    ...chat,
+    entries: (chat.entries || [])
+      .filter((entry: any) => !entry.deleted_at)
+      .sort((a: any, b: any) => 
+        new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+      )
+  }))
+
+  return chatsWithSortedEntries
+}
+
 export async function createGeneralChat() {
   const supabase = await createClient()
 

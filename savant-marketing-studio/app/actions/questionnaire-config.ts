@@ -51,42 +51,23 @@ export type QuestionWithHelp = QuestionConfig & { help?: HelpConfig }
 // ===== READ OPERATIONS =====
 
 export async function getSections(): Promise<SectionConfig[]> {
-  console.log('[getSections] SERVER ACTION CALLED');
+  const supabase = await createClient()
   
-  try {
-    console.log('[getSections] Creating Supabase client...');
-    const supabase = await createClient()
-    
-    if (!supabase) {
-      console.error('[getSections] Supabase client is NULL - check environment variables');
-      throw new Error('Supabase client not available')
-    }
-    console.log('[getSections] Supabase client created ✓');
-    
-    console.log('[getSections] Querying database...');
-    const { data, error } = await supabase
-      .from('questionnaire_sections')
-      .select('*')
-      .order('sort_order')
-    
-    console.log('[getSections] Query complete. Rows:', data?.length, 'Error:', error ? error.message : 'none');
-    
-    if (error) {
-      console.error('[getSections] Database error:', {
-        message: error.message,
-        code: error.code,
-        details: error.details,
-        hint: error.hint
-      });
-      throw error
-    }
-    
-    console.log('[getSections] Returning', data?.length, 'sections');
-    return data || []
-  } catch (error) {
-    console.error('[getSections] Unexpected error:', error);
-    throw error;
+  if (!supabase) {
+    throw new Error('Supabase client not available')
   }
+  
+  const { data, error } = await supabase
+    .from('questionnaire_sections')
+    .select('*')
+    .order('sort_order')
+  
+  if (error) {
+    console.error('[getSections] Database error:', error.message)
+    throw error
+  }
+  
+  return data || []
 }
 
 export async function getEnabledSections(): Promise<SectionConfig[]> {
@@ -131,64 +112,35 @@ export async function getQuestions(): Promise<QuestionConfig[]> {
 }
 
 export async function getQuestionsWithHelp(): Promise<QuestionWithHelp[]> {
-  console.log('[getQuestionsWithHelp] SERVER ACTION CALLED');
+  const supabase = await createClient()
   
-  try {
-    console.log('[getQuestionsWithHelp] Creating Supabase client...');
-    const supabase = await createClient()
-    
-    if (!supabase) {
-      console.error('[getQuestionsWithHelp] Supabase client is NULL');
-      throw new Error('Supabase client not available')
-    }
-    console.log('[getQuestionsWithHelp] Supabase client created ✓');
-    
-    console.log('[getQuestionsWithHelp] Querying questions...');
-    const { data: questions, error: qError } = await supabase
-      .from('questionnaire_questions')
-      .select('*')
-      .order('section_id, sort_order')
-    
-    console.log('[getQuestionsWithHelp] Questions query complete. Rows:', questions?.length, 'Error:', qError ? qError.message : 'none');
-    
-    if (qError) {
-      console.error('[getQuestionsWithHelp] Questions error:', {
-        message: qError.message,
-        code: qError.code,
-        details: qError.details,
-        hint: qError.hint
-      });
-      throw qError
-    }
-    
-    console.log('[getQuestionsWithHelp] Querying help...');
-    const { data: help, error: hError } = await supabase
-      .from('questionnaire_help')
-      .select('*')
-    
-    console.log('[getQuestionsWithHelp] Help query complete. Rows:', help?.length, 'Error:', hError ? hError.message : 'none');
-    
-    if (hError) {
-      console.error('[getQuestionsWithHelp] Help error:', {
-        message: hError.message,
-        code: hError.code,
-        details: hError.details,
-        hint: hError.hint
-      });
-      throw hError
-    }
-    
-    const result = (questions || []).map(q => ({
-      ...q,
-      help: help?.find(h => h.question_id === q.id)
-    }));
-    
-    console.log('[getQuestionsWithHelp] Returning', result.length, 'questions with help');
-    return result;
-  } catch (error) {
-    console.error('[getQuestionsWithHelp] Unexpected error:', error);
-    throw error;
+  if (!supabase) {
+    throw new Error('Supabase client not available')
   }
+  
+  const { data: questions, error: qError } = await supabase
+    .from('questionnaire_questions')
+    .select('*')
+    .order('section_id, sort_order')
+  
+  if (qError) {
+    console.error('[getQuestionsWithHelp] Questions error:', qError.message)
+    throw qError
+  }
+  
+  const { data: help, error: hError } = await supabase
+    .from('questionnaire_help')
+    .select('*')
+  
+  if (hError) {
+    console.error('[getQuestionsWithHelp] Help error:', hError.message)
+    throw hError
+  }
+  
+  return (questions || []).map(q => ({
+    ...q,
+    help: help?.find(h => h.question_id === q.id)
+  }))
 }
 
 export async function getQuestionsBySection(sectionId: number): Promise<QuestionConfig[]> {

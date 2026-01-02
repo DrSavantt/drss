@@ -242,8 +242,6 @@ async function generateFrameworkEmbeddings(frameworkId: string, content: string)
 
     if (error) {
       console.error('Failed to store embeddings:', error);
-    } else {
-      console.log(`Generated ${embeddings.length} embeddings for framework ${frameworkId}`);
     }
   }
 }

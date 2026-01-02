@@ -218,8 +218,7 @@ export async function performDeepResearch(params: ResearchParams): Promise<Resea
   let modelUsed: string = 'unknown'; // Initialize with default
 
   if (shouldUseWebSearch) {
-    // NEW: Use REAL web search via Gemini grounding
-    console.log('🌐 Using REAL web search (Gemini grounding)');
+    // Use REAL web search via Gemini grounding
     
     try {
       const webResult = await performWebResearch(topic, depth);
@@ -261,7 +260,6 @@ export async function performDeepResearch(params: ResearchParams): Promise<Resea
   
   if (!shouldUseWebSearch) {
     // FALLBACK: Use AI-only research (original implementation)
-    console.log('🤖 Using AI-only research (no web search)');
     
     const complexity: TaskComplexity = depth === 'comprehensive' ? 'complex' : depth === 'standard' ? 'medium' : 'simple';
 

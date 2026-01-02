@@ -69,9 +69,6 @@ export async function createClient(formData: FormData) {
     return { error: 'Not authenticated' }
   }
   
-  console.log('[createClient] Attempting insert for user:', user.id)
-  console.log('[createClient] Data:', { name, email, website, industry })
-  
   const { data, error } = await supabase
     .from('clients')
     .insert({

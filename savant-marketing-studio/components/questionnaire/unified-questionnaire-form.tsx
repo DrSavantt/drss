@@ -322,7 +322,6 @@ export function UnifiedQuestionnaireForm({
         if (Array.isArray(data.completedQuestions)) {
           setCompletedQuestions(new Set(data.completedQuestions));
         }
-        console.log('[UnifiedQuestionnaireForm] Draft restored from localStorage');
       } catch (error) {
         console.error('Failed to restore draft:', error);
       }
@@ -360,7 +359,6 @@ export function UnifiedQuestionnaireForm({
       await onSave(formData as unknown as QuestionnaireData);
       setSaveStatus('saved');
       setLastSaved(new Date());
-      console.log('[UnifiedQuestionnaireForm] Progress saved');
       
       // Reset to idle after 2 seconds
       setTimeout(() => setSaveStatus('idle'), 2000);
@@ -384,7 +382,6 @@ export function UnifiedQuestionnaireForm({
         // Ignore localStorage errors
       }
       
-      console.log('[UnifiedQuestionnaireForm] Questionnaire submitted successfully');
     } catch (error) {
       console.error('[UnifiedQuestionnaireForm] Submission failed:', error);
     } finally {

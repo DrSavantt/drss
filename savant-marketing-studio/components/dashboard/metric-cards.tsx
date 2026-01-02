@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { cn } from '@/lib/utils'
 import { 
@@ -68,27 +68,85 @@ export function MetricCards({ autoExpand }: MetricCardsProps) {
   const [expanded, setExpanded] = useState<Record<string, boolean>>({})
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const abortControllerRef = useRef<AbortController | null>(null)
 
-  const fetchMetrics = async () => {
+  const fetchMetrics = useCallback(async (signal?: AbortSignal) => {
+    // Skip fetch if tab is hidden
+    if (document.hidden) return
+    
     try {
-      const res = await fetch('/api/metrics')
+      const res = await fetch('/api/metrics', { signal })
+      
+      // Check if aborted
+      if (signal?.aborted) return
+      
       if (!res.ok) throw new Error('Failed to fetch metrics')
       const data = await res.json()
-      setMetrics(data)
-      setError(null)
+      
+      // Only update state if not aborted
+      if (!signal?.aborted) {
+        setMetrics(data)
+        setError(null)
+      }
     } catch (err) {
+      // Ignore abort errors
+      if (err instanceof Error && err.name === 'AbortError') return
       console.error('Failed to fetch metrics:', err)
-      setError('Failed to load metrics')
+      if (!signal?.aborted) {
+        setError('Failed to load metrics')
+      }
     } finally {
-      setLoading(false)
+      if (!signal?.aborted) {
+        setLoading(false)
+      }
     }
-  }
+  }, [])
 
   useEffect(() => {
-    fetchMetrics()
-    const interval = setInterval(fetchMetrics, 30000) // Auto-refresh every 30s
-    return () => clearInterval(interval)
-  }, [])
+    // Create abort controller for initial fetch
+    const abortController = new AbortController()
+    abortControllerRef.current = abortController
+    
+    // Initial fetch
+    fetchMetrics(abortController.signal)
+    
+    // Set up interval with visibility check
+    const interval = setInterval(() => {
+      // Only fetch if tab is visible
+      if (!document.hidden) {
+        // Abort previous request if still pending
+        if (abortControllerRef.current) {
+          abortControllerRef.current.abort()
+        }
+        const newController = new AbortController()
+        abortControllerRef.current = newController
+        fetchMetrics(newController.signal)
+      }
+    }, 30000) // Auto-refresh every 30s
+    
+    // Visibility change handler - fetch immediately when tab becomes visible
+    const handleVisibility = () => {
+      if (!document.hidden) {
+        if (abortControllerRef.current) {
+          abortControllerRef.current.abort()
+        }
+        const newController = new AbortController()
+        abortControllerRef.current = newController
+        fetchMetrics(newController.signal)
+      }
+    }
+    
+    document.addEventListener('visibilitychange', handleVisibility)
+    
+    // Cleanup
+    return () => {
+      clearInterval(interval)
+      document.removeEventListener('visibilitychange', handleVisibility)
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort()
+      }
+    }
+  }, [fetchMetrics])
 
   useEffect(() => {
     if (autoExpand) {

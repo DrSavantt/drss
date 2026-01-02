@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo } from "react"
 import { Plus, Upload, Search, FileText } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -57,13 +57,17 @@ export function FrameworkLibrary() {
     fetchFrameworks()
   }, [dialogOpen]) // Refetch when dialog closes
 
-  const filteredFrameworks = frameworks.filter((framework) => {
-    const matchesSearch =
-      framework.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      framework.description.toLowerCase().includes(searchQuery.toLowerCase())
-    const matchesCategory = selectedCategory === "All" || framework.category === selectedCategory
-    return matchesSearch && matchesCategory
-  })
+  // PERFORMANCE OPTIMIZATION: Memoize filtered frameworks
+  // Prevents recalculation on every render - only recalculates when dependencies change
+  const filteredFrameworks = useMemo(() => {
+    return frameworks.filter((framework) => {
+      const matchesSearch =
+        framework.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        framework.description.toLowerCase().includes(searchQuery.toLowerCase())
+      const matchesCategory = selectedCategory === "All" || framework.category === selectedCategory
+      return matchesSearch && matchesCategory
+    })
+  }, [frameworks, searchQuery, selectedCategory])
 
   if (loading) {
     return (
@@ -76,7 +80,7 @@ export function FrameworkLibrary() {
         </div>
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {[...Array(8)].map((_, i) => (
-            <div key={i} className="h-48 rounded-xl border border-border bg-card animate-pulse" />
+            <div key={`skeleton-framework-${i}`} className="h-48 rounded-xl border border-border bg-card animate-pulse" />
           ))}
         </div>
       </div>

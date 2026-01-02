@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from 'react';
+import { memo, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { FileText, MoreHorizontal, Pencil, Trash2, Copy } from "lucide-react"
@@ -29,18 +29,20 @@ interface FrameworkCardProps {
   framework: Framework
 }
 
-export function FrameworkCard({ framework }: FrameworkCardProps) {
+// PERFORMANCE OPTIMIZATION: Memoized to prevent re-renders when parent state changes
+export const FrameworkCard = memo(function FrameworkCard({ framework }: FrameworkCardProps) {
   const router = useRouter();
   const [isDeleting, setIsDeleting] = useState(false);
   const [isDuplicating, setIsDuplicating] = useState(false);
 
-  const handleEdit = (e: React.MouseEvent) => {
+  // PERFORMANCE OPTIMIZATION: Memoized callbacks to prevent child re-renders
+  const handleEdit = useCallback((e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
     router.push(`/dashboard/frameworks/${framework.id}`);
-  };
+  }, [router, framework.id]);
 
-  const handleDuplicate = async (e: React.MouseEvent) => {
+  const handleDuplicate = useCallback(async (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
     setIsDuplicating(true);
@@ -57,9 +59,9 @@ export function FrameworkCard({ framework }: FrameworkCardProps) {
     } finally {
       setIsDuplicating(false);
     }
-  };
+  }, [framework.id, router]);
 
-  const handleDelete = async (e: React.MouseEvent) => {
+  const handleDelete = useCallback(async (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
     
@@ -81,7 +83,7 @@ export function FrameworkCard({ framework }: FrameworkCardProps) {
     } finally {
       setIsDeleting(false);
     }
-  };
+  }, [framework.id, framework.name, router]);
 
   return (
     <Link href={`/dashboard/frameworks/${framework.id}`}>
@@ -146,4 +148,6 @@ export function FrameworkCard({ framework }: FrameworkCardProps) {
       </Card>
     </Link>
   )
-}
+})
+
+FrameworkCard.displayName = 'FrameworkCard'

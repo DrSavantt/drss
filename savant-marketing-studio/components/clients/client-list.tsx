@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo } from "react"
 import { Plus, Search, Filter, ArrowUpDown } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -37,9 +37,11 @@ export function ClientList() {
       try {
         const res = await fetch('/api/clients')
         const data = await res.json()
-        setClients(data)
+        // Ensure we always set an array (handle API errors gracefully)
+        setClients(Array.isArray(data) ? data : [])
       } catch (error) {
         console.error('Failed to fetch clients:', error)
+        setClients([])
       } finally {
         setLoading(false)
       }
@@ -47,28 +49,32 @@ export function ClientList() {
     fetchClients()
   }, [dialogOpen]) // Refetch when dialog closes
 
-  const filteredClients = clients
-    .filter((client) => {
-      const matchesSearch =
-        client.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        client.email.toLowerCase().includes(searchQuery.toLowerCase())
-      const matchesStatus = statusFilter === "all" || client.status === statusFilter
-      return matchesSearch && matchesStatus
-    })
-    .sort((a, b) => {
-      switch (sortBy) {
-        case "name":
-          return a.name.localeCompare(b.name)
-        case "projects":
-          return b.projectCount - a.projectCount
-        case "content":
-          return b.contentCount - a.contentCount
-        case "spend":
-          return b.aiSpend - a.aiSpend
-        default:
-          return 0
-      }
-    })
+  // PERFORMANCE OPTIMIZATION: Memoize filtered and sorted clients
+  // Prevents recalculation on every render - only recalculates when dependencies change
+  const filteredClients = useMemo(() => {
+    return clients
+      .filter((client) => {
+        const matchesSearch =
+          client.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          client.email.toLowerCase().includes(searchQuery.toLowerCase())
+        const matchesStatus = statusFilter === "all" || client.status === statusFilter
+        return matchesSearch && matchesStatus
+      })
+      .sort((a, b) => {
+        switch (sortBy) {
+          case "name":
+            return a.name.localeCompare(b.name)
+          case "projects":
+            return b.projectCount - a.projectCount
+          case "content":
+            return b.contentCount - a.contentCount
+          case "spend":
+            return b.aiSpend - a.aiSpend
+          default:
+            return 0
+        }
+      })
+  }, [clients, searchQuery, statusFilter, sortBy])
 
   if (loading) {
     return (
@@ -81,7 +87,7 @@ export function ClientList() {
         </div>
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
           {[...Array(6)].map((_, i) => (
-            <div key={i} className="h-48 rounded-xl border border-border bg-card animate-pulse" />
+            <div key={`skeleton-client-${i}`} className="h-48 rounded-xl border border-border bg-card animate-pulse" />
           ))}
         </div>
       </div>

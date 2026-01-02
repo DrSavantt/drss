@@ -1,7 +1,7 @@
 // Force rebuild: v2.0 - January 2026
 'use client'
 
-import { useEffect, useState, useRef } from 'react'
+import { useEffect, useState, useRef, useMemo, useCallback } from 'react'
 import { motion } from 'framer-motion'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -30,6 +30,7 @@ import { getClients } from '@/app/actions/clients'
 import { getAllProjects, getAllContentAssets } from '@/app/actions/content'
 import Link from 'next/link'
 import { PulsingDot } from '@/components/dashboard/pulsing-dot'
+import { useIsMounted } from '@/hooks/use-interval-with-visibility'
 
 interface DashboardData {
   totalClients: number
@@ -67,9 +68,26 @@ export default function DashboardPage() {
   const [mentionedContentIds, setMentionedContentIds] = useState<string[]>([])
   const inputRef = useRef<HTMLTextAreaElement>(null)
 
+  // Track mounted state for server actions
+  const isMountedRef = useIsMounted()
+
   useEffect(() => {
-    fetchDashboard()
-    fetchMentionableItems()
+    // Create AbortController for fetch cleanup
+    const abortController = new AbortController()
+    
+    // OPTIMIZED: Parallel fetches instead of sequential waterfall
+    async function loadData() {
+      await Promise.all([
+        fetchDashboard(abortController.signal),
+        fetchMentionableItems()
+      ])
+    }
+    loadData()
+    
+    // Cleanup: abort fetch on unmount
+    return () => {
+      abortController.abort()
+    }
   }, [])
 
   async function fetchMentionableItems() {
@@ -79,6 +97,9 @@ export default function DashboardPage() {
         getAllProjects(),
         getAllContentAssets()
       ])
+      
+      // Only update state if still mounted
+      if (!isMountedRef.current) return
       
       setClients(clientsData.map(c => ({ id: c.id, name: c.name })))
       
@@ -104,7 +125,9 @@ export default function DashboardPage() {
         }
       }))
     } catch (error) {
-      console.error('Failed to fetch mentionable items:', error)
+      if (isMountedRef.current) {
+        console.error('Failed to fetch mentionable items:', error)
+      }
     }
   }
 
@@ -141,15 +164,27 @@ export default function DashboardPage() {
     }
   }, [showMentionPopup])
 
-  async function fetchDashboard() {
+  async function fetchDashboard(signal?: AbortSignal) {
     try {
-      const response = await fetch('/api/dashboard')
+      const response = await fetch('/api/dashboard', { signal })
+      
+      // Check if aborted before processing
+      if (signal?.aborted) return
+      
       const dashboardData = await response.json()
-      setData(dashboardData)
+      
+      // Only update state if not aborted
+      if (!signal?.aborted) {
+        setData(dashboardData)
+      }
     } catch (error) {
+      // Ignore abort errors - component unmounted
+      if (error instanceof Error && error.name === 'AbortError') return
       console.error('Failed to fetch dashboard:', error)
     } finally {
-      setLoading(false)
+      if (!signal?.aborted) {
+        setLoading(false)
+      }
     }
   }
 
@@ -238,6 +273,21 @@ export default function DashboardPage() {
     }
   }
 
+  // PERFORMANCE OPTIMIZATION: Memoize Date calculations to prevent recalculation on every render
+  // Previously: new Date() called 3+ times on every render
+  // Now: Calculated once per mount (empty deps = recalculate when page loads)
+  const { weekStart, weekDays, greeting, currentDateFormatted } = useMemo(() => {
+    const now = new Date()
+    const calculatedWeekStart = startOfWeek(now, { weekStartsOn: 1 })
+    const hour = now.getHours()
+    return {
+      weekStart: calculatedWeekStart,
+      weekDays: Array.from({ length: 7 }, (_, i) => addDays(calculatedWeekStart, i)),
+      greeting: hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening',
+      currentDateFormatted: format(now, 'EEEE, MMMM d, yyyy')
+    }
+  }, [])
+
   if (loading || !data) {
     return (
       <div className="flex items-center justify-center h-screen">
@@ -249,15 +299,8 @@ export default function DashboardPage() {
     )
   }
 
-  const weekStart = startOfWeek(new Date(), { weekStartsOn: 1 })
-  const weekDays = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i))
-
   // Calculate AI spend (estimate from generations)
   const estimatedAISpend = Math.round(data.totalProjects * 0.15 * 100) / 100
-
-  // Time-based greeting
-  const hour = new Date().getHours()
-  const greeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening'
 
   return (
     <div className="p-6 space-y-6 max-w-7xl mx-auto">
@@ -277,7 +320,7 @@ export default function DashboardPage() {
           </p>
         </div>
         <p className="text-sm text-muted-foreground">
-          {format(new Date(), 'EEEE, MMMM d, yyyy')}
+          {currentDateFormatted}
         </p>
       </motion.div>
 
@@ -461,8 +504,8 @@ export default function DashboardPage() {
                       </p>
                       {dayProjects.length > 0 && (
                         <div className="flex justify-center gap-0.5 mt-1">
-                          {dayProjects.slice(0, 3).map((_, i) => (
-                            <div key={i} className="h-1 w-1 rounded-full bg-destructive" />
+                          {dayProjects.slice(0, 3).map((project, i) => (
+                            <div key={`dot-${project.id || i}`} className="h-1 w-1 rounded-full bg-destructive" />
                           ))}
                         </div>
                       )}

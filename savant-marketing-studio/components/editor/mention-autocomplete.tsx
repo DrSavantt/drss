@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from 'react'
 import { MentionOption } from '@/lib/editor/types'
+import { filterMentions } from '@/lib/editor/ai-commands'
 import { cn } from '@/lib/utils'
 
 interface MentionAutocompleteProps {
@@ -23,8 +24,7 @@ export function MentionAutocomplete({
 }: MentionAutocompleteProps) {
   const listRef = useRef<HTMLDivElement>(null)
 
-  // Import filtered mentions
-  const { filterMentions } = require('@/lib/editor/ai-commands')
+  // Get filtered mentions
   const mentions = filterMentions(query)
 
   // Scroll selected item into view

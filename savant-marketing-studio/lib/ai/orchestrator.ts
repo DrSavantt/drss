@@ -63,9 +63,8 @@ export class AIOrchestrator {
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Unknown error';
       
-      // Check if it's a rate limit error (429)
+      // Check if it's a rate limit error (429) - fallback to Claude Haiku
       if (errorMessage.includes('429') || errorMessage.includes('quota') || errorMessage.includes('rate')) {
-        console.log(`Rate limited on ${selection.modelName}, falling back to Claude Haiku...`);
         
         // Fallback to Claude Haiku (fast, cheap, reliable)
         try {

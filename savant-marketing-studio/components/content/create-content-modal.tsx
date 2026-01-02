@@ -73,7 +73,6 @@ export function CreateContentModal({
   }
 
   const handleTypeSelect = (type: ContentType) => {
-    console.log('[CreateContentModal] Type selected:', type)
     setSelectedType(type)
     
     // If clientId provided, skip to navigation
@@ -86,19 +85,14 @@ export function CreateContentModal({
   }
 
   const handleClientSelect = (selectedClientId: string) => {
-    console.log('[CreateContentModal] Client selected:', selectedClientId)
     handleNavigate(selectedClientId, selectedType)
   }
 
   const handleNavigate = (targetClientId: string, type: ContentType) => {
     if (type === 'note') {
-      const url = `/dashboard/clients/${targetClientId}/content/new`
-      console.log('[CreateContentModal] Navigating to:', url)
-      router.push(url)
+      router.push(`/dashboard/clients/${targetClientId}/content/new`)
     } else if (type === 'file') {
-      const url = `/dashboard/clients/${targetClientId}/files/new`
-      console.log('[CreateContentModal] Navigating to:', url)
-      router.push(url)
+      router.push(`/dashboard/clients/${targetClientId}/files/new`)
     }
     onClose()
   }
