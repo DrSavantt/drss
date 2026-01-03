@@ -8,6 +8,14 @@ When launching development servers:
 3. **NEVER** run multiple instances simultaneously
 4. Use command: `cd savant-marketing-studio && npm run dev` (defaults to 3000)
 
+## 📤 GIT & DEPLOYMENT RULES - CRITICAL
+
+When committing changes:
+1. **ALWAYS** push to remote repository immediately after commit
+2. This triggers Vercel automatic deployments for production builds
+3. Use command: `git push` after every `git commit`
+4. Never leave commits unpushed - Vercel needs the push to trigger builds
+
 ## 🎨 DESIGN SYSTEM ENFORCEMENT - CRITICAL
 
 ### ❌ NEVER USE HARDCODED COLORS

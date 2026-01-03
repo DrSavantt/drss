@@ -1,13 +1,113 @@
-import { ClientList } from "@/components/clients/client-list"
+// Server Component - uses ISR (Incremental Static Regeneration) for caching
+import { Suspense } from 'react'
+import { createClient } from '@/lib/supabase/server'
+import { ClientsPageContent } from '@/components/clients/clients-page-content'
 
-// Force dynamic rendering - needs fresh data on each request
-export const dynamic = 'force-dynamic'
+// ISR: Cache page for 60 seconds, then revalidate in background
+export const revalidate = 60
 
-// ============================================================================
-// EXACT v0 CODE - AppShell wrapper removed (handled by dashboard/layout.tsx)
-// ============================================================================
-
-export default function ClientsPage() {
-  return <ClientList />
+// Loading skeleton for Suspense
+function ClientListSkeleton() {
+  return (
+    <div className="space-y-6 animate-in fade-in duration-300">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div className="space-y-2">
+          <div className="h-8 w-32 bg-muted/30 rounded animate-pulse" />
+          <div className="h-4 w-64 bg-muted/30 rounded animate-pulse" />
+        </div>
+        <div className="h-10 w-32 bg-muted/30 rounded animate-pulse" />
+      </div>
+      
+      {/* Filters */}
+      <div className="flex gap-2">
+        <div className="h-10 w-64 bg-muted/30 rounded animate-pulse" />
+        <div className="h-10 w-24 bg-muted/30 rounded animate-pulse" />
+      </div>
+      
+      {/* Client cards */}
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        {[1, 2, 3, 4, 5, 6].map(i => (
+          <div key={i} className="h-48 bg-muted/30 rounded-lg animate-pulse" />
+        ))}
+      </div>
+    </div>
+  )
 }
 
+// Async component that fetches data
+async function ClientListLoader() {
+  const supabase = await createClient()
+
+  if (!supabase) {
+    return <ClientsPageContent initialClients={[]} />
+  }
+
+  // Fetch clients with related counts in one optimized query
+  const { data: clients, error } = await supabase
+    .from('clients')
+    .select(`
+      *,
+      projects(id, deleted_at),
+      content_assets(id, deleted_at),
+      ai_generations(cost_estimate)
+    `)
+    .is('deleted_at', null)
+    .order('created_at', { ascending: false })
+
+  if (error) {
+    console.error('Error fetching clients:', error)
+    return <ClientsPageContent initialClients={[]} />
+  }
+
+  // Transform the response to match the UI format
+  const clientsWithStats = (clients || []).map(client => {
+    // Count projects (exclude soft-deleted)
+    const projectCount = Array.isArray(client.projects) 
+      ? client.projects.filter((p: any) => !p.deleted_at).length 
+      : 0
+    
+    // Count content (exclude soft-deleted)
+    const contentCount = Array.isArray(client.content_assets) 
+      ? client.content_assets.filter((c: any) => !c.deleted_at).length 
+      : 0
+    
+    // Calculate AI spend from ai_generations array
+    const aiSpend = Array.isArray(client.ai_generations)
+      ? client.ai_generations.reduce(
+          (sum: number, gen: { cost_estimate: number | null }) => sum + (gen.cost_estimate || 0),
+          0
+        )
+      : 0
+    
+    // Map questionnaire_status to status field for v0 compatibility
+    let status: "onboarded" | "onboarding" | "new" = "new"
+    if (client.questionnaire_status === 'completed') {
+      status = "onboarded"
+    } else if (client.questionnaire_status === 'in_progress') {
+      status = "onboarding"
+    }
+
+    return {
+      id: client.id,
+      name: client.name,
+      email: client.email || '',
+      status,
+      projectCount,
+      contentCount,
+      aiSpend: Math.round(aiSpend * 100) / 100,
+      industry: client.industry || 'Not specified',
+    }
+  })
+
+  return <ClientsPageContent initialClients={clientsWithStats} />
+}
+
+// Main page with streaming
+export default function ClientsPage() {
+  return (
+    <Suspense fallback={<ClientListSkeleton />}>
+      <ClientListLoader />
+    </Suspense>
+  )
+}

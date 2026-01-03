@@ -1,18 +1,56 @@
 // Server Component - NO 'use client'
 // Fetches ALL tab data server-side in ONE parallel request
+// Uses ISR for caching at the page level
 
+import { Suspense } from 'react'
 import { createClient } from '@/lib/supabase/server'
 import { notFound } from 'next/navigation'
 import { ClientDetailContent } from '@/components/clients/client-detail-content'
 
-export const dynamic = 'force-dynamic'
+// ISR: Cache page for 30 seconds, then revalidate in background
+export const revalidate = 30
 
 interface ClientPageProps {
   params: Promise<{ id: string }>
 }
 
-export default async function ClientPage({ params }: ClientPageProps) {
-  const { id } = await params
+// Loading skeleton for Suspense
+function ClientDetailSkeleton() {
+  return (
+    <div className="space-y-6 animate-in fade-in duration-300">
+      {/* Back link skeleton */}
+      <div className="h-4 w-32 bg-muted/30 rounded animate-pulse" />
+      
+      {/* Header skeleton */}
+      <div className="flex items-start justify-between">
+        <div className="flex items-center gap-4">
+          <div className="h-16 w-16 bg-muted/30 rounded-xl animate-pulse" />
+          <div className="space-y-2">
+            <div className="h-7 w-48 bg-muted/30 rounded animate-pulse" />
+            <div className="h-4 w-32 bg-muted/30 rounded animate-pulse" />
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          <div className="h-9 w-24 bg-muted/30 rounded animate-pulse" />
+          <div className="h-9 w-9 bg-muted/30 rounded animate-pulse" />
+        </div>
+      </div>
+      
+      {/* Tabs skeleton */}
+      <div className="h-10 w-full max-w-md bg-muted/30 rounded animate-pulse" />
+      
+      {/* Content skeleton */}
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        {[1, 2, 3, 4].map(i => (
+          <div key={i} className="h-32 bg-muted/30 rounded-lg animate-pulse" />
+        ))}
+      </div>
+    </div>
+  )
+}
+
+// Async component that fetches client-specific data
+async function ClientDetailLoader({ id }: { id: string }) {
   const supabase = await createClient()
 
   if (!supabase) {
@@ -179,5 +217,16 @@ export default async function ClientPage({ params }: ClientPageProps) {
       currentQuestionnaireVersion={currentVersion}
       aiGenerations={aiGenerations || []}
     />
+  )
+}
+
+// Main page with streaming
+export default async function ClientPage({ params }: ClientPageProps) {
+  const { id } = await params
+  
+  return (
+    <Suspense fallback={<ClientDetailSkeleton />}>
+      <ClientDetailLoader id={id} />
+    </Suspense>
   )
 }

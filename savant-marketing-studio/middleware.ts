@@ -1,12 +1,46 @@
+/**
+ * Optimized Middleware
+ * 
+ * Key optimizations:
+ * 1. Skip auth check for public routes BEFORE creating Supabase client
+ * 2. Minimal work on each request - just refresh session
+ * 3. Only runs on routes that actually need auth (via matcher)
+ */
+
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
 export async function middleware(request: NextRequest) {
+  const path = request.nextUrl.pathname
+
+  // ========================================================================
+  // FAST PATH: Skip auth entirely for public routes
+  // Check these BEFORE doing any Supabase work to avoid cold starts
+  // ========================================================================
+  
+  // Public form routes - allow without auth
+  if (path.startsWith('/form/')) {
+    return NextResponse.next()
+  }
+  
+  // Landing page - allow without auth
+  if (path === '/landing' || path === '/') {
+    return NextResponse.next()
+  }
+  
+  // Login page - allow without auth (redirect handled below if logged in)
+  if (path === '/login' && !request.cookies.has('sb-access-token')) {
+    return NextResponse.next()
+  }
+
+  // ========================================================================
+  // AUTH PATH: Only reach here for protected routes
+  // ========================================================================
+  
   try {
     // Check if env vars exist
     if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
       console.error('Missing Supabase environment variables in middleware')
-      // Allow request to proceed without auth check
       return NextResponse.next()
     }
 
@@ -23,7 +57,7 @@ export async function middleware(request: NextRequest) {
             return request.cookies.getAll()
           },
           setAll(cookiesToSet) {
-            cookiesToSet.forEach(({ name, value, options }) =>
+            cookiesToSet.forEach(({ name, value }) =>
               request.cookies.set(name, value)
             )
             supabaseResponse = NextResponse.next({
@@ -42,23 +76,13 @@ export async function middleware(request: NextRequest) {
       data: { user },
     } = await supabase.auth.getUser()
 
-    // Allow public form routes without authentication (client questionnaires)
-    if (request.nextUrl.pathname.startsWith('/form/')) {
-      return supabaseResponse
-    }
-
-    // Protect dashboard routes
-    if (request.nextUrl.pathname.startsWith('/dashboard') && !user) {
+    // Protect dashboard routes - redirect to login if not authenticated
+    if (path.startsWith('/dashboard') && !user) {
       return NextResponse.redirect(new URL('/login', request.url))
     }
 
-    // Allow landing page without authentication
-    if (request.nextUrl.pathname === '/landing') {
-      return NextResponse.next()
-    }
-
     // Redirect to dashboard if logged in and trying to access login
-    if (request.nextUrl.pathname === '/login' && user) {
+    if (path === '/login' && user) {
       return NextResponse.redirect(new URL('/dashboard', request.url))
     }
 
@@ -67,15 +91,12 @@ export async function middleware(request: NextRequest) {
     console.error('Middleware error:', error)
 
     // FAIL CLOSED: If middleware fails, block protected routes
-    // This prevents authentication bypass via middleware crashes
-    if (request.nextUrl.pathname.startsWith('/dashboard')) {
+    if (path.startsWith('/dashboard')) {
       return NextResponse.redirect(
         new URL('/login?error=auth_failed', request.url)
       )
     }
 
-    // Allow public routes (landing, form, api) to continue
-    // This prevents total site outage from middleware errors
     return NextResponse.next()
   }
 }
@@ -83,15 +104,18 @@ export async function middleware(request: NextRequest) {
 export const config = {
   matcher: [
     /*
-     * Match all request paths except:
-     * - _next/static (static files)
-     * - _next/image (image optimization files)
-     * - favicon.ico (favicon file)
-     * - Public assets (images, fonts, CSS, JS, etc.)
+     * Only run middleware on routes that need auth:
+     * - /dashboard/* - protected app routes
+     * - /login - redirect if already logged in
+     * - /form/* - public but need to pass through
      * 
-     * This reduces middleware overhead by 50-100ms per navigation
-     * by skipping auth checks for static resources.
+     * Explicitly EXCLUDE:
+     * - /_next/* (Next.js internals)
+     * - /api/* (API routes handle their own auth)
+     * - Static files (images, fonts, etc.)
      */
-    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|css|js|woff|woff2|ttf|eot|map)$).*)',
+    '/dashboard/:path*',
+    '/login',
+    '/form/:path*',
   ],
 }
