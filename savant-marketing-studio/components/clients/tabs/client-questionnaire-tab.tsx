@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
-import { Copy, Settings, ExternalLink, FileText, Eye, PencilLine, History, Trash2, Loader2 } from 'lucide-react'
+import { Copy, FileText, Eye, PencilLine, History } from 'lucide-react'
 import { format } from 'date-fns'
 import { ResponseViewer } from '@/components/questionnaire/response-viewer'
 import { ResponseHistory, ResponseVersion } from '@/components/questionnaire/response-history'
@@ -10,16 +10,6 @@ import { EmbeddedQuestionnaireForm } from '../embedded-questionnaire-form'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
 import { sanitizeResponses, hasValidResponseData } from '@/lib/utils/safe-render'
@@ -82,7 +72,6 @@ interface ClientQuestionnaireTabProps {
   questionnaireStatus?: 'not_started' | 'in_progress' | 'completed' | null
   questionnaireCompletedAt?: string | null
   questionnaireToken?: string | null
-  questionnaireProgress?: Record<string, unknown>
 }
 
 export function ClientQuestionnaireTab({
@@ -93,17 +82,12 @@ export function ClientQuestionnaireTab({
   currentVersion: initialCurrentVersion,
   questionnaireStatus = 'not_started',
   questionnaireCompletedAt,
-  questionnaireToken,
-  questionnaireProgress
+  questionnaireToken
 }: ClientQuestionnaireTabProps) {
   const router = useRouter()
   const [activeTab, setActiveTab] = useState<TabValue>('view')
   const [currentVersion, setCurrentVersion] = useState<QuestionnaireVersion | null>(initialCurrentVersion)
   const [refreshKey, setRefreshKey] = useState(0)
-  
-  // Delete draft state
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
-  const [isDeleting, setIsDeleting] = useState(false)
 
   // Calculate progress from current responses
   const calculateProgress = (): number => {
@@ -168,31 +152,6 @@ export function ClientQuestionnaireTab({
     toast.success('Questionnaire submitted successfully!')
   }
 
-  // Handle delete draft
-  const handleDeleteDraft = async () => {
-    setIsDeleting(true)
-    try {
-      const response = await fetch(`/api/questionnaire-response/${clientId}/draft`, {
-        method: 'DELETE',
-      })
-      
-      if (response.ok) {
-        toast.success('Draft deleted successfully')
-        setShowDeleteConfirm(false)
-        router.refresh()
-        setRefreshKey(prev => prev + 1)
-      } else {
-        const data = await response.json()
-        toast.error(data.error || 'Failed to delete draft')
-      }
-    } catch (error) {
-      console.error('Delete draft error:', error)
-      toast.error('Failed to delete draft')
-    } finally {
-      setIsDeleting(false)
-    }
-  }
-
   // Transform sections for ResponseViewer
   const transformedSections = config.sections
     .filter(s => s.enabled !== false)
@@ -233,7 +192,7 @@ export function ClientQuestionnaireTab({
       {/* Header Actions */}
       <div className="space-y-4">
         <div className="flex flex-wrap items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
             <Button
               onClick={handleCopyLink}
               disabled={!questionnaireToken}
@@ -241,39 +200,7 @@ export function ClientQuestionnaireTab({
               size="sm"
             >
               <Copy className="h-4 w-4 mr-2" />
-              {questionnaireStatus === 'in_progress' ? 'Copy Resume Link' : 'Copy Link'}
-            </Button>
-            {questionnaireToken && (
-              <Button
-                onClick={() => window.open(`/form/${questionnaireToken}`, '_blank')}
-                variant="outline"
-                size="sm"
-              >
-                <ExternalLink className="h-4 w-4 mr-2" />
-                Open Public Form
-              </Button>
-            )}
-          </div>
-          <div className="flex items-center gap-3">
-            {/* Delete Draft button - show when there are responses or status is in_progress */}
-            {(hasResponses || questionnaireStatus === 'in_progress') && (
-              <Button
-                variant="outline"
-                size="sm"
-                className="text-destructive hover:text-destructive hover:bg-destructive/10"
-                onClick={() => setShowDeleteConfirm(true)}
-              >
-                <Trash2 className="h-4 w-4 mr-2" />
-                Delete Draft
-              </Button>
-            )}
-            <Button
-              onClick={() => router.push(`/dashboard/clients/${clientId}/questionnaire/customize`)}
-              variant="outline"
-              size="sm"
-            >
-              <Settings className="h-4 w-4 mr-2" />
-              Customize Form
+              Copy Link
             </Button>
           </div>
         </div>
@@ -377,18 +304,9 @@ export function ClientQuestionnaireTab({
                 <p className="text-muted-foreground mb-4">
                   {clientName} hasn&apos;t filled out the questionnaire yet.
                 </p>
-                <div className="flex items-center justify-center gap-4">
-                  <Button onClick={() => setActiveTab('fill')}>
-                    <PencilLine className="w-4 h-4 mr-2" />
-                    Fill Out Now
-                  </Button>
-                  {questionnaireToken && (
-                    <Button variant="outline" onClick={handleCopyLink}>
-                      <Copy className="w-4 h-4 mr-2" />
-                      Copy Link for Client
-                    </Button>
-                  )}
-                </div>
+                <p className="text-sm text-muted-foreground">
+                  Copy the link above and share it with your client to get started.
+                </p>
               </CardContent>
             </Card>
           )}
@@ -441,36 +359,6 @@ export function ClientQuestionnaireTab({
           )}
         </TabsContent>
       </Tabs>
-
-      {/* Delete Draft Confirmation Dialog */}
-      <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete Draft?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This will permanently delete all saved responses for this questionnaire.
-              The client will have to start over from the beginning. This action cannot be undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleDeleteDraft}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-              disabled={isDeleting}
-            >
-              {isDeleting ? (
-                <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Deleting...
-                </>
-              ) : (
-                'Delete Draft'
-              )}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </div>
   )
 }

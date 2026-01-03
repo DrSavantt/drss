@@ -1,12 +1,24 @@
 "use client"
 
 import { useState, useEffect, useMemo } from "react"
+import { useRouter } from "next/navigation"
 import { Plus, Search, Filter, ArrowUpDown } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 import { ClientCard } from "./client-card"
 import { NewClientDialog } from "./new-client-dialog"
+import { deleteClient } from "@/app/actions/clients"
 
 // ============================================================================
 // EXACT v0 CODE - Only data fetching added
@@ -24,12 +36,18 @@ interface Client {
 }
 
 export function ClientList() {
+  const router = useRouter()
   const [clients, setClients] = useState<Client[]>([])
   const [loading, setLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState("")
   const [statusFilter, setStatusFilter] = useState("all")
   const [sortBy, setSortBy] = useState("name")
   const [dialogOpen, setDialogOpen] = useState(false)
+  
+  // Delete confirmation state
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false)
+  const [deletingClient, setDeletingClient] = useState<{ id: string; name: string } | null>(null)
+  const [isDeleting, setIsDeleting] = useState(false)
 
   // Fetch clients from Supabase
   useEffect(() => {
@@ -48,6 +66,47 @@ export function ClientList() {
     }
     fetchClients()
   }, [dialogOpen]) // Refetch when dialog closes
+
+  // Handle edit - navigate to client page
+  const handleEdit = (id: string) => {
+    router.push(`/dashboard/clients/${id}`)
+  }
+
+  // Handle delete - show confirmation dialog
+  const handleDelete = (id: string) => {
+    const client = clients.find(c => c.id === id)
+    if (client) {
+      setDeletingClient({ id, name: client.name })
+      setShowDeleteDialog(true)
+    }
+  }
+
+  // Confirm delete
+  const confirmDelete = async () => {
+    if (!deletingClient) return
+    
+    setIsDeleting(true)
+    try {
+      const result = await deleteClient(deletingClient.id, 'delete_all', deletingClient.name)
+      
+      if (result?.error) {
+        console.error('Failed to delete client:', result.error)
+        return
+      }
+      
+      // Optimistically remove from list
+      setClients(prev => prev.filter(c => c.id !== deletingClient.id))
+      setShowDeleteDialog(false)
+      setDeletingClient(null)
+      
+      // Refresh to ensure data consistency
+      router.refresh()
+    } catch (error) {
+      console.error('Failed to delete client:', error)
+    } finally {
+      setIsDeleting(false)
+    }
+  }
 
   // PERFORMANCE OPTIMIZATION: Memoize filtered and sorted clients
   // Prevents recalculation on every render - only recalculates when dependencies change
@@ -150,7 +209,12 @@ export function ClientList() {
       {/* Client Grid */}
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
         {filteredClients.map((client) => (
-          <ClientCard key={client.id} client={client} />
+          <ClientCard 
+            key={client.id} 
+            client={client} 
+            onEdit={handleEdit}
+            onDelete={handleDelete}
+          />
         ))}
       </div>
 
@@ -164,6 +228,28 @@ export function ClientList() {
       )}
 
       <NewClientDialog open={dialogOpen} onOpenChange={setDialogOpen} />
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Client?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently delete <strong>{deletingClient?.name}</strong> and all associated projects, content, and questionnaire data. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmDelete}
+              disabled={isDeleting}
+              className="bg-destructive hover:bg-destructive/90 text-destructive-foreground"
+            >
+              {isDeleting ? 'Deleting...' : 'Delete'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }

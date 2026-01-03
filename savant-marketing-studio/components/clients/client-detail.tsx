@@ -52,7 +52,6 @@ interface Client {
   questionnaire_status?: 'not_started' | 'in_progress' | 'completed' | null
   questionnaire_token?: string | null
   questionnaire_completed_at?: string | null
-  questionnaire_progress?: any
 }
 
 interface Activity {
@@ -210,7 +209,6 @@ export function ClientDetail({ clientId }: ClientDetailProps) {
             clientId={clientId}
             clientName={client.name}
             status={client.questionnaire_status || null}
-            progress={client.questionnaire_progress}
             completedAt={client.questionnaire_completed_at}
             questionnaireToken={client.questionnaire_token}
           />

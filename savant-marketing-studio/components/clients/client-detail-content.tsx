@@ -46,7 +46,6 @@ interface Client {
   questionnaire_status?: 'not_started' | 'in_progress' | 'completed' | null
   questionnaire_token?: string | null
   questionnaire_completed_at?: string | null
-  questionnaire_progress?: Record<string, unknown>
 }
 
 interface QuestionnaireConfig {
@@ -297,7 +296,6 @@ export function ClientDetailContent({
             questionnaireStatus={client.questionnaire_status}
             questionnaireCompletedAt={client.questionnaire_completed_at}
             questionnaireToken={client.questionnaire_token}
-            questionnaireProgress={client.questionnaire_progress}
           />
         </TabsContent>
 

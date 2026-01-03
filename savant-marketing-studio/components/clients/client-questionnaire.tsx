@@ -314,14 +314,6 @@ export function ClientQuestionnaire({
                 Delete Draft
               </Button>
             )}
-            <Button
-              onClick={() => router.push(`/dashboard/clients/${clientId}/questionnaire/customize`)}
-              variant="outline"
-              size="sm"
-            >
-              <Settings className="h-4 w-4 mr-2" />
-              Customize Form
-            </Button>
           </div>
         </div>
 

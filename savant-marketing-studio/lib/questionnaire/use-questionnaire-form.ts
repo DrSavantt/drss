@@ -111,14 +111,38 @@ export function useQuestionnaireForm(
   // ============================================
   
   /**
+   * Check if questionnaire data has any meaningful answers (not just empty strings)
+   */
+  const hasContent = useCallback((data: QuestionnaireData): boolean => {
+    // Check if any section has any non-empty answers
+    return Object.values(data).some(section => {
+      if (!section || typeof section !== 'object') return false;
+      return Object.values(section).some(answer => {
+        if (answer === null || answer === undefined || answer === '') return false;
+        if (Array.isArray(answer) && answer.length === 0) return false;
+        if (typeof answer === 'object' && !Array.isArray(answer) && Object.keys(answer).length === 0) return false;
+        return true;
+      });
+    });
+  }, []);
+
+  /**
    * Save to server (auto-save draft)
+   * SANITIZED: Only saves if there's actual content to prevent {} in database
    */
   const saveToServer = useCallback(async (data: QuestionnaireData) => {
     if (!clientId) return;
     if (isEditMode) return; // Don't auto-save in edit mode
     
-    // Skip if data is empty
+    // Skip if data is empty object
     if (Object.keys(data).length === 0) return;
+    
+    // IMPORTANT: Skip if there's no actual content
+    // This prevents saving {} or forms with only empty strings
+    if (!hasContent(data)) {
+      console.log('[AUTO-SAVE] Skipped - no meaningful content');
+      return;
+    }
     
     setSaveStatus('saving');
     try {
@@ -133,6 +157,14 @@ export function useQuestionnaireForm(
       
       if (!response.ok) throw new Error('Save failed');
       
+      const result = await response.json();
+      
+      // If server skipped the save, don't update lastSaved
+      if (result.action === 'skipped') {
+        setSaveStatus('idle');
+        return;
+      }
+      
       setSaveStatus('saved');
       setLastSaved(new Date());
       
@@ -143,7 +175,7 @@ export function useQuestionnaireForm(
       setSaveStatus('error');
       // Don't throw - let localStorage backup work
     }
-  }, [clientId, isEditMode]);
+  }, [clientId, isEditMode, hasContent]);
 
   /**
    * Debounced server save (5 seconds)

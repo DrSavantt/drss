@@ -186,11 +186,11 @@ export async function getHelp(questionId: string): Promise<HelpConfig | null> {
   return data
 }
 
-// ===== CLIENT-SPECIFIC CONFIG (WITH OVERRIDES) =====
+// ===== CLIENT-SPECIFIC CONFIG =====
 
 /**
- * Get sections with client-specific overrides applied.
- * Used by public form and embedded form to show only what the client should see.
+ * Get sections for a client.
+ * Returns global configuration (per-client overrides feature removed).
  */
 export async function getSectionsForClient(clientId: string): Promise<SectionConfig[]> {
   const supabase = await createClient()
@@ -200,7 +200,7 @@ export async function getSectionsForClient(clientId: string): Promise<SectionCon
     throw new Error('Supabase client not available')
   }
   
-  // Get global sections
+  // Get global sections (client parameter kept for API compatibility)
   const { data: sections, error: sectionsError } = await supabase
     .from('questionnaire_sections')
     .select('*')
@@ -211,43 +211,12 @@ export async function getSectionsForClient(clientId: string): Promise<SectionCon
     throw sectionsError
   }
   
-  // Get client-specific section overrides
-  const { data: overrides, error: overridesError } = await supabase
-    .from('client_questionnaire_overrides')
-    .select('*')
-    .eq('client_id', clientId)
-    .eq('override_type', 'section')
-  
-  if (overridesError) {
-    console.error('[getSectionsForClient] Error fetching overrides:', overridesError)
-    // Don't throw - continue with global sections if overrides fail
-  }
-  
-  // Merge overrides with sections
-  return (sections || []).map(section => {
-    const override = overrides?.find(o => o.section_id === section.id)
-    if (!override) return section
-    
-    // Read description from custom_help.description if present
-    const customDescription = override.custom_help && typeof override.custom_help === 'object'
-      ? (override.custom_help as Record<string, unknown>).description as string | null
-      : null
-    
-    return {
-      ...section,
-      // Override enabled status if override exists
-      enabled: override.is_enabled,
-      // Override title if custom_text provided
-      title: override.custom_text || section.title,
-      // Override description if custom_help.description provided
-      description: customDescription || section.description,
-    }
-  })
+  return sections || []
 }
 
 /**
- * Get questions with help AND client-specific overrides applied.
- * Used by public form and embedded form to show only what the client should see.
+ * Get questions with help for a client.
+ * Returns global configuration (per-client overrides feature removed).
  */
 export async function getQuestionsForClient(clientId: string): Promise<QuestionWithHelp[]> {
   const supabase = await createClient()
@@ -257,7 +226,7 @@ export async function getQuestionsForClient(clientId: string): Promise<QuestionW
     throw new Error('Supabase client not available')
   }
   
-  // Get global questions
+  // Get global questions (client parameter kept for API compatibility)
   const { data: questions, error: questionsError } = await supabase
     .from('questionnaire_questions')
     .select('*')
@@ -278,40 +247,11 @@ export async function getQuestionsForClient(clientId: string): Promise<QuestionW
     // Don't throw - continue without help if it fails
   }
   
-  // Get client-specific question overrides
-  const { data: overrides, error: overridesError } = await supabase
-    .from('client_questionnaire_overrides')
-    .select('*')
-    .eq('client_id', clientId)
-    .not('question_id', 'is', null) // Only question overrides
-  
-  if (overridesError) {
-    console.error('[getQuestionsForClient] Error fetching overrides:', overridesError)
-    // Don't throw - continue with global questions if overrides fail
-  }
-  
-  // Merge overrides with questions
-  return (questions || []).map(question => {
-    const questionHelp = help?.find(h => h.question_id === question.id)
-    const override = overrides?.find(o => o.question_id === question.id)
-    
-    // Merge custom_help if provided
-    let mergedHelp = questionHelp
-    if (override?.custom_help && typeof override.custom_help === 'object') {
-      mergedHelp = questionHelp 
-        ? { ...questionHelp, ...override.custom_help }
-        : override.custom_help as HelpConfig
-    }
-    
-    return {
-      ...question,
-      // Override enabled status if override exists
-      enabled: override !== undefined ? override.is_enabled : question.enabled,
-      // Override text if custom_text provided
-      text: override?.custom_text || question.text,
-      help: mergedHelp,
-    }
-  })
+  // Return questions with help
+  return (questions || []).map(question => ({
+    ...question,
+    help: help?.find(h => h.question_id === question.id)
+  }))
 }
 
 // ===== SECTION UPDATE OPERATIONS =====

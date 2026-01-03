@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { NextRequest, NextResponse } from 'next/server'
+import { sanitizeForDb, hasQuestionnaireContent } from '@/lib/utils/safe-render'
 
 /**
  * POST /api/questionnaire-response
@@ -21,12 +22,25 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     const { client_id, response_data } = body
 
-    if (!client_id || !response_data) {
+    if (!client_id) {
       return NextResponse.json(
-        { error: 'Missing client_id or response_data' },
+        { error: 'Missing client_id' },
         { status: 400 }
       )
     }
+
+    // SANITIZE: Skip save if response_data is empty or {}
+    // This prevents auto-save from creating {} in the database
+    if (!response_data || !hasQuestionnaireContent(response_data)) {
+      return NextResponse.json({ 
+        data: null, 
+        action: 'skipped',
+        reason: 'No meaningful content to save'
+      })
+    }
+
+    // Sanitize the data before saving (convert {} to null in nested objects)
+    const sanitizedData = sanitizeForDb(response_data)
 
     // Verify user owns this client
     const { data: client, error: clientError } = await supabase
@@ -53,11 +67,11 @@ export async function POST(request: NextRequest) {
       .single()
 
     if (existingDraft) {
-      // Update existing draft
+      // Update existing draft with sanitized data
       const { data, error } = await supabase
         .from('questionnaire_responses')
         .update({
-          response_data,
+          response_data: sanitizedData,
           updated_at: new Date().toISOString()
         })
         .eq('id', existingDraft.id)
@@ -73,14 +87,14 @@ export async function POST(request: NextRequest) {
 
       const nextVersion = versionData || 1
 
-      // Create new draft
+      // Create new draft with sanitized data
       const { data, error } = await supabase
         .from('questionnaire_responses')
         .insert({
           client_id,
           user_id: user.id,
           version: nextVersion,
-          response_data,
+          response_data: sanitizedData,
           status: 'draft',
           is_latest: true
         })

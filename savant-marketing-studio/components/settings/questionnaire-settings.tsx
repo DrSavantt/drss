@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { 
   getSections, 
   getQuestionsWithHelp,
@@ -92,6 +92,7 @@ export function QuestionnaireSettings({
   const [expandedSections, setExpandedSections] = useState<Set<number>>(new Set())
   const [editingSection, setEditingSection] = useState<SectionConfig | null>(null)
   const [editingQuestion, setEditingQuestion] = useState<QuestionWithHelp | null>(null)
+  const isSavingRef = useRef(false)
 
   const isClientMode = mode === 'client' && !!clientId
 
@@ -108,6 +109,9 @@ export function QuestionnaireSettings({
   }, [clientId, mode])
 
   async function loadData() {
+    // Don't reload while saving - prevents race condition
+    if (isSavingRef.current) return
+    
     try {
       setLoading(true)
       
@@ -132,14 +136,23 @@ export function QuestionnaireSettings({
             )
             if (override) {
               // Read description from custom_help.description if present
-              const customDescription = override.custom_help && typeof override.custom_help === 'object' 
+              // Guard against empty objects {}
+              const customDescription = override.custom_help && 
+                typeof override.custom_help === 'object' && 
+                Object.keys(override.custom_help).length > 0
                 ? (override.custom_help as Record<string, unknown>).description as string | null
                 : null
+              
+              // Ensure description is string or null, never an object
+              const finalDescription = typeof customDescription === 'string' 
+                ? customDescription 
+                : section.description
+              
               return { 
                 ...section, 
                 enabled: override.is_enabled,
                 title: override.custom_text || section.title,
-                description: customDescription || section.description
+                description: finalDescription
               }
             }
             return section
@@ -246,6 +259,8 @@ export function QuestionnaireSettings({
     const oldSections = [...sections]
     setSections(sections.map(s => s.id === id ? { ...s, enabled } : s))
     
+    isSavingRef.current = true
+    
     try {
       if (isClientMode) {
         // Save to client overrides
@@ -276,6 +291,8 @@ export function QuestionnaireSettings({
     } catch (error) {
       setSections(oldSections)
       toast.error('Failed to update section')
+    } finally {
+      isSavingRef.current = false
     }
   }
 
@@ -283,6 +300,8 @@ export function QuestionnaireSettings({
   async function handleQuestionToggle(id: string, enabled: boolean) {
     const oldQuestions = [...questions]
     setQuestions(questions.map(q => q.id === id ? { ...q, enabled } : q))
+    
+    isSavingRef.current = true
     
     try {
       if (isClientMode) {
@@ -314,6 +333,8 @@ export function QuestionnaireSettings({
     } catch (error) {
       setQuestions(oldQuestions)
       toast.error('Failed to update question')
+    } finally {
+      isSavingRef.current = false
     }
   }
 
@@ -707,7 +728,7 @@ function SectionItem({
               {enabledCount}/{questions.length} questions
             </Badge>
           </div>
-          {section.description && (
+          {section.description && typeof section.description === 'string' && (
             <p className="text-sm text-muted-foreground truncate">{section.description}</p>
           )}
         </div>
@@ -818,7 +839,9 @@ function QuestionItem({
           <Badge variant="outline" className="text-xs">{question.type}</Badge>
           {question.required && <Badge variant="secondary" className="text-xs">Required</Badge>}
         </div>
-        <p className="text-sm text-muted-foreground truncate">{question.text}</p>
+        <p className="text-sm text-muted-foreground truncate">
+          {typeof question.text === 'string' ? question.text : ''}
+        </p>
       </div>
 
       <Switch checked={question.enabled} onCheckedChange={onToggle} />

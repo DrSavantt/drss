@@ -14,6 +14,119 @@ export type Database = {
   }
   public: {
     Tables: {
+      activity_log: {
+        Row: {
+          activity_type: string
+          client_id: string | null
+          created_at: string | null
+          entity_id: string
+          entity_name: string | null
+          entity_type: string
+          id: string
+          metadata: Json | null
+          user_id: string
+        }
+        Insert: {
+          activity_type: string
+          client_id?: string | null
+          created_at?: string | null
+          entity_id: string
+          entity_name?: string | null
+          entity_type: string
+          id?: string
+          metadata?: Json | null
+          user_id: string
+        }
+        Update: {
+          activity_type?: string
+          client_id?: string | null
+          created_at?: string | null
+          entity_id?: string
+          entity_name?: string | null
+          entity_type?: string
+          id?: string
+          metadata?: Json | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "activity_log_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ai_executions: {
+        Row: {
+          client_id: string | null
+          complexity: string | null
+          created_at: string | null
+          duration_ms: number | null
+          error_message: string | null
+          id: string
+          input_data: Json
+          input_tokens: number | null
+          model_id: string
+          output_data: Json | null
+          output_tokens: number | null
+          status: string
+          task_type: string
+          total_cost_usd: number | null
+          user_id: string
+        }
+        Insert: {
+          client_id?: string | null
+          complexity?: string | null
+          created_at?: string | null
+          duration_ms?: number | null
+          error_message?: string | null
+          id?: string
+          input_data: Json
+          input_tokens?: number | null
+          model_id: string
+          output_data?: Json | null
+          output_tokens?: number | null
+          status: string
+          task_type: string
+          total_cost_usd?: number | null
+          user_id: string
+        }
+        Update: {
+          client_id?: string | null
+          complexity?: string | null
+          created_at?: string | null
+          duration_ms?: number | null
+          error_message?: string | null
+          id?: string
+          input_data?: Json
+          input_tokens?: number | null
+          model_id?: string
+          output_data?: Json | null
+          output_tokens?: number | null
+          status?: string
+          task_type?: string
+          total_cost_usd?: number | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_executions_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ai_executions_model_id_fkey"
+            columns: ["model_id"]
+            isOneToOne: false
+            referencedRelation: "ai_models"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       ai_generations: {
         Row: {
           client_id: string | null
@@ -67,17 +180,166 @@ export type Database = {
           },
         ]
       }
+      ai_models: {
+        Row: {
+          cost_per_1m_input: number | null
+          cost_per_1m_output: number | null
+          created_at: string | null
+          display_name: string
+          id: string
+          is_active: boolean | null
+          max_tokens: number | null
+          metadata: Json | null
+          model_name: string
+          model_tier: string
+          provider_id: string
+          supports_streaming: boolean | null
+        }
+        Insert: {
+          cost_per_1m_input?: number | null
+          cost_per_1m_output?: number | null
+          created_at?: string | null
+          display_name: string
+          id?: string
+          is_active?: boolean | null
+          max_tokens?: number | null
+          metadata?: Json | null
+          model_name: string
+          model_tier: string
+          provider_id: string
+          supports_streaming?: boolean | null
+        }
+        Update: {
+          cost_per_1m_input?: number | null
+          cost_per_1m_output?: number | null
+          created_at?: string | null
+          display_name?: string
+          id?: string
+          is_active?: boolean | null
+          max_tokens?: number | null
+          metadata?: Json | null
+          model_name?: string
+          model_tier?: string
+          provider_id?: string
+          supports_streaming?: boolean | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_models_provider_id_fkey"
+            columns: ["provider_id"]
+            isOneToOne: false
+            referencedRelation: "ai_providers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ai_providers: {
+        Row: {
+          api_key_env_var: string | null
+          created_at: string | null
+          display_name: string
+          id: string
+          is_active: boolean | null
+          metadata: Json | null
+          name: string
+          provider_type: string
+        }
+        Insert: {
+          api_key_env_var?: string | null
+          created_at?: string | null
+          display_name: string
+          id?: string
+          is_active?: boolean | null
+          metadata?: Json | null
+          name: string
+          provider_type: string
+        }
+        Update: {
+          api_key_env_var?: string | null
+          created_at?: string | null
+          display_name?: string
+          id?: string
+          is_active?: boolean | null
+          metadata?: Json | null
+          name?: string
+          provider_type?: string
+        }
+        Relationships: []
+      }
+      client_questionnaire_overrides: {
+        Row: {
+          client_id: string
+          created_at: string | null
+          custom_help: Json | null
+          custom_text: string | null
+          id: string
+          is_enabled: boolean | null
+          override_type: string
+          question_id: string | null
+          section_id: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          client_id: string
+          created_at?: string | null
+          custom_help?: Json | null
+          custom_text?: string | null
+          id?: string
+          is_enabled?: boolean | null
+          override_type: string
+          question_id?: string | null
+          section_id?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          client_id?: string
+          created_at?: string | null
+          custom_help?: Json | null
+          custom_text?: string | null
+          id?: string
+          is_enabled?: boolean | null
+          override_type?: string
+          question_id?: string | null
+          section_id?: number | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_questionnaire_overrides_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_questionnaire_overrides_question_id_fkey"
+            columns: ["question_id"]
+            isOneToOne: false
+            referencedRelation: "questionnaire_questions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_questionnaire_overrides_section_id_fkey"
+            columns: ["section_id"]
+            isOneToOne: false
+            referencedRelation: "questionnaire_sections"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       clients: {
         Row: {
           brand_data: Json | null
           client_code: string | null
           created_at: string | null
+          deleted_at: string | null
+          deleted_by: string | null
           email: string | null
           id: string
+          industry: string | null
           intake_responses: Json | null
           name: string
           questionnaire_completed_at: string | null
-          questionnaire_progress: Json | null
           questionnaire_status: string | null
           questionnaire_token: string | null
           updated_at: string | null
@@ -88,12 +350,14 @@ export type Database = {
           brand_data?: Json | null
           client_code?: string | null
           created_at?: string | null
+          deleted_at?: string | null
+          deleted_by?: string | null
           email?: string | null
           id?: string
+          industry?: string | null
           intake_responses?: Json | null
           name: string
           questionnaire_completed_at?: string | null
-          questionnaire_progress?: Json | null
           questionnaire_status?: string | null
           questionnaire_token?: string | null
           updated_at?: string | null
@@ -104,12 +368,14 @@ export type Database = {
           brand_data?: Json | null
           client_code?: string | null
           created_at?: string | null
+          deleted_at?: string | null
+          deleted_by?: string | null
           email?: string | null
           id?: string
+          industry?: string | null
           intake_responses?: Json | null
           name?: string
           questionnaire_completed_at?: string | null
-          questionnaire_progress?: Json | null
           questionnaire_status?: string | null
           questionnaire_token?: string | null
           updated_at?: string | null
@@ -220,6 +486,7 @@ export type Database = {
           client_id: string
           content_json: Json | null
           created_at: string | null
+          deleted_at: string | null
           file_size: number | null
           file_type: string | null
           file_url: string | null
@@ -237,6 +504,7 @@ export type Database = {
           client_id: string
           content_json?: Json | null
           created_at?: string | null
+          deleted_at?: string | null
           file_size?: number | null
           file_type?: string | null
           file_url?: string | null
@@ -254,6 +522,7 @@ export type Database = {
           client_id?: string
           content_json?: Json | null
           created_at?: string | null
+          deleted_at?: string | null
           file_size?: number | null
           file_type?: string | null
           file_url?: string | null
@@ -286,6 +555,41 @@ export type Database = {
             columns: ["project_id"]
             isOneToOne: false
             referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      framework_chunks: {
+        Row: {
+          chunk_index: number
+          content: string
+          created_at: string | null
+          embedding: string | null
+          framework_id: string
+          id: number
+        }
+        Insert: {
+          chunk_index: number
+          content: string
+          created_at?: string | null
+          embedding?: string | null
+          framework_id: string
+          id?: number
+        }
+        Update: {
+          chunk_index?: number
+          content?: string
+          created_at?: string | null
+          embedding?: string | null
+          framework_id?: string
+          id?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "framework_chunks_framework_id_fkey"
+            columns: ["framework_id"]
+            isOneToOne: false
+            referencedRelation: "marketing_frameworks"
             referencedColumns: ["id"]
           },
         ]
@@ -367,29 +671,46 @@ export type Database = {
       journal_chats: {
         Row: {
           created_at: string | null
+          deleted_at: string | null
+          folder_id: string | null
           id: string
           linked_id: string | null
           name: string
           type: string
+          updated_at: string | null
           user_id: string
         }
         Insert: {
           created_at?: string | null
+          deleted_at?: string | null
+          folder_id?: string | null
           id?: string
           linked_id?: string | null
           name: string
           type: string
+          updated_at?: string | null
           user_id: string
         }
         Update: {
           created_at?: string | null
+          deleted_at?: string | null
+          folder_id?: string | null
           id?: string
           linked_id?: string | null
           name?: string
           type?: string
+          updated_at?: string | null
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "journal_chats_folder_id_fkey"
+            columns: ["folder_id"]
+            isOneToOne: false
+            referencedRelation: "journal_folders"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       journal_entries: {
         Row: {
@@ -398,6 +719,7 @@ export type Database = {
           content: string
           converted_to_content_id: string | null
           created_at: string | null
+          deleted_at: string | null
           id: string
           is_converted: boolean | null
           is_pinned: boolean | null
@@ -415,6 +737,7 @@ export type Database = {
           content: string
           converted_to_content_id?: string | null
           created_at?: string | null
+          deleted_at?: string | null
           id?: string
           is_converted?: boolean | null
           is_pinned?: boolean | null
@@ -432,6 +755,7 @@ export type Database = {
           content?: string
           converted_to_content_id?: string | null
           created_at?: string | null
+          deleted_at?: string | null
           id?: string
           is_converted?: boolean | null
           is_pinned?: boolean | null
@@ -459,6 +783,72 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      journal_folders: {
+        Row: {
+          color: string | null
+          created_at: string | null
+          id: string
+          name: string
+          position: number | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          color?: string | null
+          created_at?: string | null
+          id?: string
+          name: string
+          position?: number | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          color?: string | null
+          created_at?: string | null
+          id?: string
+          name?: string
+          position?: number | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      marketing_frameworks: {
+        Row: {
+          category: string | null
+          content: string
+          created_at: string | null
+          description: string | null
+          id: string
+          is_active: boolean | null
+          name: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          category?: string | null
+          content: string
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          name: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          category?: string | null
+          content?: string
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
       }
       pages: {
         Row: {
@@ -524,6 +914,7 @@ export type Database = {
         Row: {
           client_id: string
           created_at: string | null
+          deleted_at: string | null
           description: string | null
           due_date: string | null
           id: string
@@ -537,6 +928,7 @@ export type Database = {
         Insert: {
           client_id: string
           created_at?: string | null
+          deleted_at?: string | null
           description?: string | null
           due_date?: string | null
           id?: string
@@ -550,6 +942,7 @@ export type Database = {
         Update: {
           client_id?: string
           created_at?: string | null
+          deleted_at?: string | null
           description?: string | null
           due_date?: string | null
           id?: string
@@ -570,24 +963,283 @@ export type Database = {
           },
         ]
       }
+      questionnaire_help: {
+        Row: {
+          created_at: string | null
+          good_example: string | null
+          how_to_extract: string[] | null
+          id: number
+          question_id: string | null
+          quick_tip: string | null
+          title: string | null
+          updated_at: string | null
+          weak_example: string | null
+          where_to_find: string[] | null
+        }
+        Insert: {
+          created_at?: string | null
+          good_example?: string | null
+          how_to_extract?: string[] | null
+          id?: number
+          question_id?: string | null
+          quick_tip?: string | null
+          title?: string | null
+          updated_at?: string | null
+          weak_example?: string | null
+          where_to_find?: string[] | null
+        }
+        Update: {
+          created_at?: string | null
+          good_example?: string | null
+          how_to_extract?: string[] | null
+          id?: number
+          question_id?: string | null
+          quick_tip?: string | null
+          title?: string | null
+          updated_at?: string | null
+          weak_example?: string | null
+          where_to_find?: string[] | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "questionnaire_help_question_id_fkey"
+            columns: ["question_id"]
+            isOneToOne: true
+            referencedRelation: "questionnaire_questions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      questionnaire_questions: {
+        Row: {
+          accepted_file_types: string[] | null
+          conditional_on: Json | null
+          created_at: string | null
+          enabled: boolean | null
+          file_description: string | null
+          id: string
+          max_file_size: number | null
+          max_files: number | null
+          max_length: number | null
+          min_length: number | null
+          options: Json | null
+          placeholder: string | null
+          question_key: string
+          required: boolean | null
+          section_id: number | null
+          sort_order: number
+          text: string
+          type: string
+          updated_at: string | null
+        }
+        Insert: {
+          accepted_file_types?: string[] | null
+          conditional_on?: Json | null
+          created_at?: string | null
+          enabled?: boolean | null
+          file_description?: string | null
+          id: string
+          max_file_size?: number | null
+          max_files?: number | null
+          max_length?: number | null
+          min_length?: number | null
+          options?: Json | null
+          placeholder?: string | null
+          question_key: string
+          required?: boolean | null
+          section_id?: number | null
+          sort_order: number
+          text: string
+          type: string
+          updated_at?: string | null
+        }
+        Update: {
+          accepted_file_types?: string[] | null
+          conditional_on?: Json | null
+          created_at?: string | null
+          enabled?: boolean | null
+          file_description?: string | null
+          id?: string
+          max_file_size?: number | null
+          max_files?: number | null
+          max_length?: number | null
+          min_length?: number | null
+          options?: Json | null
+          placeholder?: string | null
+          question_key?: string
+          required?: boolean | null
+          section_id?: number | null
+          sort_order?: number
+          text?: string
+          type?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "questionnaire_questions_section_id_fkey"
+            columns: ["section_id"]
+            isOneToOne: false
+            referencedRelation: "questionnaire_sections"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      questionnaire_responses: {
+        Row: {
+          client_id: string
+          created_at: string | null
+          id: string
+          is_latest: boolean | null
+          response_data: Json
+          status: string | null
+          submitted_at: string | null
+          submitted_by: string | null
+          updated_at: string | null
+          user_id: string | null
+          version: number | null
+        }
+        Insert: {
+          client_id: string
+          created_at?: string | null
+          id?: string
+          is_latest?: boolean | null
+          response_data: Json
+          status?: string | null
+          submitted_at?: string | null
+          submitted_by?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+          version?: number | null
+        }
+        Update: {
+          client_id?: string
+          created_at?: string | null
+          id?: string
+          is_latest?: boolean | null
+          response_data?: Json
+          status?: string | null
+          submitted_at?: string | null
+          submitted_by?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+          version?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "questionnaire_responses_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      questionnaire_sections: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          enabled: boolean | null
+          estimated_minutes: number | null
+          id: number
+          key: string
+          sort_order: number
+          title: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          enabled?: boolean | null
+          estimated_minutes?: number | null
+          id?: number
+          key: string
+          sort_order: number
+          title: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          enabled?: boolean | null
+          estimated_minutes?: number | null
+          id?: number
+          key?: string
+          sort_order?: number
+          title?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
     }
     Views: {
-      [_ in never]: never
+      ai_cost_summary: {
+        Row: {
+          avg_duration_ms: number | null
+          client_id: string | null
+          date: string | null
+          execution_count: number | null
+          model_id: string | null
+          total_cost_usd: number | null
+          total_input_tokens: number | null
+          total_output_tokens: number | null
+          total_tokens: number | null
+          user_id: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_executions_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ai_executions_model_id_fkey"
+            columns: ["model_id"]
+            isOneToOne: false
+            referencedRelation: "ai_models"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
+      count_journal_entries: { Args: never; Returns: number }
       generate_client_code: { Args: never; Returns: string }
-      match_framework_chunks: {
-        Args: {
-          match_count: number
-          match_threshold: number
-          query_embedding: string
-        }
-        Returns: {
-          content: string
-          framework_id: string
-          id: number
-          similarity: number
-        }[]
+      get_next_response_version: {
+        Args: { p_client_id: string }
+        Returns: number
+      }
+      match_framework_chunks:
+        | {
+            Args: {
+              match_count: number
+              match_threshold: number
+              query_embedding: string
+            }
+            Returns: {
+              content: string
+              framework_id: string
+              id: number
+              similarity: number
+            }[]
+          }
+        | {
+            Args: {
+              match_count: number
+              match_threshold: number
+              query_embedding: string
+            }
+            Returns: {
+              content: string
+              framework_id: string
+              id: number
+              similarity: number
+            }[]
+          }
+      remove_client_from_journal_mentions: {
+        Args: { p_client_id: string }
+        Returns: undefined
       }
     }
     Enums: {

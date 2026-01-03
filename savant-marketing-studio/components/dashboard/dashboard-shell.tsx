@@ -3,6 +3,7 @@
 import { AppShell } from '@/components/layout/app-shell'
 import { ErrorBoundary } from '@/components/error-boundary'
 import { PerfMonitor } from '@/components/perf-monitor'
+import { SidebarProvider } from '@/contexts/sidebar-context'
 
 interface User {
   id: string
@@ -34,9 +35,11 @@ interface DashboardShellProps {
 export function DashboardShell({ user, children }: DashboardShellProps) {
   return (
     <ErrorBoundary>
-      <AppShell user={user}>
-        {children}
-      </AppShell>
+      <SidebarProvider>
+        <AppShell user={user}>
+          {children}
+        </AppShell>
+      </SidebarProvider>
       
       {/* Performance monitor for development */}
       <PerfMonitor />

@@ -6,6 +6,7 @@ import { QuestionnaireData, UploadedFile } from '@/lib/questionnaire/types';
 import { questionSchemas } from '@/lib/questionnaire/validation-schemas';
 import { logActivity } from '@/lib/activity-log';
 import { logPublicActivity } from '@/lib/activity-log-public';
+import { sanitizeForDb, hasQuestionnaireContent } from '@/lib/utils/safe-render';
 
 // File upload constraints
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
@@ -521,6 +522,7 @@ export async function submitPublicQuestionnaire(
  * Uses token-based authentication
  * 
  * UPDATED: Now saves to questionnaire_responses table as draft
+ * SANITIZED: Prevents saving {} which crashes the app
  */
 export async function savePublicQuestionnaireProgress(
   token: string,
@@ -531,6 +533,20 @@ export async function savePublicQuestionnaireProgress(
 
     if (!supabase) {
       return { success: false, error: 'Failed to connect to database' };
+    }
+
+    // SANITIZE: Skip save if data is empty or {}
+    // This prevents auto-save from creating {} in the database
+    if (!data || !hasQuestionnaireContent(data)) {
+      return { success: true }; // Silent success - nothing to save
+    }
+
+    // Sanitize the data before saving (convert {} to null in nested objects)
+    const sanitizedData = sanitizeForDb(data);
+    
+    // If sanitization results in null, skip the save
+    if (!sanitizedData) {
+      return { success: true }; // Silent success - nothing meaningful to save
     }
 
     // Verify token and get client
@@ -549,7 +565,7 @@ export async function savePublicQuestionnaireProgress(
       return { success: true };
     }
 
-    // === NEW: Save to questionnaire_responses table as draft ===
+    // === Save to questionnaire_responses table as draft ===
     
     // Check if there's an existing draft
     const { data: existingDraft } = await supabase
@@ -561,11 +577,11 @@ export async function savePublicQuestionnaireProgress(
       .single()
 
     if (existingDraft) {
-      // Update existing draft
+      // Update existing draft with sanitized data
       await supabase
         .from('questionnaire_responses')
         .update({
-          response_data: data,
+          response_data: sanitizedData,
           updated_at: new Date().toISOString()
         })
         .eq('id', existingDraft.id)
@@ -576,28 +592,25 @@ export async function savePublicQuestionnaireProgress(
       
       const nextVersion = versionData || 1
 
-      // Create new draft
+      // Create new draft with sanitized data
       await supabase
         .from('questionnaire_responses')
         .insert({
           client_id: client.id,
           user_id: client.user_id,
           version: nextVersion,
-          response_data: data,
+          response_data: sanitizedData,
           status: 'draft',
           is_latest: true
         })
     }
 
-    // === END NEW ===
-
     // Also save to clients.intake_responses for backward compatibility
-    // Store in SAME format as questionnaire_responses.response_data (raw form data)
-    // This ensures consistency between both storage locations
+    // Store sanitized data to prevent {} issues
     const { error } = await supabase
       .from('clients')
       .update({
-        intake_responses: data, // Store raw form data, same as response_data
+        intake_responses: sanitizedData,
         questionnaire_status: 'in_progress',
       })
       .eq('id', client.id);

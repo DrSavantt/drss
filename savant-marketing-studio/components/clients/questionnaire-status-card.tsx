@@ -3,36 +3,26 @@
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { Progress } from '@/components/ui/progress'
 import { 
-  ClipboardList, 
   CheckCircle2, 
   Clock, 
   AlertCircle,
-  ArrowRight,
   Eye,
   Copy
 } from 'lucide-react'
 import Link from 'next/link'
 import { cn } from '@/lib/utils'
-import { useState, useMemo } from 'react'
-import { sanitizeProgressData } from '@/lib/questionnaire/data-sanitizer'
-import { isEmpty } from '@/lib/utils/safe-render'
+import { useState } from 'react'
 
 // ============================================================================
 // QUESTIONNAIRE STATUS CARD - Prominent display of onboarding status
-// Matches production implementation with clear CTAs
+// Simplified - no progress tracking (progress column was never written to)
 // ============================================================================
 
 interface QuestionnaireStatusCardProps {
   clientId: string
   clientName: string
   status: 'not_started' | 'in_progress' | 'completed' | null
-  progress?: {
-    current_section?: number
-    completed_questions?: number[]
-    total_questions?: number
-  }
   completedAt?: string | null
   questionnaireToken?: string | null
   className?: string
@@ -42,19 +32,12 @@ export function QuestionnaireStatusCard({
   clientId,
   clientName,
   status,
-  progress,
   completedAt,
   questionnaireToken,
   className
 }: QuestionnaireStatusCardProps) {
   const [copied, setCopied] = useState(false)
   const effectiveStatus = status || 'not_started'
-  
-  // Sanitize progress data to prevent crashes from corrupted data
-  const safeProgress = useMemo(() => {
-    if (!progress || isEmpty(progress)) return null
-    return sanitizeProgressData(progress)
-  }, [progress])
   
   const handleCopyLink = async () => {
     if (!questionnaireToken) return
@@ -68,18 +51,6 @@ export function QuestionnaireStatusCard({
       console.error('Failed to copy:', err)
     }
   }
-
-  // Calculate progress for in_progress status with type safety
-  const progressPercent = (() => {
-    if (effectiveStatus !== 'in_progress' || !safeProgress) return 0
-    
-    const completedCount = safeProgress.completed_questions.length
-    const totalCount = safeProgress.total_questions || 32
-    
-    if (completedCount === 0) return 0
-    
-    return Math.round((completedCount / totalCount) * 100)
-  })()
 
   // Not started or in progress - Red/Orange card with CTA
   if (effectiveStatus !== 'completed') {
@@ -116,71 +87,29 @@ export function QuestionnaireStatusCard({
                   : 'Help us understand your business better by completing the onboarding questionnaire. Takes about 15 minutes.'}
               </p>
 
-              {/* Progress bar for in_progress */}
-              {effectiveStatus === 'in_progress' && progressPercent > 0 && (
-                <div className="mb-4 space-y-1">
-                  <Progress value={progressPercent} className="h-2" />
-                  <p className="text-xs text-muted-foreground">
-                    Section {safeProgress?.current_section || 1} of 8 • {progressPercent}% complete
-                  </p>
-                </div>
-              )}
-
-              {/* CTA Button - Link to public form */}
-              {questionnaireToken ? (
-                <a 
-                  href={`${typeof window !== 'undefined' ? window.location.origin : ''}/form/${questionnaireToken}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  <Button size="lg" className="font-bold">
-                    {effectiveStatus === 'in_progress' ? (
-                      <>
-                        <Clock className="h-4 w-4 mr-2" />
-                        Resume Questionnaire
-                      </>
-                    ) : (
-                      <>
-                        <ClipboardList className="h-4 w-4 mr-2" />
-                        Start Questionnaire
-                      </>
-                    )}
-                    <ArrowRight className="h-4 w-4 ml-2" />
-                  </Button>
-                </a>
-              ) : (
-                <Button size="lg" className="font-bold" disabled>
-                  No Questionnaire Link Available
-                </Button>
-              )}
-            </div>
-          </div>
-
-          {/* Copy Form Link - Always show if token exists */}
-          {questionnaireToken && (
-            <div className="mt-4 pt-4 border-t border-border">
-              <div className="flex items-center justify-between">
-                <p className="text-xs text-muted-foreground">Share questionnaire link:</p>
+              {/* Copy Link Button - Admin action to share with client */}
+              {questionnaireToken && (
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={handleCopyLink}
+                  className="mt-4"
                 >
                   {copied ? (
                     <>
-                      <CheckCircle2 className="h-3 w-3 mr-1" />
+                      <CheckCircle2 className="h-4 w-4 mr-2" />
                       Copied!
                     </>
                   ) : (
                     <>
-                      <Copy className="h-3 w-3 mr-1" />
-                      Copy Link
+                      <Copy className="h-4 w-4 mr-2" />
+                      Copy Link for Client
                     </>
                   )}
                 </Button>
-              </div>
+              )}
             </div>
-          )}
+          </div>
         </CardContent>
       </Card>
     )
@@ -205,20 +134,9 @@ export function QuestionnaireStatusCard({
               </p>
             </div>
           </div>
-          <Link href={`/dashboard/clients/${clientId}/questionnaire-responses`}>
-            <Button variant="outline">
-              <Eye className="h-4 w-4 mr-2" />
-              View Responses
-              <ArrowRight className="h-4 w-4 ml-2" />
-            </Button>
-          </Link>
-        </div>
-
-        {/* Copy Form Link - Always show if token exists */}
-        {questionnaireToken && (
-          <div className="mt-4 pt-4 border-t border-border">
-            <div className="flex items-center justify-between">
-              <p className="text-xs text-muted-foreground">Share questionnaire link:</p>
+          <div className="flex items-center gap-2">
+            {/* Copy Link */}
+            {questionnaireToken && (
               <Button
                 variant="outline"
                 size="sm"
@@ -226,19 +144,26 @@ export function QuestionnaireStatusCard({
               >
                 {copied ? (
                   <>
-                    <CheckCircle2 className="h-3 w-3 mr-1" />
+                    <CheckCircle2 className="h-4 w-4 mr-2" />
                     Copied!
                   </>
                 ) : (
                   <>
-                    <Copy className="h-3 w-3 mr-1" />
+                    <Copy className="h-4 w-4 mr-2" />
                     Copy Link
                   </>
                 )}
               </Button>
-            </div>
+            )}
+            {/* View Responses */}
+            <Link href={`/dashboard/clients/${clientId}/questionnaire`}>
+              <Button variant="outline" size="sm">
+                <Eye className="h-4 w-4 mr-2" />
+                View Responses
+              </Button>
+            </Link>
           </div>
-        )}
+        </div>
       </CardContent>
     </Card>
   )
