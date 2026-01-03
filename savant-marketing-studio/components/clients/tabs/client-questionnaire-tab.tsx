@@ -64,7 +64,9 @@ interface QuestionnaireVersion {
   version: number
   response_data: Record<string, unknown>
   is_latest: boolean
-  submitted_at?: string
+  status?: 'draft' | 'submitted'
+  submitted_at?: string | null
+  submitted_by?: 'client' | 'admin' | null
   created_at: string
   updated_at: string
 }
@@ -410,8 +412,15 @@ export function ClientQuestionnaireTab({
           {versions.length > 0 ? (
             <ResponseHistory
               versions={versions.map(v => ({
-                ...v,
-                submitted_at: v.submitted_at || null
+                id: v.id,
+                version: v.version,
+                status: (v.status || (v.submitted_at ? 'submitted' : 'draft')) as 'draft' | 'submitted',
+                response_data: v.response_data,
+                submitted_at: v.submitted_at || null,
+                submitted_by: v.submitted_by || null,
+                created_at: v.created_at,
+                updated_at: v.updated_at,
+                is_latest: v.is_latest
               }))}
               currentVersionId={currentVersion?.id}
               onViewVersion={(version) => {
