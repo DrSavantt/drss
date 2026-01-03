@@ -1,6 +1,7 @@
 "use client"
 
 import { memo, useMemo } from "react"
+import Link from "next/link"
 import { Moon, Sun, Bell, User, Settings as SettingsIcon, LogOut } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
@@ -15,6 +16,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { logout } from "@/app/actions/auth"
+import { MobileNav } from "./mobile-nav"
 
 interface User {
   id: string
@@ -86,7 +88,21 @@ export const TopNav = memo(function TopNav({ user }: TopNavProps) {
   }
 
   return (
-    <header className="sticky top-0 z-30 flex h-16 items-center justify-end gap-4 border-b border-border bg-background px-6">
+    <header className="sticky top-0 z-30 flex h-16 items-center gap-4 border-b border-border bg-background px-4">
+      {/* Hamburger Menu */}
+      <MobileNav />
+      
+      {/* Logo/Brand */}
+      <Link href="/dashboard" className="flex items-center gap-2">
+        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary">
+          <span className="text-sm font-bold text-primary-foreground">D</span>
+        </div>
+        <span className="font-semibold text-foreground hidden sm:inline-block">DRSS Studio</span>
+      </Link>
+      
+      {/* Spacer */}
+      <div className="flex-1" />
+      
       {/* Theme Toggle */}
       <Button variant="ghost" size="icon" onClick={toggleTheme} className="text-muted-foreground hover:text-foreground">
         {!mounted ? (
