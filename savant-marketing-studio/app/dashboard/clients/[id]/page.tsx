@@ -1,8 +1,11 @@
-import { ClientDetail } from "@/components/clients/client-detail"
+// Server Component - NO 'use client'
+// Fetches ALL tab data server-side in ONE parallel request
 
-// ============================================================================
-// EXACT v0 CODE - AppShell wrapper removed (handled by dashboard/layout.tsx)
-// ============================================================================
+import { createClient } from '@/lib/supabase/server'
+import { notFound } from 'next/navigation'
+import { ClientDetailContent } from '@/components/clients/client-detail-content'
+
+export const dynamic = 'force-dynamic'
 
 interface ClientPageProps {
   params: Promise<{ id: string }>
@@ -10,6 +13,171 @@ interface ClientPageProps {
 
 export default async function ClientPage({ params }: ClientPageProps) {
   const { id } = await params
-  return <ClientDetail clientId={id} />
-}
+  const supabase = await createClient()
 
+  if (!supabase) {
+    throw new Error('Database connection failed')
+  }
+
+  // Fetch ALL data for ALL tabs in ONE parallel request
+  const [
+    { data: client, error: clientError },
+    { data: projects },
+    { data: content },
+    { data: activityLog },
+    { data: sections },
+    { data: questions },
+    { data: helpData },
+    { data: questionnaireResponses },
+    { data: aiGenerations },
+    { count: projectCount },
+    { count: contentCount }
+  ] = await Promise.all([
+    // Client details
+    supabase
+      .from('clients')
+      .select('*')
+      .eq('id', id)
+      .is('deleted_at', null)
+      .single(),
+    
+    // Projects for this client only
+    supabase
+      .from('projects')
+      .select('*')
+      .eq('client_id', id)
+      .is('deleted_at', null)
+      .order('created_at', { ascending: false }),
+    
+    // Content for this client only
+    supabase
+      .from('content_assets')
+      .select('*')
+      .eq('client_id', id)
+      .is('deleted_at', null)
+      .order('created_at', { ascending: false }),
+    
+    // Activity log for this client (recent 20)
+    supabase
+      .from('activity_log')
+      .select('*')
+      .eq('client_id', id)
+      .order('created_at', { ascending: false })
+      .limit(20),
+    
+    // Questionnaire sections (static, same for all clients)
+    supabase
+      .from('questionnaire_sections')
+      .select('*')
+      .order('sort_order'),
+    
+    // Questionnaire questions
+    supabase
+      .from('questionnaire_questions')
+      .select('*')
+      .order('section_id, sort_order'),
+    
+    // Questionnaire help content
+    supabase
+      .from('questionnaire_help')
+      .select('*'),
+    
+    // Questionnaire responses for this client
+    supabase
+      .from('questionnaire_responses')
+      .select('*')
+      .eq('client_id', id)
+      .order('version', { ascending: false }),
+    
+    // AI generations for this client
+    supabase
+      .from('ai_generations')
+      .select('*')
+      .eq('client_id', id)
+      .order('created_at', { ascending: false })
+      .limit(20),
+    
+    // Project count
+    supabase
+      .from('projects')
+      .select('*', { count: 'exact', head: true })
+      .eq('client_id', id)
+      .is('deleted_at', null),
+    
+    // Content count  
+    supabase
+      .from('content_assets')
+      .select('*', { count: 'exact', head: true })
+      .eq('client_id', id)
+      .is('deleted_at', null)
+  ])
+
+  // Handle not found
+  if (clientError || !client) {
+    notFound()
+  }
+
+  // Build questions with help data
+  const questionsWithHelp = (questions || []).map(q => {
+    const questionHelp = helpData?.find(h => h.question_id === q.id)
+    return {
+      ...q,
+      help: questionHelp || null
+    }
+  })
+
+  // Build questionnaire config object
+  const questionnaireConfig = {
+    sections: sections || [],
+    questions: questionsWithHelp
+  }
+
+  // Find current/latest response version
+  const questionnaireVersions = questionnaireResponses || []
+  const currentVersion = questionnaireVersions.find(v => v.is_latest) || questionnaireVersions[0] || null
+
+  // Calculate AI stats
+  const aiCalls = aiGenerations?.length || 0
+  const aiSpend = aiGenerations?.reduce((sum, gen) => sum + (gen.cost_usd || 0), 0) || 0
+
+  // Map client status
+  let status: 'onboarded' | 'onboarding' | 'new' = 'new'
+  if (client.questionnaire_status === 'completed') {
+    status = 'onboarded'
+  } else if (client.questionnaire_status === 'in_progress') {
+    status = 'onboarding'
+  }
+
+  // Extract brand info from responses
+  const brandVoice = client.intake_responses?.brand_voice || 
+                     client.brand_data?.voice || 
+                     'Not yet defined'
+  const targetAudience = client.intake_responses?.target_audience || 
+                        client.brand_data?.target_audience || 
+                        'Not yet defined'
+
+  // Build the full client object with computed fields
+  const clientWithCounts = {
+    ...client,
+    status,
+    projectCount: projectCount || 0,
+    contentCount: contentCount || 0,
+    aiCalls,
+    aiSpend: Math.round(aiSpend * 100) / 100,
+    brandVoice,
+    targetAudience
+  }
+
+  return (
+    <ClientDetailContent
+      client={clientWithCounts}
+      projects={projects || []}
+      content={content || []}
+      activity={activityLog || []}
+      questionnaireConfig={questionnaireConfig}
+      questionnaireVersions={questionnaireVersions}
+      currentQuestionnaireVersion={currentVersion}
+      aiGenerations={aiGenerations || []}
+    />
+  )
+}
