@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { AlertCircle } from 'lucide-react';
+import { useDebouncedInput } from '@/hooks/use-debounced-value';
 
 interface ShortTextQuestionProps {
   value: string;
@@ -21,7 +22,15 @@ export default function ShortTextQuestion({
   error,
 }: ShortTextQuestionProps) {
   const [isFocused, setIsFocused] = useState(false);
-  const charCount = value?.length || 0;
+  
+  // Use debounced input for smooth typing without lag
+  const { value: localValue, onChange: handleLocalChange } = useDebouncedInput(
+    value,
+    onChange,
+    300 // 300ms debounce for short text
+  );
+  
+  const charCount = localValue?.length || 0;
   const isNearMax = charCount > maxLength * 0.85;
   const isOverMax = charCount > maxLength;
 
@@ -29,8 +38,8 @@ export default function ShortTextQuestion({
     <div className="space-y-2">
       <input
         type="text"
-        value={value || ''}
-        onChange={(e) => onChange(e.target.value)}
+        value={localValue || ''}
+        onChange={(e) => handleLocalChange(e.target.value)}
         onFocus={() => setIsFocused(true)}
         onBlur={() => {
           setIsFocused(false);

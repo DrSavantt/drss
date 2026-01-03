@@ -4,9 +4,11 @@ import { useState, useEffect } from 'react'
 import { updateProject, deleteProject } from '@/app/actions/projects'
 import { getJournalEntriesByProject } from '@/app/actions/journal'
 import { highlightMentions } from '@/lib/utils/mentions'
+import { sanitizeHtml } from '@/lib/utils/sanitize-html'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
+import { VisuallyHidden } from '@/components/ui/visually-hidden'
 import { AnimatedButton } from '@/components/animated-button'
 
 interface Project {
@@ -140,7 +142,7 @@ export function ProjectModal({ project, onClose, onUpdate, onDelete }: ProjectMo
   return (
     <>
       <Dialog open={true} onOpenChange={(val) => { if (!val) onClose() }}>
-        <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto" aria-describedby={undefined}>
           <DialogHeader>
             <DialogTitle>{isEditing ? 'Edit Project' : 'Project Details'}</DialogTitle>
           </DialogHeader>
@@ -287,7 +289,7 @@ export function ProjectModal({ project, onClose, onUpdate, onDelete }: ProjectMo
                           >
                             <div
                               className="text-sm text-foreground mb-3 leading-relaxed"
-                              dangerouslySetInnerHTML={{ __html: highlightMentions(entry.content, [project.name, project.clients?.name].filter(Boolean) as string[]) }}
+                              dangerouslySetInnerHTML={{ __html: sanitizeHtml(highlightMentions(entry.content, [project.name, project.clients?.name].filter(Boolean) as string[])) }}
                             />
                             <div className="flex items-center justify-between text-xs text-slate">
                               <div className="flex items-center gap-3">
@@ -452,6 +454,9 @@ export function ProjectModal({ project, onClose, onUpdate, onDelete }: ProjectMo
           <DialogContent className="max-w-md">
             <DialogHeader>
               <DialogTitle>Delete {project.name}?</DialogTitle>
+              <VisuallyHidden>
+                <DialogDescription>Confirmation dialog to delete this project</DialogDescription>
+              </VisuallyHidden>
             </DialogHeader>
             <div className="space-y-4">
               <p className="text-sm text-silver">

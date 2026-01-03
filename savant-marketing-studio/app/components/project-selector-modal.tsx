@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
 import { AnimatedButton } from '@/components/animated-button'
 
 interface Project {
@@ -44,11 +44,9 @@ export function ProjectSelectorModal({
       <DialogContent className="max-w-2xl">
         <DialogHeader>
           <DialogTitle>Change Project</DialogTitle>
+          <DialogDescription>Select a project to move the selected items to</DialogDescription>
         </DialogHeader>
         <div className="space-y-4 max-h-[70vh] flex flex-col">
-          <p className="text-sm text-silver">
-            Select a project to move the selected items to
-          </p>
 
           <div>
             <input

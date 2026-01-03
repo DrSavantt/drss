@@ -6,11 +6,21 @@ import { TopNav } from "./top-nav"
 import { useSidebar } from "@/contexts/sidebar-context"
 import { cn } from "@/lib/utils"
 
+interface User {
+  id: string
+  email?: string
+  user_metadata?: {
+    full_name?: string
+    avatar_url?: string
+  }
+}
+
 interface AppShellProps {
+  user?: User | null
   children: React.ReactNode
 }
 
-export function AppShell({ children }: AppShellProps) {
+export function AppShell({ user, children }: AppShellProps) {
   const { collapsed } = useSidebar()
   
   return (
@@ -22,7 +32,7 @@ export function AppShell({ children }: AppShellProps) {
         "transition-all duration-300",
         collapsed ? "pl-16" : "pl-64"
       )}>
-        <TopNav />
+        <TopNav user={user} />
         
         <main className="min-h-[calc(100vh-4rem)] p-6">
           {children}

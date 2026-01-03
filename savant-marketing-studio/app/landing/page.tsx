@@ -265,6 +265,7 @@ export default function LandingPage() {
               fill
               className="object-cover"
               sizes="(max-width: 768px) 128px, 160px"
+              priority
             />
           </div>
 

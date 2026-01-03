@@ -1,7 +1,8 @@
 'use client'
 
 import { useState } from 'react'
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
+import { VisuallyHidden } from '@/components/ui/visually-hidden'
 import { AnimatedButton } from '@/components/animated-button'
 
 interface TagModalProps {
@@ -54,6 +55,9 @@ export function TagModal({ isOpen, onClose, onConfirm, title = "Add Tags" }: Tag
       <DialogContent className="max-w-md">
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
+          <VisuallyHidden>
+            <DialogDescription>Enter tags to add to selected entries</DialogDescription>
+          </VisuallyHidden>
         </DialogHeader>
         <div className="space-y-4">
           <div>

@@ -14,6 +14,7 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { updateUserProfile } from "@/app/actions/settings"
 import { Download, Upload, Loader2 } from "lucide-react"
 import { useSidebar } from "@/contexts/sidebar-context"
+import { setStorageItem, getStorageItem } from "@/lib/utils/async-storage"
 
 // Dynamic import for QuestionnaireSettings to reduce initial bundle
 // dnd-kit (~30kb) only loads when the Questionnaire tab is clicked
@@ -99,19 +100,24 @@ export function Settings() {
     }
     fetchUser()
     
-    // Load AI settings from localStorage
-    const savedAI = localStorage.getItem('ai_settings')
-    if (savedAI) {
-      try {
-        const settings = JSON.parse(savedAI)
+    // Load AI settings from localStorage (async)
+    async function loadAISettings() {
+      const settings = await getStorageItem<{
+        defaultComplexity?: string
+        monthlyBudgetAlert?: number
+        autoSaveContent?: boolean
+        defaultTemperature?: string
+      }>('ai_settings')
+      
+      if (settings) {
         setDefaultComplexity(settings.defaultComplexity || 'balanced')
         setMonthlyBudgetAlert(settings.monthlyBudgetAlert || 50)
         setAutoSaveContent(settings.autoSaveContent ?? true)
         setDefaultTemperature(settings.defaultTemperature || '0.7')
-      } catch (e) {
-        console.error('Failed to load AI settings:', e)
       }
     }
+    
+    loadAISettings()
   }, [])
 
   const handleThemeChange = (newTheme: string) => {
@@ -119,7 +125,8 @@ export function Settings() {
     if (newTheme === 'dark' || newTheme === 'light') {
       document.documentElement.classList.remove('dark', 'light')
       document.documentElement.classList.add(newTheme)
-      localStorage.setItem('theme', newTheme)
+      // Use async storage (non-blocking)
+      setStorageItem('theme', newTheme)
     }
   }
 
@@ -150,7 +157,7 @@ export function Settings() {
   }
 
   // Handler: Save AI settings
-  const handleSaveAISettings = () => {
+  const handleSaveAISettings = async () => {
     setSavingAI(true)
     setAIMessage(null)
     
@@ -161,7 +168,8 @@ export function Settings() {
         autoSaveContent,
         defaultTemperature,
       }
-      localStorage.setItem('ai_settings', JSON.stringify(settings))
+      // Use async storage (non-blocking)
+      await setStorageItem('ai_settings', settings)
       setAIMessage({ type: 'success', text: 'AI settings saved successfully' })
       // Clear message after 3 seconds
       setTimeout(() => setAIMessage(null), 3000)
@@ -193,10 +201,13 @@ export function Settings() {
     setIsExporting(true)
     try {
       // Fetch all user data from the backend
-      const [clientsRes, projectsRes, journalRes] = await Promise.all([
+      const [clientsRes, projectsRes, journalRes, aiSettings, sidebarState, themeState] = await Promise.all([
         fetch('/api/clients'),
         fetch('/api/projects'),
         fetch('/api/journal'),
+        getStorageItem('ai_settings'),
+        getStorageItem('sidebar_collapsed'),
+        getStorageItem('theme'),
       ])
       
       const data = {
@@ -205,9 +216,9 @@ export function Settings() {
         projects: projectsRes.ok ? await projectsRes.json() : [],
         journal: journalRes.ok ? await journalRes.json() : [],
         settings: {
-          ai: JSON.parse(localStorage.getItem('ai_settings') || '{}'),
-          sidebar: localStorage.getItem('sidebar_collapsed'),
-          theme: localStorage.getItem('theme'),
+          ai: aiSettings || {},
+          sidebar: sidebarState,
+          theme: themeState,
         }
       }
       

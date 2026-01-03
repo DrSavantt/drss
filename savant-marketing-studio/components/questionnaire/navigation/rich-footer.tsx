@@ -153,11 +153,11 @@ export function RichFooter({
                       </AlertDialogCancel>
                       <button
                         type="button"
-                        onClick={(e) => {
+                        onClick={async (e) => {
                           e.preventDefault();
                           e.stopPropagation();
 
-                          // Clear the keys
+                          // Clear the keys (can use sync since page reloads immediately)
                           localStorage.removeItem(`questionnaire_draft_${clientId}`);
                           localStorage.removeItem(`questionnaire_completed_${clientId}`);
                           localStorage.removeItem(`questionnaire_section_${clientId}`);

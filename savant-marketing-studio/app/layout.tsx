@@ -5,7 +5,7 @@ import { ErrorBoundary } from "@/components/error-boundary";
 import "./globals.css";
 
 const roboto = Roboto({
-  variable: "--font-inter",
+  variable: "--font-roboto",
   subsets: ["latin"],
   display: "swap",
   weight: ['400', '700'], // Regular and Bold

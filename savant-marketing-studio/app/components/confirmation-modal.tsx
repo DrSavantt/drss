@@ -1,6 +1,7 @@
 'use client'
 
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
+import { VisuallyHidden } from '@/components/ui/visually-hidden'
 import { AnimatedButton } from '@/components/animated-button'
 
 interface ConfirmationModalProps {
@@ -31,6 +32,9 @@ export function ConfirmationModal({
       <DialogContent>
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
+          <VisuallyHidden>
+            <DialogDescription>Confirmation required</DialogDescription>
+          </VisuallyHidden>
         </DialogHeader>
         <div className="space-y-4">
           <p className="text-silver">{message}</p>

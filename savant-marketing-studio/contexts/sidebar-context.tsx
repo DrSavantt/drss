@@ -1,6 +1,7 @@
 'use client';
 
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { setStorageItem, getStorageItemSync } from '@/lib/utils/async-storage';
 
 interface SidebarContextType {
   collapsed: boolean;
@@ -17,7 +18,8 @@ export function SidebarProvider({ children }: { children: ReactNode }) {
   // Load from localStorage after mount (avoids hydration mismatch)
   useEffect(() => {
     setMounted(true);
-    const saved = localStorage.getItem('sidebar_collapsed');
+    // Use sync version on mount to avoid flash
+    const saved = getStorageItemSync<string>('sidebar_collapsed');
     if (saved !== null) {
       setCollapsedState(saved === 'true');
     }
@@ -25,7 +27,8 @@ export function SidebarProvider({ children }: { children: ReactNode }) {
 
   const setCollapsed = (value: boolean) => {
     setCollapsedState(value);
-    localStorage.setItem('sidebar_collapsed', String(value));
+    // Use async version for updates (non-blocking)
+    setStorageItem('sidebar_collapsed', String(value));
   };
 
   const toggleCollapsed = () => {

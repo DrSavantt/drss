@@ -160,15 +160,9 @@
     text-rendering: optimizeLegibility;
   }
   
-  /* Headings should be bold */
+  /* Headings should be bold (uses Roboto via font-sans) */
   h1, h2, h3, h4, h5, h6 {
-    font-family: var(--font-inter), -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
     font-weight: 700 !important;
-  }
-  
-  /* All text elements use Inter */
-  p, span, div, button, input, textarea, select, label, a, li, td, th, strong, b {
-    font-family: var(--font-inter), -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   }
   
   /* Remove underlines from navigation links */

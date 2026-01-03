@@ -13,6 +13,7 @@ import {
 } from './dynamic-validation';
 import { useQuestionnaireConfigOptional } from './questionnaire-config-context';
 import { debounce } from '@/lib/utils';
+import { setStorageItem, getStorageItem, removeStorageItem } from '@/lib/utils/async-storage';
 
 export interface UseQuestionnaireFormReturn {
   formData: QuestionnaireData;
@@ -224,10 +225,10 @@ export function useQuestionnaireForm(
       
       const { data } = await response.json();
       
-      // Clear localStorage draft
-      localStorage.removeItem(`questionnaire_draft_${clientId}`);
-      localStorage.removeItem(`questionnaire_completed_${clientId}`);
-      localStorage.removeItem(`questionnaire_section_${clientId}`);
+      // Clear localStorage draft (async, non-blocking)
+      await removeStorageItem(`questionnaire_draft_${clientId}`);
+      await removeStorageItem(`questionnaire_completed_${clientId}`);
+      await removeStorageItem(`questionnaire_section_${clientId}`);
       
       setIsDraft(false);
       
@@ -309,56 +310,58 @@ export function useQuestionnaireForm(
   // Restore from localStorage on mount (only for create mode, not edit mode)
   // This runs after server load, so it acts as a fallback
   useEffect(() => {
-    // Skip restore if we just cleared (reset button was clicked)
-    if (sessionStorage.getItem('skipRestore') === 'true') {
-      sessionStorage.removeItem('skipRestore');
-      hasRestoredRef.current = true;
-      return;
-    }
-    
-    // Skip if in edit mode, already restored, or loaded from server
-    if (isEditMode || hasRestoredRef.current || hasLoadedFromServerRef.current) {
-      return;
-    }
-    
-    try {
-      const draftKey = `questionnaire_draft_${clientId}`;
-      const completedKey = `questionnaire_completed_${clientId}`;
-      const sectionKey = `questionnaire_section_${clientId}`;
-      
-      // Restore formData
-      const savedDraft = localStorage.getItem(draftKey);
-      if (savedDraft) {
-        const parsed = JSON.parse(savedDraft);
-        setFormData(parsed);
-        setIsDraft(true);
+    async function restoreDraft() {
+      // Skip restore if we just cleared (reset button was clicked)
+      if (sessionStorage.getItem('skipRestore') === 'true') {
+        sessionStorage.removeItem('skipRestore');
+        hasRestoredRef.current = true;
+        return;
       }
+      
+      // Skip if in edit mode, already restored, or loaded from server
+      if (isEditMode || hasRestoredRef.current || hasLoadedFromServerRef.current) {
+        return;
+      }
+      
+      try {
+        const draftKey = `questionnaire_draft_${clientId}`;
+        const completedKey = `questionnaire_completed_${clientId}`;
+        const sectionKey = `questionnaire_section_${clientId}`;
         
-      // Restore completedQuestions
-      const savedCompleted = localStorage.getItem(completedKey);
-      if (savedCompleted) {
-        const parsed = JSON.parse(savedCompleted);
-        setCompletedQuestions(new Set(parsed));
+        // Restore formData (async)
+        const savedDraft = await getStorageItem<QuestionnaireData>(draftKey);
+        if (savedDraft) {
+          setFormData(savedDraft);
+          setIsDraft(true);
+        }
+          
+        // Restore completedQuestions (async)
+        const savedCompleted = await getStorageItem<string[]>(completedKey);
+        if (savedCompleted) {
+          setCompletedQuestions(new Set(savedCompleted));
         }
 
-      // Restore current section (ensure it's an enabled section)
-      const savedSection = localStorage.getItem(sectionKey);
-      if (savedSection) {
-        const sectionNum = parseInt(savedSection, 10);
-        const enabled = getEnabledSectionsLive();
-        const isEnabled = enabled.some(s => s.id === sectionNum);
-        if (isEnabled) {
-          setCurrentSection(sectionNum);
+        // Restore current section (ensure it's an enabled section) (async)
+        const savedSection = await getStorageItem<string>(sectionKey);
+        if (savedSection) {
+          const sectionNum = parseInt(savedSection, 10);
+          const enabled = getEnabledSectionsLive();
+          const isEnabled = enabled.some(s => s.id === sectionNum);
+          if (isEnabled) {
+            setCurrentSection(sectionNum);
+          }
         }
-      }
-      
-      // Mark as restored so this never runs again
-      hasRestoredRef.current = true;
-      
+        
+        // Mark as restored so this never runs again
+        hasRestoredRef.current = true;
+        
       } catch (error) {
-      console.error('[RESTORE] ❌ FAILED:', error);
+        console.error('[RESTORE] ❌ FAILED:', error);
+      }
     }
-  }, [clientId, isEditMode]); // Still depends on clientId, but ref prevents multiple runs
+    
+    restoreDraft();
+  }, [clientId, isEditMode, getEnabledSectionsLive]); // Still depends on clientId, but ref prevents multiple runs
 
   // Auto-save to server (debounced) when form data changes
   useEffect(() => {
@@ -372,37 +375,44 @@ export function useQuestionnaireForm(
     };
   }, [formData, debouncedServerSave, isEditMode]);
 
-  // Auto-save to localStorage - immediate, no debounce
+  // Auto-save to localStorage - async, debounced to prevent blocking
   useEffect(() => {
     if (!formData) {
       return;
     }
 
-    try {
-      const draftKey = `questionnaire_draft_${clientId}`;
-      const completedKey = `questionnaire_completed_${clientId}`;
-      
-      // Save formData
-      localStorage.setItem(draftKey, JSON.stringify(formData));
-      
-      // Save completedQuestions
-      localStorage.setItem(completedKey, JSON.stringify(Array.from(completedQuestions)));
-      
-      // Save current section
-      localStorage.setItem(`questionnaire_section_${clientId}`, String(currentSection));
-      
-      setSaveStatus('saved');
-      setIsDraft(true);
-    } catch (error) {
-      console.error('[AUTO-SAVE] ❌ FAILED:', error);
-      setSaveStatus('error');
-    }
+    // Debounce auto-save to avoid excessive localStorage writes
+    const saveTimer = setTimeout(async () => {
+      try {
+        const draftKey = `questionnaire_draft_${clientId}`;
+        const completedKey = `questionnaire_completed_${clientId}`;
+        const sectionKey = `questionnaire_section_${clientId}`;
+        
+        // Save formData (async, non-blocking)
+        await setStorageItem(draftKey, formData);
+        
+        // Save completedQuestions (async, non-blocking)
+        await setStorageItem(completedKey, Array.from(completedQuestions));
+        
+        // Save current section (async, non-blocking)
+        await setStorageItem(sectionKey, String(currentSection));
+        
+        setSaveStatus('saved');
+        setIsDraft(true);
+      } catch (error) {
+        console.error('[AUTO-SAVE] ❌ FAILED:', error);
+        setSaveStatus('error');
+      }
+    }, 1000); // 1 second debounce for localStorage
+
+    return () => clearTimeout(saveTimer);
   }, [formData, completedQuestions, currentSection, clientId]);
 
   // Save when component unmounts or user navigates away
   useEffect(() => {
     const handleBeforeUnload = () => {
       // Save immediately before page closes/navigates
+      // Note: We use sync version here because beforeunload needs to be synchronous
       try {
         localStorage.setItem(
           `questionnaire_draft_${clientId}`,
@@ -427,23 +437,10 @@ export function useQuestionnaireForm(
     // Cleanup: save on unmount (navigating to different route)
     return () => {
       window.removeEventListener('beforeunload', handleBeforeUnload);
-      // Final save on unmount
-      try {
-        localStorage.setItem(
-          `questionnaire_draft_${clientId}`,
-          JSON.stringify(formData)
-        );
-        localStorage.setItem(
-          `questionnaire_completed_${clientId}`,
-          JSON.stringify(Array.from(completedQuestions))
-        );
-        localStorage.setItem(
-          `questionnaire_section_${clientId}`,
-          currentSection.toString()
-        );
-      } catch (error) {
-        console.error('Failed to save on unmount:', error);
-      }
+      // Final save on unmount - async to avoid blocking
+      setStorageItem(`questionnaire_draft_${clientId}`, formData);
+      setStorageItem(`questionnaire_completed_${clientId}`, Array.from(completedQuestions));
+      setStorageItem(`questionnaire_section_${clientId}`, currentSection.toString());
     };
   }, [formData, completedQuestions, currentSection, clientId]);
 
@@ -622,20 +619,14 @@ export function useQuestionnaireForm(
   }, [currentSection, getPreviousEnabledSectionIdLive]);
 
   // Manual save
-  const manualSave = useCallback(() => {
+  const manualSave = useCallback(async () => {
     try {
-      localStorage.setItem(
-        `questionnaire_draft_${clientId}`,
-        JSON.stringify(formData)
-      );
-      localStorage.setItem(
-        `questionnaire_completed_${clientId}`,
-        JSON.stringify(Array.from(completedQuestions))
-      );
-      localStorage.setItem(
-        `questionnaire_section_${clientId}`,
-        currentSection.toString()
-      );
+      setSaveStatus('saving');
+      
+      await setStorageItem(`questionnaire_draft_${clientId}`, formData);
+      await setStorageItem(`questionnaire_completed_${clientId}`, Array.from(completedQuestions));
+      await setStorageItem(`questionnaire_section_${clientId}`, currentSection.toString());
+      
       setSaveStatus('saved');
       setIsDraft(true);
     } catch (error) {

@@ -25,6 +25,7 @@ import {
   Globe,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { sanitizeHtml } from "@/lib/utils/sanitize-html"
 import { performDeepResearch, generateResearchPlan, type ResearchResult } from "@/app/actions/research"
 import { createGoogleDoc } from "@/app/actions/google-docs"
 import { getClientsForDropdown } from "@/app/actions/ai"
@@ -626,11 +627,13 @@ function CompleteState({ query, result, onExportGoogleDocs, onNewResearch }: {
             <div
               className="whitespace-pre-wrap text-foreground"
               dangerouslySetInnerHTML={{
-                __html: result.report
-                  .replace(/## (.*)/g, '<h2 class="text-lg font-bold mt-6 mb-3 text-primary">$1</h2>')
-                  .replace(/### (.*)/g, '<h3 class="text-base font-semibold mt-4 mb-2">$1</h3>')
-                  .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-                  .replace(/- (.*)/g, '<li class="ml-4">$1</li>')
+                __html: sanitizeHtml(
+                  result.report
+                    .replace(/## (.*)/g, '<h2 class="text-lg font-bold mt-6 mb-3 text-primary">$1</h2>')
+                    .replace(/### (.*)/g, '<h3 class="text-base font-semibold mt-4 mb-2">$1</h3>')
+                    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+                    .replace(/- (.*)/g, '<li class="ml-4">$1</li>')
+                )
               }}
             />
           </div>

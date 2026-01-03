@@ -1,5 +1,6 @@
 "use client"
 
+import { memo, useMemo } from "react"
 import { Moon, Sun, Bell, User, Settings as SettingsIcon, LogOut } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
@@ -15,10 +16,46 @@ import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { logout } from "@/app/actions/auth"
 
-export function TopNav() {
+interface User {
+  id: string
+  email?: string
+  user_metadata?: {
+    full_name?: string
+    avatar_url?: string
+  }
+}
+
+interface TopNavProps {
+  user?: User | null
+}
+
+export const TopNav = memo(function TopNav({ user }: TopNavProps) {
   const [theme, setTheme] = useState<"dark" | "light">('dark') // Always start with 'dark' for SSR
   const [mounted, setMounted] = useState(false)
   const router = useRouter()
+
+  // Compute display name and initials from user data
+  const { displayName, displayEmail, initials } = useMemo(() => {
+    const fullName = user?.user_metadata?.full_name
+    const email = user?.email
+    
+    const name = fullName || email?.split('@')[0] || 'User'
+    const emailDisplay = email || 'user@drss.studio'
+    
+    // Generate initials from name
+    const nameInitials = name
+      .split(' ')
+      .map(part => part[0])
+      .join('')
+      .toUpperCase()
+      .slice(0, 2) || 'U'
+    
+    return {
+      displayName: name,
+      displayEmail: emailDisplay,
+      initials: nameInitials
+    }
+  }, [user])
 
   // Load saved theme after mount (client-side only)
   useEffect(() => {
@@ -72,15 +109,17 @@ export function TopNav() {
         <DropdownMenuTrigger asChild>
           <Button variant="ghost" className="relative h-9 w-9 rounded-full">
             <Avatar className="h-9 w-9">
-              <AvatarFallback className="bg-primary text-primary-foreground">JD</AvatarFallback>
+              <AvatarFallback className="bg-primary text-primary-foreground">
+                {initials}
+              </AvatarFallback>
             </Avatar>
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent className="w-56" align="end" forceMount>
           <DropdownMenuLabel className="font-normal">
             <div className="flex flex-col space-y-1">
-              <p className="text-sm font-medium">Jay Developer</p>
-              <p className="text-xs text-muted-foreground">jay@drss.studio</p>
+              <p className="text-sm font-medium">{displayName}</p>
+              <p className="text-xs text-muted-foreground">{displayEmail}</p>
             </div>
           </DropdownMenuLabel>
           <DropdownMenuSeparator />
@@ -110,4 +149,6 @@ export function TopNav() {
       </DropdownMenu>
     </header>
   )
-}
+})
+
+TopNav.displayName = 'TopNav'

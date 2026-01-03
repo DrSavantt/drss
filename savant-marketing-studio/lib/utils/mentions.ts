@@ -1,3 +1,5 @@
+import { escapeHtml } from './sanitize-html'
+
 export function parseMentions(
   text: string,
   clients: { id: string; name: string }[],
@@ -93,7 +95,8 @@ export function parseMentions(
 }
 
 export function highlightMentions(text: string, knownNames: string[] = []) {
-  let result = text
+  // First, escape HTML to prevent XSS attacks
+  let result = escapeHtml(text)
   
   // Only highlight exact matches of known names
   if (knownNames.length > 0) {
@@ -101,11 +104,13 @@ export function highlightMentions(text: string, knownNames: string[] = []) {
     const sortedNames = [...knownNames].sort((a, b) => b.length - a.length)
     
     sortedNames.forEach(name => {
-      // Escape special regex characters in the name
-      const escapedName = name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+      // Escape special regex characters in the name (for regex matching)
+      const escapedRegexName = name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+      // Also escape the name for HTML output
+      const escapedHtmlName = escapeHtml(name)
       // Match @name exactly (case insensitive), followed by word boundary or punctuation
-      const nameRegex = new RegExp(`@(${escapedName})(?=\\s|$|[.,!?;:])`, 'gi')
-      result = result.replace(nameRegex, '<span class="text-info font-semibold">@$1</span>')
+      const nameRegex = new RegExp(`@(${escapedRegexName})(?=\\s|$|[.,!?;:])`, 'gi')
+      result = result.replace(nameRegex, `<span class="text-info font-semibold">@${escapedHtmlName}</span>`)
     })
   }
   

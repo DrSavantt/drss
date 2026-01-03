@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { cn } from "@/lib/utils"
+import { escapeHtml } from "@/lib/utils/sanitize-html"
 import { 
   createJournalEntry, 
   getJournalChats, 
@@ -675,18 +676,17 @@ export function Journal() {
   }
 
   // Function to render entry with highlighted mentions and tags
+  // Uses escapeHtml to sanitize user content before adding HTML formatting
   const renderContent = (content: string, mentionedClientNames: string[] = []) => {
-    let html = content
-    
-    // Escape HTML first to prevent XSS
-    html = html.replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    // Escape HTML first to prevent XSS - use utility for consistency
+    let html = escapeHtml(content)
     
     // Only highlight names we KNOW are clients (from mentionedClientNames)
     mentionedClientNames.forEach(clientName => {
       // Escape special regex characters in client name
       const escapedName = clientName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
       const regex = new RegExp(`@${escapedName}`, 'g')
-      html = html.replace(regex, `<span class="text-cyan-400 font-medium">@${clientName}</span>`)
+      html = html.replace(regex, `<span class="text-cyan-400 font-medium">@${escapeHtml(clientName)}</span>`)
     })
     
     // Highlight #tags

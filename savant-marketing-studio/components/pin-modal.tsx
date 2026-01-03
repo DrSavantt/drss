@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { AnimatedButton } from '@/components/animated-button';
+import { setStorageItem, getStorageItem, removeStorageItem } from '@/lib/utils/async-storage';
 
 export default function PinModal({ open, onClose }: { open: boolean; onClose: () => void }) {
   const [pin, setPin] = useState('');
@@ -14,8 +15,11 @@ export default function PinModal({ open, onClose }: { open: boolean; onClose: ()
 
   // Check lockout state from localStorage on mount
   useEffect(() => {
-    const lockTS = +(localStorage.getItem('PIN_LOCKOUT') || 0);
-    if (Date.now() < lockTS) setLockout(lockTS);
+    async function checkLockout() {
+      const lockTS = await getStorageItem<number>('PIN_LOCKOUT');
+      if (lockTS && Date.now() < lockTS) setLockout(lockTS);
+    }
+    checkLockout();
   }, []);
   useEffect(() => { if (open) inputRef.current?.focus(); }, [open]);
 
@@ -23,7 +27,12 @@ export default function PinModal({ open, onClose }: { open: boolean; onClose: ()
   useEffect(() => {
     if (!lockout) return;
     const timer = setInterval(() => {
-      if (Date.now() >= (lockout || 0)) { setLockout(null); localStorage.removeItem('PIN_LOCKOUT'); setAttempts(0); setError(''); }
+      if (Date.now() >= (lockout || 0)) { 
+        setLockout(null); 
+        removeStorageItem('PIN_LOCKOUT'); 
+        setAttempts(0); 
+        setError(''); 
+      }
     }, 500);
     return () => clearInterval(timer);
   }, [lockout]);
@@ -48,7 +57,8 @@ export default function PinModal({ open, onClose }: { open: boolean; onClose: ()
         const next = a + 1;
         if (next >= 3) {
           const until = Date.now() + 15 * 60 * 1000;
-          setLockout(until); localStorage.setItem('PIN_LOCKOUT', String(until));
+          setLockout(until); 
+          setStorageItem('PIN_LOCKOUT', until);
           setError('Too many failures. Locked for 15 minutes.');
         } else {
           setError('Incorrect PIN. Please try again.');
@@ -66,6 +76,7 @@ export default function PinModal({ open, onClose }: { open: boolean; onClose: ()
       <DialogContent className="max-w-sm">
         <DialogHeader>
           <DialogTitle>Admin PIN</DialogTitle>
+          <DialogDescription>Enter your 6-digit PIN to access the dashboard.</DialogDescription>
         </DialogHeader>
         <div className="text-center">
           {lockout ? (

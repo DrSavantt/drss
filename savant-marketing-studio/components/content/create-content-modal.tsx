@@ -7,7 +7,9 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
 } from '@/components/ui/dialog'
+import { VisuallyHidden } from '@/components/ui/visually-hidden'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { FileText, Upload, ChevronLeft, User } from 'lucide-react'
@@ -129,6 +131,11 @@ export function CreateContentModal({
               )}
             </DialogTitle>
           </div>
+          <VisuallyHidden>
+            <DialogDescription>
+              {step === 'type' ? 'Choose the type of content to create' : 'Select a client for this content'}
+            </DialogDescription>
+          </VisuallyHidden>
         </DialogHeader>
 
         {step === 'type' ? (

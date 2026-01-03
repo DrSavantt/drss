@@ -4,7 +4,8 @@ import { useState, useEffect } from 'react'
 import dynamic from 'next/dynamic'
 import { Loader2 } from 'lucide-react'
 import { getClientProjects } from '@/app/actions/content'
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
+import { VisuallyHidden } from '@/components/ui/visually-hidden'
 import { AnimatedButton } from '@/components/animated-button'
 
 const TiptapEditor = dynamic(
@@ -140,6 +141,9 @@ export function NoteEditorModal({
       <DialogContent className="max-w-2xl">
         <DialogHeader>
           <DialogTitle>New Note</DialogTitle>
+          <VisuallyHidden>
+            <DialogDescription>Create a new note with title, client, project and content</DialogDescription>
+          </VisuallyHidden>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="flex flex-col max-h-[70vh]">
         <div className="flex-1 overflow-y-auto py-4 space-y-4">

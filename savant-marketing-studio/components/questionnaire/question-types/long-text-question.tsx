@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { AlertCircle } from 'lucide-react';
+import { useDebouncedInput } from '@/hooks/use-debounced-value';
 
 interface LongTextQuestionProps {
   value: string;
@@ -23,7 +24,15 @@ export default function LongTextQuestion({
   error,
 }: LongTextQuestionProps) {
   const [isFocused, setIsFocused] = useState(false);
-  const charCount = value?.length || 0;
+  
+  // Use debounced input for smooth typing without lag
+  const { value: localValue, onChange: handleLocalChange } = useDebouncedInput(
+    value,
+    onChange,
+    500 // 500ms debounce for long text
+  );
+  
+  const charCount = localValue?.length || 0;
   
   // Only show counter when approaching limits or there's an issue
   const showCounter = charCount > 0 && (charCount < minLength || charCount > maxLength * 0.9);
@@ -34,8 +43,8 @@ export default function LongTextQuestion({
   return (
     <div className="space-y-2">
       <textarea
-        value={value || ''}
-        onChange={(e) => onChange(e.target.value)}
+        value={localValue || ''}
+        onChange={(e) => handleLocalChange(e.target.value)}
         onFocus={() => setIsFocused(true)}
         onBlur={() => {
           setIsFocused(false);

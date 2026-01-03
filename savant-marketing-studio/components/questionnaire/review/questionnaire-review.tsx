@@ -64,7 +64,7 @@ export default function QuestionnaireReview({
       const result = await saveQuestionnaire(clientId, formData, mode);
 
       if (result.success) {
-        // Clear localStorage
+        // Clear localStorage (sync is fine here since we're redirecting)
         localStorage.removeItem(`questionnaire_draft_${clientId}`);
         localStorage.removeItem(`questionnaire_completed_${clientId}`);
 

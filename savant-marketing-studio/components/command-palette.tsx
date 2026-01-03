@@ -5,7 +5,9 @@ import { useRouter } from 'next/navigation'
 import {
   Dialog,
   DialogContent,
+  DialogTitle,
 } from '@/components/ui/dialog'
+import { VisuallyHidden } from '@/components/ui/visually-hidden'
 import {
   LayoutDashboard,
   Users,
@@ -20,6 +22,7 @@ import {
   Settings,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { useDebouncedValue } from '@/hooks/use-debounced-value'
 
 interface CommandItem {
   id: string
@@ -58,6 +61,9 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
   const [projects, setProjects] = useState<CommandItem[]>([])
   const [content, setContent] = useState<CommandItem[]>([])
   const [loading, setLoading] = useState(false)
+
+  // Debounce the search query - only filter after user stops typing
+  const debouncedQuery = useDebouncedValue(query, 200)
 
   // Fetch data when palette opens
   useEffect(() => {
@@ -122,22 +128,22 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
     }
   }
 
-  // Filter items based on query
+  // Filter items based on debounced query (not raw query)
   useEffect(() => {
     const allItems = [...PAGES, ...clients, ...projects, ...content]
     
-    if (!query.trim()) {
+    if (!debouncedQuery.trim()) {
       setItems(allItems)
     } else {
       const filtered = allItems.filter(item =>
-        item.label.toLowerCase().includes(query.toLowerCase()) ||
-        item.description?.toLowerCase().includes(query.toLowerCase())
+        item.label.toLowerCase().includes(debouncedQuery.toLowerCase()) ||
+        item.description?.toLowerCase().includes(debouncedQuery.toLowerCase())
       )
       setItems(filtered)
     }
     
     setSelectedIndex(0) // Reset selection when filter changes
-  }, [query, clients, projects, content])
+  }, [debouncedQuery, clients, projects, content])
 
   // Group items by type
   const groupedItems = items.reduce((acc, item) => {
@@ -180,7 +186,12 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="p-0 gap-0 max-w-2xl max-h-[600px] overflow-hidden">
+      <DialogContent className="p-0 gap-0 max-w-2xl max-h-[600px] overflow-hidden" aria-describedby={undefined}>
+        {/* Accessible title for screen readers */}
+        <VisuallyHidden>
+          <DialogTitle>Search Command Palette</DialogTitle>
+        </VisuallyHidden>
+        
         {/* Search Input */}
         <div className="border-b border-border p-4">
           <div className="flex items-center gap-3">

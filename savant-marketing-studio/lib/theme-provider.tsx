@@ -1,6 +1,7 @@
 'use client'
 
 import { createContext, useContext, useEffect, useState } from 'react'
+import { setStorageItem, getStorageItemSync } from '@/lib/utils/async-storage'
 
 type Theme = 'light' | 'dark'
 
@@ -22,7 +23,8 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     // Get initial theme from localStorage or default to dark
-    const stored = localStorage.getItem('theme') as Theme | null
+    // Use sync version here to prevent flash of wrong theme
+    const stored = getStorageItemSync<Theme>('theme')
     const initialTheme = stored || 'dark'
     
     setTheme(initialTheme)
@@ -36,8 +38,8 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (!mounted) return
     
-    // Save to localStorage
-    localStorage.setItem('theme', theme)
+    // Save to localStorage (async, non-blocking)
+    setStorageItem('theme', theme)
     
     // Apply theme class
     document.documentElement.classList.remove('light', 'dark')

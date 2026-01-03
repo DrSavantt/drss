@@ -8,6 +8,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
   DialogFooter,
 } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
@@ -96,6 +97,7 @@ export function EditClientDialog({ client, open, onOpenChange }: EditClientDialo
       <DialogContent className="max-w-[425px]">
         <DialogHeader>
           <DialogTitle>Edit Client</DialogTitle>
+          <DialogDescription>Update the client's profile information.</DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit}>
           <div className="grid gap-4 py-4">
