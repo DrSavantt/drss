@@ -48,14 +48,14 @@ export default async function PublicFormPage({ params }: PageProps) {
   
   // Load existing responses from clients.intake_responses
   // Data format: { sections: {...} } or raw { avatar_definition: {...}, ... }
-  let existingResponses = null
+  let existingResponses: Record<string, unknown> | null = null
   
   if (client.intake_responses) {
     const intakeData = client.intake_responses as Record<string, unknown>
     
     if (intakeData.sections) {
       // It's wrapped in { version, sections: {...} } format - unwrap it
-      existingResponses = intakeData.sections
+      existingResponses = intakeData.sections as Record<string, unknown>
     } else if (intakeData.avatar_definition || intakeData.dream_outcome) {
       // It's already in raw format
       existingResponses = intakeData
