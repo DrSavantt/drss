@@ -11,10 +11,37 @@ When launching development servers:
 ## 📤 GIT & DEPLOYMENT RULES - CRITICAL
 
 When committing changes:
-1. **ALWAYS** push to remote repository immediately after commit
-2. This triggers Vercel automatic deployments for production builds
-3. Use command: `git push` after every `git commit`
-4. Never leave commits unpushed - Vercel needs the push to trigger builds
+1. **ALWAYS** use proper commit messages: `git commit -m "type: description"`
+2. **ALWAYS** push to remote repository immediately after commit: `git push origin main`
+3. **ALWAYS** verify the push triggered Vercel deployment by checking https://vercel.com/drsavantt/drss
+4. This triggers Vercel automatic deployments for production builds
+5. Never leave commits unpushed - Vercel needs the push to trigger builds
+6. Deployment automatically starts on push - no manual action needed
+
+### Commit Message Format
+```
+git commit -m "type: short description
+
+Optional detailed explanation"
+```
+
+**Types:**
+- `feat:` - New feature
+- `fix:` - Bug fix
+- `refactor:` - Code refactoring
+- `docs:` - Documentation
+- `perf:` - Performance improvement
+- `test:` - Test additions/changes
+- `chore:` - Build/maintenance tasks
+
+### Vercel Deployment Flow
+1. Make code changes locally
+2. Test locally (`npm run dev`)
+3. `git add .` and `git commit -m "..."`
+4. `git push origin main`
+5. Vercel automatically detects push → starts build
+6. Check deployment at https://vercel.com/drsavantt/drss
+7. Preview URL updates once build completes (~2-5 minutes)
 
 ## 🎨 DESIGN SYSTEM ENFORCEMENT - CRITICAL
 
