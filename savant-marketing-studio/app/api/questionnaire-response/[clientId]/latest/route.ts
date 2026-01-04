@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from 'next/server'
 
 /**
  * GET /api/questionnaire-response/[clientId]/latest
- * Get the latest response (draft or submitted)
+ * Get the current response from clients.intake_responses
  */
 export async function GET(
   request: NextRequest,
@@ -23,33 +23,40 @@ export async function GET(
 
     const { clientId } = await params
 
-    // Verify user owns this client
-    const { data: client } = await supabase
+    // Get client with intake_responses
+    const { data: client, error } = await supabase
       .from('clients')
-      .select('id')
+      .select('id, intake_responses, questionnaire_status, questionnaire_completed_at, updated_at')
       .eq('id', clientId)
       .eq('user_id', user.id)
       .single()
 
-    if (!client) {
+    if (error || !client) {
       return NextResponse.json({ error: 'Client not found' }, { status: 404 })
     }
 
-    // Get latest response (is_latest = true)
-    const { data: response, error } = await supabase
-      .from('questionnaire_responses')
-      .select('*')
-      .eq('client_id', clientId)
-      .eq('is_latest', true)
-      .single()
-
-    if (error && error.code !== 'PGRST116') { // PGRST116 = no rows returned
-      throw error
+    // Parse intake_responses
+    let responseData = null;
+    if (client.intake_responses) {
+      const intakeData = client.intake_responses as Record<string, unknown>;
+      if (intakeData.sections) {
+        responseData = intakeData.sections;
+      } else if (intakeData.avatar_definition || intakeData.dream_outcome) {
+        responseData = intakeData;
+      }
     }
 
     return NextResponse.json({ 
-      data: response || null,
-      has_response: !!response
+      data: responseData ? {
+        id: client.id,
+        response_data: responseData,
+        status: client.questionnaire_status === 'completed' ? 'submitted' : 
+                client.questionnaire_status === 'in_progress' ? 'draft' : null,
+        submitted_at: client.questionnaire_completed_at,
+        updated_at: client.updated_at,
+        is_latest: true
+      } : null,
+      has_response: !!responseData
     })
   } catch (error) {
     console.error('Error fetching latest response:', error)

@@ -46,26 +46,11 @@ export default async function PublicFormPage({ params }: PageProps) {
     redirect(`/form/${token}/complete`)
   }
   
-  // IMPORTANT: Fetch latest response from questionnaire_responses table
-  // This is the primary source of truth for saved progress
-  const { data: latestResponse } = await supabase
-    .from('questionnaire_responses')
-    .select('response_data, status, updated_at')
-    .eq('client_id', client.id)
-    .eq('is_latest', true)
-    .single()
-
-  // Determine the best available response data:
-  // 1. First try questionnaire_responses.response_data (raw format)
-  // 2. Fall back to clients.intake_responses.sections (unwrapped)
-  // 3. Fall back to clients.intake_responses directly (if it's already raw)
+  // Load existing responses from clients.intake_responses
+  // Data format: { sections: {...} } or raw { avatar_definition: {...}, ... }
   let existingResponses = null
   
-  if (latestResponse?.response_data) {
-    // Primary source: questionnaire_responses table has raw form data
-    existingResponses = latestResponse.response_data
-  } else if (client.intake_responses) {
-    // Fallback: clients.intake_responses might be wrapped or raw
+  if (client.intake_responses) {
     const intakeData = client.intake_responses as Record<string, unknown>
     
     if (intakeData.sections) {

@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from 'next/server'
 
 /**
  * DELETE /api/questionnaire-response/[clientId]/draft
- * Delete draft responses for a client, resetting their questionnaire to not_started
+ * Reset questionnaire to not_started by clearing intake_responses
  */
 export async function DELETE(
   request: NextRequest,
@@ -35,19 +35,7 @@ export async function DELETE(
       return NextResponse.json({ error: 'Client not found' }, { status: 404 })
     }
 
-    // Delete all responses from questionnaire_responses table for this client
-    // (both draft and any submitted versions - full reset)
-    const { error: deleteResponseError } = await supabase
-      .from('questionnaire_responses')
-      .delete()
-      .eq('client_id', clientId)
-
-    if (deleteResponseError) {
-      console.error('Delete response error:', deleteResponseError)
-      // Continue to reset client even if no responses existed
-    }
-
-    // Clear intake_responses and reset questionnaire status in clients table
+    // Clear intake_responses and reset questionnaire status
     const { error: updateClientError } = await supabase
       .from('clients')
       .update({
@@ -64,7 +52,7 @@ export async function DELETE(
 
     return NextResponse.json({ 
       success: true, 
-      message: 'Draft deleted and questionnaire reset to not started' 
+      message: 'Questionnaire reset to not started' 
     })
   } catch (error) {
     console.error('Error deleting draft:', error)

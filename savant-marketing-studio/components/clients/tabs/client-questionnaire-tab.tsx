@@ -2,10 +2,9 @@
 
 import { useState, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
-import { Copy, FileText, Eye, PencilLine, History } from 'lucide-react'
+import { Copy, FileText, Eye, PencilLine } from 'lucide-react'
 import { format } from 'date-fns'
 import { ResponseViewer } from '@/components/questionnaire/response-viewer'
-import { ResponseHistory, ResponseVersion } from '@/components/questionnaire/response-history'
 import { EmbeddedQuestionnaireForm } from '../embedded-questionnaire-form'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -17,6 +16,7 @@ import { sanitizeResponses, hasValidResponseData } from '@/lib/utils/safe-render
 // ============================================================================
 // CLIENT QUESTIONNAIRE TAB
 // All data pre-fetched server-side. NO loading spinner on tab switch!
+// Simplified: Uses clients.intake_responses as single source of truth
 // ============================================================================
 
 interface QuestionnaireConfig {
@@ -48,27 +48,13 @@ interface QuestionnaireConfig {
   }>
 }
 
-interface QuestionnaireVersion {
-  id: string
-  client_id: string
-  version: number
-  response_data: Record<string, unknown>
-  is_latest: boolean
-  status?: 'draft' | 'submitted'
-  submitted_at?: string | null
-  submitted_by?: 'client' | 'admin' | null
-  created_at: string
-  updated_at: string
-}
-
-type TabValue = 'view' | 'fill' | 'history'
+type TabValue = 'view' | 'fill'
 
 interface ClientQuestionnaireTabProps {
   clientId: string
   clientName: string
   config: QuestionnaireConfig
-  versions: QuestionnaireVersion[]
-  currentVersion: QuestionnaireVersion | null
+  responseData: Record<string, unknown> | null
   questionnaireStatus?: 'not_started' | 'in_progress' | 'completed' | null
   questionnaireCompletedAt?: string | null
   questionnaireToken?: string | null
@@ -78,15 +64,13 @@ export function ClientQuestionnaireTab({
   clientId,
   clientName,
   config,
-  versions,
-  currentVersion: initialCurrentVersion,
+  responseData,
   questionnaireStatus = 'not_started',
   questionnaireCompletedAt,
   questionnaireToken
 }: ClientQuestionnaireTabProps) {
   const router = useRouter()
   const [activeTab, setActiveTab] = useState<TabValue>('view')
-  const [currentVersion, setCurrentVersion] = useState<QuestionnaireVersion | null>(initialCurrentVersion)
   const [refreshKey, setRefreshKey] = useState(0)
 
   // Copy questionnaire link with contextual message
@@ -104,14 +88,6 @@ export function ClientQuestionnaireTab({
       toast.success('Link copied! Questionnaire is already completed.')
     } else {
       toast.success('Questionnaire link copied to clipboard!')
-    }
-  }
-
-  // View a specific version
-  const handleViewVersion = (version: ResponseVersion) => {
-    const foundVersion = versions.find(v => v.id === version.id)
-    if (foundVersion) {
-      setCurrentVersion(foundVersion)
     }
   }
 
@@ -145,16 +121,15 @@ export function ClientQuestionnaireTab({
 
   // Check if there are actual responses with content
   const hasResponses = useMemo(() => {
-    if (versions.length === 0) return false
-    if (!currentVersion?.response_data) return false
-    return hasValidResponseData(currentVersion.response_data)
-  }, [versions, currentVersion])
+    if (!responseData) return false
+    return hasValidResponseData(responseData)
+  }, [responseData])
   
   // Sanitize response data to prevent crashes from corrupted data
   const safeResponseData = useMemo(() => {
-    if (!currentVersion?.response_data) return null
-    return sanitizeResponses(currentVersion.response_data)
-  }, [currentVersion])
+    if (!responseData) return null
+    return sanitizeResponses(responseData)
+  }, [responseData])
   
   const isCompleted = questionnaireStatus === 'completed'
 
@@ -217,9 +192,9 @@ export function ClientQuestionnaireTab({
         </CardHeader>
       </Card>
 
-      {/* Tabs for View/Fill/History */}
+      {/* Tabs for View/Fill */}
       <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as TabValue)}>
-        <TabsList className="grid w-full grid-cols-3">
+        <TabsList className="grid w-full grid-cols-2">
           <TabsTrigger value="view" className="flex items-center gap-2">
             <Eye className="w-4 h-4" />
             <span>View Responses</span>
@@ -228,29 +203,15 @@ export function ClientQuestionnaireTab({
             <PencilLine className="w-4 h-4" />
             <span>{hasResponses ? 'Edit Form' : 'Fill Out'}</span>
           </TabsTrigger>
-          <TabsTrigger value="history" className="flex items-center gap-2">
-            <History className="w-4 h-4" />
-            <span>History</span>
-          </TabsTrigger>
         </TabsList>
 
         {/* View Tab - Show responses */}
         <TabsContent value="view" className="mt-6">
           {hasResponses && safeResponseData ? (
-            <div className="space-y-4">
-              {versions.length > 1 && currentVersion && (
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-muted-foreground">
-                    Viewing version {currentVersion.version}
-                    {currentVersion.is_latest && ' (current)'}
-                  </span>
-                </div>
-              )}
-              <ResponseViewer
-                responseData={safeResponseData}
-                sections={transformedSections}
-              />
-            </div>
+            <ResponseViewer
+              responseData={safeResponseData}
+              sections={transformedSections}
+            />
           ) : (
             <Card>
               <CardContent className="py-12 text-center">
@@ -274,44 +235,10 @@ export function ClientQuestionnaireTab({
             clientId={clientId}
             clientName={clientName}
             userId=""
-            initialData={currentVersion?.response_data as unknown as import('@/lib/questionnaire/types').QuestionnaireData}
+            initialData={responseData as unknown as import('@/lib/questionnaire/types').QuestionnaireData}
             onComplete={handleFormComplete}
             onCancel={() => setActiveTab('view')}
           />
-        </TabsContent>
-
-        {/* History Tab - Version history */}
-        <TabsContent value="history" className="mt-6">
-          {versions.length > 0 ? (
-            <ResponseHistory
-              versions={versions.map(v => ({
-                id: v.id,
-                version: v.version,
-                status: (v.status || (v.submitted_at ? 'submitted' : 'draft')) as 'draft' | 'submitted',
-                response_data: v.response_data,
-                submitted_at: v.submitted_at || null,
-                submitted_by: v.submitted_by || null,
-                created_at: v.created_at,
-                updated_at: v.updated_at,
-                is_latest: v.is_latest
-              }))}
-              currentVersionId={currentVersion?.id}
-              onViewVersion={(version) => {
-                handleViewVersion(version)
-                setActiveTab('view')
-              }}
-            />
-          ) : (
-            <Card>
-              <CardContent className="py-12 text-center">
-                <History className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
-                <h3 className="text-lg font-semibold mb-2">No History Yet</h3>
-                <p className="text-muted-foreground">
-                  Response history will appear here once the questionnaire is filled out.
-                </p>
-              </CardContent>
-            </Card>
-          )}
         </TabsContent>
       </Tabs>
     </div>

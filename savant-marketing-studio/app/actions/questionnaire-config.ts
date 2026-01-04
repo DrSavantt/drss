@@ -35,9 +35,7 @@ export interface QuestionConfig {
   file_description: string | null
 }
 
-export interface HelpConfig {
-  id: number
-  question_id: string
+export interface HelpContent {
   title: string | null
   where_to_find: string[] | null
   how_to_extract: string[] | null
@@ -46,7 +44,16 @@ export interface HelpConfig {
   quick_tip: string | null
 }
 
-export type QuestionWithHelp = QuestionConfig & { help?: HelpConfig }
+// Legacy interface for backwards compatibility (deprecated)
+export interface HelpConfig extends HelpContent {
+  id: number
+  question_id: string
+}
+
+export type QuestionWithHelp = QuestionConfig & { 
+  help_content?: HelpContent | null
+  help?: HelpContent | null  // Alias for backwards compatibility
+}
 
 // ===== READ OPERATIONS =====
 
@@ -118,6 +125,7 @@ export async function getQuestionsWithHelp(): Promise<QuestionWithHelp[]> {
     throw new Error('Supabase client not available')
   }
   
+  // Help content is now embedded in questions via help_content column
   const { data: questions, error: qError } = await supabase
     .from('questionnaire_questions')
     .select('*')
@@ -128,18 +136,10 @@ export async function getQuestionsWithHelp(): Promise<QuestionWithHelp[]> {
     throw qError
   }
   
-  const { data: help, error: hError } = await supabase
-    .from('questionnaire_help')
-    .select('*')
-  
-  if (hError) {
-    console.error('[getQuestionsWithHelp] Help error:', hError.message)
-    throw hError
-  }
-  
+  // Map help_content to help for backwards compatibility
   return (questions || []).map(q => ({
     ...q,
-    help: help?.find(h => h.question_id === q.id)
+    help: q.help_content as HelpContent | null
   }))
 }
 
@@ -164,7 +164,7 @@ export async function getQuestionsBySection(sectionId: number): Promise<Question
   return data || []
 }
 
-export async function getHelp(questionId: string): Promise<HelpConfig | null> {
+export async function getHelp(questionId: string): Promise<HelpContent | null> {
   const supabase = await createClient()
   
   if (!supabase) {
@@ -172,10 +172,11 @@ export async function getHelp(questionId: string): Promise<HelpConfig | null> {
     throw new Error('Supabase client not available')
   }
   
+  // Help content is now embedded in questions via help_content column
   const { data, error } = await supabase
-    .from('questionnaire_help')
-    .select('*')
-    .eq('question_id', questionId)
+    .from('questionnaire_questions')
+    .select('help_content')
+    .eq('id', questionId)
     .single()
   
   if (error) {
@@ -183,7 +184,7 @@ export async function getHelp(questionId: string): Promise<HelpConfig | null> {
     console.error('Error fetching help:', error)
     throw error
   }
-  return data
+  return data?.help_content as HelpContent | null
 }
 
 // ===== CLIENT-SPECIFIC CONFIG =====
@@ -226,7 +227,7 @@ export async function getQuestionsForClient(clientId: string): Promise<QuestionW
     throw new Error('Supabase client not available')
   }
   
-  // Get global questions (client parameter kept for API compatibility)
+  // Get global questions with embedded help content (client parameter kept for API compatibility)
   const { data: questions, error: questionsError } = await supabase
     .from('questionnaire_questions')
     .select('*')
@@ -237,20 +238,10 @@ export async function getQuestionsForClient(clientId: string): Promise<QuestionW
     throw questionsError
   }
   
-  // Get help content
-  const { data: help, error: helpError } = await supabase
-    .from('questionnaire_help')
-    .select('*')
-  
-  if (helpError) {
-    console.error('[getQuestionsForClient] Error fetching help:', helpError)
-    // Don't throw - continue without help if it fails
-  }
-  
-  // Return questions with help
+  // Help content is now embedded via help_content column
   return (questions || []).map(question => ({
     ...question,
-    help: help?.find(h => h.question_id === question.id)
+    help: question.help_content as HelpContent | null
   }))
 }
 
@@ -457,7 +448,7 @@ export async function deleteQuestion(id: string) {
 
 // ===== HELP UPDATE OPERATIONS =====
 
-export async function updateHelp(questionId: string, updates: Omit<Partial<HelpConfig>, 'id' | 'question_id' | 'created_at' | 'updated_at'>) {
+export async function updateHelp(questionId: string, updates: Partial<HelpContent>) {
   const supabase = await createClient()
   
   if (!supabase) {
@@ -465,33 +456,21 @@ export async function updateHelp(questionId: string, updates: Omit<Partial<HelpC
     throw new Error('Supabase client not available')
   }
   
-  // Check if help exists
+  // Get existing help_content to merge with updates
   const existing = await getHelp(questionId)
   
-  if (existing) {
-    // Update existing
-    const { error } = await supabase
-      .from('questionnaire_help')
-      .update(updates)
-      .eq('question_id', questionId)
-    
-    if (error) {
-      console.error('Error updating help:', error)
-      throw error
-    }
-  } else {
-    // Insert new
-    const { error } = await supabase
-      .from('questionnaire_help')
-      .insert({
-        question_id: questionId,
-        ...updates
-      })
-    
-    if (error) {
-      console.error('Error creating help:', error)
-      throw error
-    }
+  const newHelpContent = existing 
+    ? { ...existing, ...updates }
+    : updates
+  
+  const { error } = await supabase
+    .from('questionnaire_questions')
+    .update({ help_content: newHelpContent })
+    .eq('id', questionId)
+  
+  if (error) {
+    console.error('Error updating help:', error)
+    throw error
   }
   
   revalidatePath('/dashboard/settings/questionnaire')
@@ -506,9 +485,9 @@ export async function deleteHelp(questionId: string) {
   }
   
   const { error } = await supabase
-    .from('questionnaire_help')
-    .delete()
-    .eq('question_id', questionId)
+    .from('questionnaire_questions')
+    .update({ help_content: null })
+    .eq('id', questionId)
   
   if (error) {
     console.error('Error deleting help:', error)

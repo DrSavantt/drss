@@ -17,6 +17,16 @@ interface DbSectionConfig {
   enabled: boolean;
 }
 
+// Help content structure (embedded in questions.help_content JSONB column)
+interface HelpContent {
+  title: string | null;
+  where_to_find: string[] | null;
+  how_to_extract: string[] | null;
+  good_example: string | null;
+  weak_example: string | null;
+  quick_tip: string | null;
+}
+
 interface DbQuestionWithHelp {
   id: string;
   section_id: number;
@@ -35,16 +45,10 @@ interface DbQuestionWithHelp {
   max_file_size: number | null;
   max_files: number | null;
   file_description: string | null;
-  help?: {
-    id: number;
-    question_id: string;
-    title: string | null;
-    where_to_find: string[] | null;
-    how_to_extract: string[] | null;
-    good_example: string | null;
-    weak_example: string | null;
-    quick_tip: string | null;
-  };
+  // Help content - embedded directly in question via help_content column
+  // API maps help_content -> help for backwards compatibility
+  help?: HelpContent | null;
+  help_content?: HelpContent | null;
 }
 
 // Transform database section to config section format

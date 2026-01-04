@@ -77,16 +77,6 @@ interface QuestionnaireConfig {
   }>
 }
 
-interface QuestionnaireVersion {
-  id: string
-  client_id: string
-  version: number
-  response_data: Record<string, unknown>
-  is_latest: boolean
-  submitted_at?: string
-  created_at: string
-  updated_at: string
-}
 
 interface Activity {
   id: string
@@ -133,8 +123,7 @@ interface ClientDetailContentProps {
   }>
   activity: Activity[]
   questionnaireConfig: QuestionnaireConfig
-  questionnaireVersions: QuestionnaireVersion[]
-  currentQuestionnaireVersion: QuestionnaireVersion | null
+  questionnaireResponseData: Record<string, unknown> | null
   aiExecutions: AIExecution[]
 }
 
@@ -144,8 +133,7 @@ export function ClientDetailContent({
   content,
   activity,
   questionnaireConfig,
-  questionnaireVersions,
-  currentQuestionnaireVersion,
+  questionnaireResponseData,
   aiExecutions
 }: ClientDetailContentProps) {
   const [activeTab, setActiveTab] = useState('overview')
@@ -290,8 +278,7 @@ export function ClientDetailContent({
             clientId={client.id}
             clientName={client.name}
             config={questionnaireConfig}
-            versions={questionnaireVersions}
-            currentVersion={currentQuestionnaireVersion}
+            responseData={questionnaireResponseData}
             questionnaireStatus={client.questionnaire_status}
             questionnaireCompletedAt={client.questionnaire_completed_at}
             questionnaireToken={client.questionnaire_token}

@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server';
 // GET /api/questionnaire-config
 // Returns all questionnaire sections and questions with help data
 // Note: Per-client overrides feature removed - returns global config only
+// Note: Help content is now embedded in questions.help_content column
 export async function GET(request: NextRequest) {
   try {
     const supabase = await createClient();
@@ -13,16 +14,14 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Database unavailable' }, { status: 500 });
     }
     
-    // Execute all queries in parallel
-    const [sectionsResult, questionsResult, helpResult] = await Promise.all([
+    // Execute queries in parallel - help is now embedded in questions
+    const [sectionsResult, questionsResult] = await Promise.all([
       supabase.from('questionnaire_sections').select('*').order('sort_order'),
       supabase.from('questionnaire_questions').select('*').order('section_id, sort_order'),
-      supabase.from('questionnaire_help').select('*'),
     ]);
     
     const { data: sections, error: sectionsError } = sectionsResult;
     const { data: questions, error: questionsError } = questionsResult;
-    const { data: help, error: helpError } = helpResult;
     
     // Error handling
     if (sectionsError) {
@@ -41,18 +40,10 @@ export async function GET(request: NextRequest) {
       }, { status: 500 });
     }
     
-    if (helpError) {
-      console.error('[API] Help error:', helpError);
-      return NextResponse.json({ 
-        error: helpError.message,
-        code: helpError.code 
-      }, { status: 500 });
-    }
-    
-    // Combine questions with their help data
+    // Map help_content to help for backwards compatibility
     const questionsWithHelp = (questions || []).map(q => ({
       ...q,
-      help: help?.find(h => h.question_id === q.id)
+      help: q.help_content || null
     }));
     
     return NextResponse.json({

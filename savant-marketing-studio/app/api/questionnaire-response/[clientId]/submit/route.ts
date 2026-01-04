@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from 'next/server'
 
 /**
  * PUT /api/questionnaire-response/[clientId]/submit
- * Finalize a draft as submitted
+ * Mark questionnaire as completed (uses clients.intake_responses)
  */
 export async function PUT(
   request: NextRequest,
@@ -22,68 +22,44 @@ export async function PUT(
     }
 
     const { clientId } = await params
-    const body = await request.json()
-    const { submitted_by = 'admin' } = body // 'admin' or 'client'
 
-    // Verify user owns this client
-    const { data: client } = await supabase
+    // Verify user owns this client and get current data
+    const { data: client, error: clientError } = await supabase
       .from('clients')
-      .select('id')
+      .select('id, intake_responses')
       .eq('id', clientId)
       .eq('user_id', user.id)
       .single()
 
-    if (!client) {
+    if (clientError || !client) {
       return NextResponse.json(
         { error: 'Client not found or unauthorized' },
         { status: 404 }
       )
     }
 
-    // Get the current draft
-    const { data: draft, error: fetchError } = await supabase
-      .from('questionnaire_responses')
-      .select('*')
-      .eq('client_id', clientId)
-      .eq('status', 'draft')
-      .eq('is_latest', true)
-      .single()
-
-    if (fetchError || !draft) {
+    if (!client.intake_responses) {
       return NextResponse.json(
         { error: 'No draft found to submit' },
         { status: 404 }
       )
     }
 
-    // Update draft to submitted
-    const { data: response, error: updateError } = await supabase
-      .from('questionnaire_responses')
+    // Mark as completed
+    const { data, error: updateError } = await supabase
+      .from('clients')
       .update({
-        status: 'submitted',
-        submitted_at: new Date().toISOString(),
-        submitted_by,
-        updated_at: new Date().toISOString()
+        questionnaire_status: 'completed',
+        questionnaire_completed_at: new Date().toISOString()
       })
-      .eq('id', draft.id)
-      .select()
+      .eq('id', clientId)
+      .select('id, questionnaire_status, questionnaire_completed_at')
       .single()
 
     if (updateError) throw updateError
 
-    // Also update the client's questionnaire status for backward compatibility
-    await supabase
-      .from('clients')
-      .update({
-        questionnaire_status: 'completed',
-        questionnaire_completed_at: new Date().toISOString(),
-        // Sync to intake_responses for backward compatibility with existing code
-        intake_responses: draft.response_data
-      })
-      .eq('id', clientId)
-
     return NextResponse.json({ 
-      data: response,
+      data,
       message: 'Questionnaire submitted successfully'
     })
   } catch (error) {

@@ -42,21 +42,21 @@ async function fixClientData(clientName: string = 'axeee') {
     console.log('━'.repeat(60));
     
     // Helper to check if value is empty object
-    const isEmptyObject = (obj: any): boolean => {
+    const isEmptyObject = (obj: unknown): boolean => {
       if (obj === null || obj === undefined) return false;
       if (typeof obj !== 'object') return false;
       if (Array.isArray(obj)) return false;
-      return Object.keys(obj).length === 0;
+      return Object.keys(obj as object).length === 0;
     };
     
     // Helper to check if data has empty objects nested
-    const hasNestedEmptyObjects = (data: any): boolean => {
+    const hasNestedEmptyObjects = (data: unknown): boolean => {
       if (!data || typeof data !== 'object') return false;
       
-      return Object.values(data).some(value => {
+      return Object.values(data as object).some(value => {
         if (isEmptyObject(value)) return true;
         if (value && typeof value === 'object' && !Array.isArray(value)) {
-          return Object.values(value).some(v => isEmptyObject(v));
+          return Object.values(value as object).some(v => isEmptyObject(v));
         }
         return false;
       });
@@ -90,45 +90,11 @@ async function fixClientData(clientName: string = 'axeee') {
       console.log('  ', JSON.stringify(client.questionnaire_progress, null, 2));
     }
     
-    // Check questionnaire_responses table
-    console.log('\n📋 Checking questionnaire_responses table...');
-    const { data: responses, error: respError } = await supabase
-      .from('questionnaire_responses')
-      .select('*')
-      .eq('client_id', client.id);
-    
-    if (respError) {
-      console.error('  ❌ Error:', respError);
-    } else if (!responses || responses.length === 0) {
-      console.log('  ℹ️  No responses found');
-    } else {
-      console.log(`  📦 Found ${responses.length} response(s)`);
-      
-      responses.forEach((resp, idx) => {
-        console.log(`\n  Response ${idx + 1} (ID: ${resp.id}):`);
-        console.log(`    - Version: ${resp.version}`);
-        console.log(`    - Status: ${resp.status}`);
-        console.log(`    - Is Latest: ${resp.is_latest}`);
-        
-        if (isEmptyObject(resp.response_data)) {
-          console.log('    ⚠️  response_data is EMPTY OBJECT {}');
-        } else if (hasNestedEmptyObjects(resp.response_data)) {
-          console.log('    ⚠️  response_data contains nested empty objects');
-        } else {
-          const keys = Object.keys(resp.response_data || {});
-          console.log(`    ✅ response_data has ${keys.length} sections`);
-        }
-      });
-    }
-    
     // Detect if cleanup is needed
     const needsCleanup = 
       isEmptyObject(client.intake_responses) ||
       hasNestedEmptyObjects(client.intake_responses) ||
-      isEmptyObject(client.questionnaire_progress) ||
-      (responses && responses.some(r => 
-        isEmptyObject(r.response_data) || hasNestedEmptyObjects(r.response_data)
-      ));
+      isEmptyObject(client.questionnaire_progress);
     
     if (needsCleanup) {
       console.log('\n' + '⚠️ '.repeat(30));
@@ -167,25 +133,6 @@ async function fixClientData(clientName: string = 'axeee') {
           console.error('    ❌ Error:', updateError);
         } else {
           console.log('    ✅ Cleaned');
-        }
-      }
-      
-      // Clean bad responses
-      if (responses && responses.length > 0) {
-        for (const resp of responses) {
-          if (isEmptyObject(resp.response_data) || hasNestedEmptyObjects(resp.response_data)) {
-            console.log(`  → Deleting bad response (ID: ${resp.id})...`);
-            const { error: deleteError } = await supabase
-              .from('questionnaire_responses')
-              .delete()
-              .eq('id', resp.id);
-            
-            if (deleteError) {
-              console.error('    ❌ Error:', deleteError);
-            } else {
-              console.log('    ✅ Deleted');
-            }
-          }
         }
       }
       

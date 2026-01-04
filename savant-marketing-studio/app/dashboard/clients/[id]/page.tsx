@@ -66,13 +66,11 @@ async function ClientDetailLoader({ id }: { id: string }) {
     { data: activityLog },
     { data: sections },
     { data: questions },
-    { data: helpData },
-    { data: questionnaireResponses },
     { data: aiExecutions },
     { count: projectCount },
     { count: contentCount }
   ] = await Promise.all([
-    // Client details
+    // Client details (includes intake_responses for questionnaire)
     supabase
       .from('clients')
       .select('*')
@@ -110,23 +108,11 @@ async function ClientDetailLoader({ id }: { id: string }) {
       .select('*')
       .order('sort_order'),
     
-    // Questionnaire questions
+    // Questionnaire questions (help is embedded in help_content column)
     supabase
       .from('questionnaire_questions')
       .select('*')
       .order('section_id, sort_order'),
-    
-    // Questionnaire help content
-    supabase
-      .from('questionnaire_help')
-      .select('*'),
-    
-    // Questionnaire responses for this client
-    supabase
-      .from('questionnaire_responses')
-      .select('*')
-      .eq('client_id', id)
-      .order('version', { ascending: false }),
     
     // AI executions for this client
     supabase
@@ -156,14 +142,11 @@ async function ClientDetailLoader({ id }: { id: string }) {
     notFound()
   }
 
-  // Build questions with help data
-  const questionsWithHelp = (questions || []).map(q => {
-    const questionHelp = helpData?.find(h => h.question_id === q.id)
-    return {
-      ...q,
-      help: questionHelp || null
-    }
-  })
+  // Build questions with help data (help is embedded in help_content column)
+  const questionsWithHelp = (questions || []).map(q => ({
+    ...q,
+    help: q.help_content || null
+  }))
 
   // Build questionnaire config object
   const questionnaireConfig = {
@@ -171,9 +154,19 @@ async function ClientDetailLoader({ id }: { id: string }) {
     questions: questionsWithHelp
   }
 
-  // Find current/latest response version
-  const questionnaireVersions = questionnaireResponses || []
-  const currentVersion = questionnaireVersions.find(v => v.is_latest) || questionnaireVersions[0] || null
+  // Get response data from clients.intake_responses (single source of truth)
+  // Format: { sections: {...} } or raw { avatar_definition: {...}, ... }
+  let responseData = null
+  if (client.intake_responses) {
+    const intakeData = client.intake_responses as Record<string, unknown>
+    if (intakeData.sections) {
+      // Wrapped format - unwrap
+      responseData = intakeData.sections
+    } else if (intakeData.avatar_definition || intakeData.dream_outcome) {
+      // Raw format
+      responseData = intakeData
+    }
+  }
 
   // Calculate AI stats
   const aiCalls = aiExecutions?.length || 0
@@ -214,8 +207,7 @@ async function ClientDetailLoader({ id }: { id: string }) {
       content={content || []}
       activity={activityLog || []}
       questionnaireConfig={questionnaireConfig}
-      questionnaireVersions={questionnaireVersions}
-      currentQuestionnaireVersion={currentVersion}
+      questionnaireResponseData={responseData}
       aiExecutions={aiExecutions || []}
     />
   )

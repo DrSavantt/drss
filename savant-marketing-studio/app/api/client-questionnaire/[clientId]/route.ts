@@ -45,13 +45,10 @@ export async function GET(
 
     if (sectionsError) throw sectionsError
 
-    // Get global questions with help
+    // Get global questions (help is embedded in help_content column)
     const { data: questions, error: questionsError } = await supabase
       .from('questionnaire_questions')
-      .select(`
-        *,
-        questionnaire_help (*)
-      `)
+      .select('*')
       .eq('enabled', true)
       .order('sort_order', { ascending: true })
 
@@ -93,7 +90,7 @@ export async function GET(
     // Merge questions with overrides
     const mergedQuestions = questions?.map(question => {
       const override = questionOverrides.get(question.id)
-      const help = question.questionnaire_help?.[0] || null
+      const help = question.help_content || null
       
       // Merge help content if override has custom_help
       const mergedHelp = override?.custom_help 

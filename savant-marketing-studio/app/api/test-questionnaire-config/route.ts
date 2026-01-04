@@ -48,7 +48,7 @@ export async function GET() {
     }
     console.log('[Test API] Sections fetched:', sections?.length);
     
-    // Step 4: Test questions query
+    // Step 4: Test questions query (help is now embedded in help_content column)
     console.log('[Test API] Fetching all questions...');
     const { data: questions, error: questionsError } = await supabase
       .from('questionnaire_questions')
@@ -64,20 +64,9 @@ export async function GET() {
     }
     console.log('[Test API] Questions fetched:', questions?.length);
     
-    // Step 5: Test help query
-    console.log('[Test API] Fetching help data...');
-    const { data: help, error: helpError } = await supabase
-      .from('questionnaire_help')
-      .select('*');
-    
-    if (helpError) {
-      console.error('[Test API] Help error:', helpError);
-      return NextResponse.json({ 
-        error: helpError.message,
-        step: 'help'
-      }, { status: 500 });
-    }
-    console.log('[Test API] Help entries fetched:', help?.length);
+    // Count questions with embedded help content
+    const questionsWithHelp = questions?.filter(q => q.help_content !== null) || [];
+    console.log('[Test API] Questions with help_content:', questionsWithHelp.length);
     
     console.log('[Test API] ALL QUERIES SUCCESSFUL ✓');
     
@@ -85,7 +74,7 @@ export async function GET() {
       success: true,
       sections: sections?.length || 0,
       questions: questions?.length || 0,
-      help: help?.length || 0,
+      questionsWithHelp: questionsWithHelp.length,
       sectionNames: sections?.map(s => s.title) || [],
       firstSection: sections?.[0] || null,
       firstQuestion: questions?.[0] || null

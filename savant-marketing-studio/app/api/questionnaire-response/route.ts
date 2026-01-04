@@ -4,7 +4,7 @@ import { sanitizeForDb, hasQuestionnaireContent } from '@/lib/utils/safe-render'
 
 /**
  * POST /api/questionnaire-response
- * Create or update a draft response (for auto-save)
+ * Update client's intake_responses (auto-save for admin form)
  */
 export async function POST(request: NextRequest) {
   try {
@@ -45,7 +45,7 @@ export async function POST(request: NextRequest) {
     // Verify user owns this client
     const { data: client, error: clientError } = await supabase
       .from('clients')
-      .select('id')
+      .select('id, questionnaire_status')
       .eq('id', client_id)
       .eq('user_id', user.id)
       .single()
@@ -57,53 +57,23 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Check if draft exists for this client
-    const { data: existingDraft } = await supabase
-      .from('questionnaire_responses')
-      .select('id, version')
-      .eq('client_id', client_id)
-      .eq('status', 'draft')
-      .eq('is_latest', true)
+    // Update client's intake_responses
+    const { data, error } = await supabase
+      .from('clients')
+      .update({
+        intake_responses: sanitizedData,
+        questionnaire_status: client.questionnaire_status === 'completed' ? 'completed' : 'in_progress'
+      })
+      .eq('id', client_id)
+      .select('id, intake_responses, questionnaire_status')
       .single()
 
-    if (existingDraft) {
-      // Update existing draft with sanitized data
-      const { data, error } = await supabase
-        .from('questionnaire_responses')
-        .update({
-          response_data: sanitizedData,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', existingDraft.id)
-        .select()
-        .single()
-
-      if (error) throw error
-      return NextResponse.json({ data, action: 'updated' })
-    } else {
-      // Get next version number
-      const { data: versionData } = await supabase
-        .rpc('get_next_response_version', { p_client_id: client_id })
-
-      const nextVersion = versionData || 1
-
-      // Create new draft with sanitized data
-      const { data, error } = await supabase
-        .from('questionnaire_responses')
-        .insert({
-          client_id,
-          user_id: user.id,
-          version: nextVersion,
-          response_data: sanitizedData,
-          status: 'draft',
-          is_latest: true
-        })
-        .select()
-        .single()
-
-      if (error) throw error
-      return NextResponse.json({ data, action: 'created' })
-    }
+    if (error) throw error
+    
+    return NextResponse.json({ 
+      data, 
+      action: 'updated'
+    })
   } catch (error) {
     console.error('Error saving questionnaire response:', error)
     return NextResponse.json(

@@ -266,67 +266,6 @@ export type Database = {
         }
         Relationships: []
       }
-      client_questionnaire_overrides: {
-        Row: {
-          client_id: string
-          created_at: string | null
-          custom_help: Json | null
-          custom_text: string | null
-          id: string
-          is_enabled: boolean | null
-          override_type: string
-          question_id: string | null
-          section_id: number | null
-          updated_at: string | null
-        }
-        Insert: {
-          client_id: string
-          created_at?: string | null
-          custom_help?: Json | null
-          custom_text?: string | null
-          id?: string
-          is_enabled?: boolean | null
-          override_type: string
-          question_id?: string | null
-          section_id?: number | null
-          updated_at?: string | null
-        }
-        Update: {
-          client_id?: string
-          created_at?: string | null
-          custom_help?: Json | null
-          custom_text?: string | null
-          id?: string
-          is_enabled?: boolean | null
-          override_type?: string
-          question_id?: string | null
-          section_id?: number | null
-          updated_at?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "client_questionnaire_overrides_client_id_fkey"
-            columns: ["client_id"]
-            isOneToOne: false
-            referencedRelation: "clients"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "client_questionnaire_overrides_question_id_fkey"
-            columns: ["question_id"]
-            isOneToOne: false
-            referencedRelation: "questionnaire_questions"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "client_questionnaire_overrides_section_id_fkey"
-            columns: ["section_id"]
-            isOneToOne: false
-            referencedRelation: "questionnaire_sections"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       clients: {
         Row: {
           brand_data: Json | null
@@ -963,53 +902,6 @@ export type Database = {
           },
         ]
       }
-      questionnaire_help: {
-        Row: {
-          created_at: string | null
-          good_example: string | null
-          how_to_extract: string[] | null
-          id: number
-          question_id: string | null
-          quick_tip: string | null
-          title: string | null
-          updated_at: string | null
-          weak_example: string | null
-          where_to_find: string[] | null
-        }
-        Insert: {
-          created_at?: string | null
-          good_example?: string | null
-          how_to_extract?: string[] | null
-          id?: number
-          question_id?: string | null
-          quick_tip?: string | null
-          title?: string | null
-          updated_at?: string | null
-          weak_example?: string | null
-          where_to_find?: string[] | null
-        }
-        Update: {
-          created_at?: string | null
-          good_example?: string | null
-          how_to_extract?: string[] | null
-          id?: number
-          question_id?: string | null
-          quick_tip?: string | null
-          title?: string | null
-          updated_at?: string | null
-          weak_example?: string | null
-          where_to_find?: string[] | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "questionnaire_help_question_id_fkey"
-            columns: ["question_id"]
-            isOneToOne: true
-            referencedRelation: "questionnaire_questions"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       questionnaire_questions: {
         Row: {
           accepted_file_types: string[] | null
@@ -1017,6 +909,7 @@ export type Database = {
           created_at: string | null
           enabled: boolean | null
           file_description: string | null
+          help_content: Json | null
           id: string
           max_file_size: number | null
           max_files: number | null
@@ -1038,6 +931,7 @@ export type Database = {
           created_at?: string | null
           enabled?: boolean | null
           file_description?: string | null
+          help_content?: Json | null
           id: string
           max_file_size?: number | null
           max_files?: number | null
@@ -1059,6 +953,7 @@ export type Database = {
           created_at?: string | null
           enabled?: boolean | null
           file_description?: string | null
+          help_content?: Json | null
           id?: string
           max_file_size?: number | null
           max_files?: number | null
@@ -1080,56 +975,6 @@ export type Database = {
             columns: ["section_id"]
             isOneToOne: false
             referencedRelation: "questionnaire_sections"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      questionnaire_responses: {
-        Row: {
-          client_id: string
-          created_at: string | null
-          id: string
-          is_latest: boolean | null
-          response_data: Json
-          status: string | null
-          submitted_at: string | null
-          submitted_by: string | null
-          updated_at: string | null
-          user_id: string | null
-          version: number | null
-        }
-        Insert: {
-          client_id: string
-          created_at?: string | null
-          id?: string
-          is_latest?: boolean | null
-          response_data: Json
-          status?: string | null
-          submitted_at?: string | null
-          submitted_by?: string | null
-          updated_at?: string | null
-          user_id?: string | null
-          version?: number | null
-        }
-        Update: {
-          client_id?: string
-          created_at?: string | null
-          id?: string
-          is_latest?: boolean | null
-          response_data?: Json
-          status?: string | null
-          submitted_at?: string | null
-          submitted_by?: string | null
-          updated_at?: string | null
-          user_id?: string | null
-          version?: number | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "questionnaire_responses_client_id_fkey"
-            columns: ["client_id"]
-            isOneToOne: false
-            referencedRelation: "clients"
             referencedColumns: ["id"]
           },
         ]
@@ -1206,10 +1051,6 @@ export type Database = {
     Functions: {
       count_journal_entries: { Args: never; Returns: number }
       generate_client_code: { Args: never; Returns: string }
-      get_next_response_version: {
-        Args: { p_client_id: string }
-        Returns: number
-      }
       match_framework_chunks:
         | {
             Args: {
