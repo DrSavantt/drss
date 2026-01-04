@@ -16,7 +16,7 @@ import { formatCost, getModelLabel } from '@/lib/ai/pricing'
 interface AIExecution {
   id: string
   client_id?: string | null
-  task_type: string
+  task_type?: string | null
   model_id?: string | null
   input_tokens?: number | null
   output_tokens?: number | null
@@ -43,7 +43,8 @@ export function ClientAIHistoryTab({ clientId, executions }: ClientAIHistoryTabP
   const totalTokens = executions.reduce((sum, e) => sum + (e.input_tokens || 0) + (e.output_tokens || 0), 0)
   const totalExecutions = executions.length
 
-  const formatTaskType = (taskType: string) => {
+  const formatTaskType = (taskType: string | null | undefined) => {
+    if (!taskType) return 'Unknown Task'
     return taskType
       .split('_')
       .map(word => word.charAt(0).toUpperCase() + word.slice(1))
@@ -213,7 +214,7 @@ export function ClientAIHistoryTab({ clientId, executions }: ClientAIHistoryTabP
                     <div className="flex items-center gap-3 text-xs text-muted-foreground">
                       <span className="flex items-center gap-1">
                         <Sparkles className="h-3 w-3" />
-                        {execution.model_id ? execution.model_id.substring(0, 8) : 'Unknown'}
+                        {execution.model_id ? execution.model_id.substring(0, 8) : 'N/A'}
                       </span>
                       {executionTotalTokens > 0 && (
                         <span className="flex items-center gap-1">
