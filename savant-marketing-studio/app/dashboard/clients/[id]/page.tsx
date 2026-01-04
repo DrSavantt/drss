@@ -68,7 +68,7 @@ async function ClientDetailLoader({ id }: { id: string }) {
     { data: questions },
     { data: helpData },
     { data: questionnaireResponses },
-    { data: aiGenerations },
+    { data: aiExecutions },
     { count: projectCount },
     { count: contentCount }
   ] = await Promise.all([
@@ -128,9 +128,9 @@ async function ClientDetailLoader({ id }: { id: string }) {
       .eq('client_id', id)
       .order('version', { ascending: false }),
     
-    // AI generations for this client
+    // AI executions for this client
     supabase
-      .from('ai_generations')
+      .from('ai_executions')
       .select('*')
       .eq('client_id', id)
       .order('created_at', { ascending: false })
@@ -176,8 +176,8 @@ async function ClientDetailLoader({ id }: { id: string }) {
   const currentVersion = questionnaireVersions.find(v => v.is_latest) || questionnaireVersions[0] || null
 
   // Calculate AI stats
-  const aiCalls = aiGenerations?.length || 0
-  const aiSpend = aiGenerations?.reduce((sum, gen) => sum + (gen.cost_usd || 0), 0) || 0
+  const aiCalls = aiExecutions?.length || 0
+  const aiSpend = aiExecutions?.reduce((sum, gen) => sum + (Number(gen.total_cost_usd) || 0), 0) || 0
 
   // Map client status
   let status: 'onboarded' | 'onboarding' | 'new' = 'new'
@@ -216,7 +216,7 @@ async function ClientDetailLoader({ id }: { id: string }) {
       questionnaireConfig={questionnaireConfig}
       questionnaireVersions={questionnaireVersions}
       currentQuestionnaireVersion={currentVersion}
-      aiGenerations={aiGenerations || []}
+      aiExecutions={aiExecutions || []}
     />
   )
 }

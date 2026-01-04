@@ -15,20 +15,19 @@ import { formatCost, getModelLabel } from '@/lib/ai/pricing'
 
 interface AIExecution {
   id: string
+  client_id?: string | null
   task_type: string
-  complexity: string
-  model_id: string
-  input_tokens: number
-  output_tokens: number
-  cost_usd: number
-  duration_ms: number
+  model_id?: string | null
+  input_tokens?: number | null
+  output_tokens?: number | null
+  total_cost_usd?: number | null
+  duration_ms?: number | null
+  status?: string | null
+  complexity?: string | null
+  input_data?: Record<string, unknown> | null
+  output_data?: Record<string, unknown> | null
+  error_message?: string | null
   created_at: string
-  input_data?: {
-    messages?: Array<{ role: string; content: string }>
-  }
-  output_data?: {
-    content?: string
-  }
 }
 
 interface ClientAIHistoryTabProps {
@@ -40,7 +39,7 @@ export function ClientAIHistoryTab({ clientId, executions }: ClientAIHistoryTabP
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set())
 
   // Calculate totals from pre-fetched data
-  const totalSpend = executions.reduce((sum, e) => sum + (e.cost_usd || 0), 0)
+  const totalSpend = executions.reduce((sum, e) => sum + (Number(e.total_cost_usd) || 0), 0)
   const totalTokens = executions.reduce((sum, e) => sum + (e.input_tokens || 0) + (e.output_tokens || 0), 0)
   const totalExecutions = executions.length
 
@@ -51,12 +50,54 @@ export function ClientAIHistoryTab({ clientId, executions }: ClientAIHistoryTabP
       .join(' ')
   }
 
-  const getPromptPreview = (execution: AIExecution) => {
-    const firstMessage = execution.input_data?.messages?.[0]
-    if (!firstMessage) return 'No prompt available'
+  const getPrompt = (execution: AIExecution): string => {
+    if (!execution.input_data) return 'No prompt available'
     
-    const content = firstMessage.content
-    return content.length > 100 ? content.substring(0, 100) + '...' : content
+    const data = execution.input_data as Record<string, unknown>
+    
+    // Check for direct prompt property
+    if (typeof data.prompt === 'string') {
+      return data.prompt
+    }
+    
+    // Check for messages array (Claude/OpenAI format)
+    if (Array.isArray(data.messages)) {
+      const userMessage = data.messages.find((m: { role: string; content: string }) => m.role === 'user')
+      if (userMessage && typeof userMessage.content === 'string') {
+        return userMessage.content
+      }
+      // Return first message if no user message found
+      if (data.messages.length > 0 && typeof data.messages[0].content === 'string') {
+        return data.messages[0].content
+      }
+    }
+    
+    // Fallback to JSON
+    return JSON.stringify(execution.input_data).slice(0, 200) + '...'
+  }
+
+  const getPromptPreview = (execution: AIExecution) => {
+    const prompt = getPrompt(execution)
+    return prompt.length > 100 ? prompt.substring(0, 100) + '...' : prompt
+  }
+  
+  const getOutputPreview = (execution: AIExecution) => {
+    if (!execution.output_data) return 'No output available'
+    
+    const data = execution.output_data as Record<string, unknown>
+    
+    // Check for content property
+    if (typeof data.content === 'string') {
+      return data.content
+    }
+    
+    // If output_data is already a string
+    if (typeof execution.output_data === 'string') {
+      return execution.output_data
+    }
+    
+    // Fallback to JSON stringification
+    return JSON.stringify(execution.output_data, null, 2)
   }
 
   const toggleExpanded = (id: string) => {
@@ -141,7 +182,7 @@ export function ClientAIHistoryTab({ clientId, executions }: ClientAIHistoryTabP
           {executions.map((execution) => {
             const isExpanded = expandedIds.has(execution.id)
             const executionTotalTokens = (execution.input_tokens || 0) + (execution.output_tokens || 0)
-            const modelLabel = getModelLabel(execution.model_id)
+            const createdAt = execution.created_at ? new Date(execution.created_at) : new Date()
 
             return (
               <div
@@ -155,31 +196,47 @@ export function ClientAIHistoryTab({ clientId, executions }: ClientAIHistoryTabP
                       <h4 className="text-sm font-semibold text-foreground">
                         {formatTaskType(execution.task_type)}
                       </h4>
-                      <Badge variant="outline" className="text-xs">
-                        {execution.complexity}
-                      </Badge>
+                      {execution.complexity && (
+                        <Badge variant="outline" className="text-xs">
+                          {execution.complexity}
+                        </Badge>
+                      )}
+                      {execution.status && (
+                        <Badge 
+                          variant={execution.status === 'success' ? 'default' : 'destructive'} 
+                          className="text-xs"
+                        >
+                          {execution.status}
+                        </Badge>
+                      )}
                     </div>
                     <div className="flex items-center gap-3 text-xs text-muted-foreground">
                       <span className="flex items-center gap-1">
                         <Sparkles className="h-3 w-3" />
-                        {modelLabel}
+                        {execution.model_id ? execution.model_id.substring(0, 8) : 'Unknown'}
                       </span>
-                      <span className="flex items-center gap-1">
-                        <Zap className="h-3 w-3" />
-                        {executionTotalTokens.toLocaleString()} tokens
-                      </span>
-                      <span className="flex items-center gap-1">
-                        <DollarSign className="h-3 w-3" />
-                        {formatCost(execution.cost_usd || 0)}
-                      </span>
-                      <span className="flex items-center gap-1">
-                        <Clock className="h-3 w-3" />
-                        {execution.duration_ms}ms
-                      </span>
+                      {executionTotalTokens > 0 && (
+                        <span className="flex items-center gap-1">
+                          <Zap className="h-3 w-3" />
+                          {executionTotalTokens.toLocaleString()} tokens
+                        </span>
+                      )}
+                      {execution.total_cost_usd && (
+                        <span className="flex items-center gap-1">
+                          <DollarSign className="h-3 w-3" />
+                          {formatCost(Number(execution.total_cost_usd))}
+                        </span>
+                      )}
+                      {execution.duration_ms && (
+                        <span className="flex items-center gap-1">
+                          <Clock className="h-3 w-3" />
+                          {execution.duration_ms}ms
+                        </span>
+                      )}
                     </div>
                   </div>
                   <div className="text-xs text-muted-foreground text-right flex-shrink-0">
-                    {formatDistanceToNow(new Date(execution.created_at), { addSuffix: true })}
+                    {formatDistanceToNow(createdAt, { addSuffix: true })}
                   </div>
                 </div>
 
@@ -188,7 +245,7 @@ export function ClientAIHistoryTab({ clientId, executions }: ClientAIHistoryTabP
                   <p className="text-xs font-medium mb-1">Prompt:</p>
                   <p className="text-foreground/80">
                     {isExpanded 
-                      ? execution.input_data?.messages?.[0]?.content || 'No prompt available'
+                      ? getPrompt(execution)
                       : getPromptPreview(execution)
                     }
                   </p>
@@ -199,8 +256,16 @@ export function ClientAIHistoryTab({ clientId, executions }: ClientAIHistoryTabP
                   <div className="mt-3 text-sm text-muted-foreground bg-muted/30 rounded p-3 border border-border/50">
                     <p className="text-xs font-medium mb-1">Generated Output:</p>
                     <p className="text-foreground/80 whitespace-pre-wrap">
-                      {execution.output_data?.content || 'No output available'}
+                      {getOutputPreview(execution)}
                     </p>
+                  </div>
+                )}
+
+                {/* Error Message (if any) */}
+                {execution.error_message && (
+                  <div className="mt-3 text-sm bg-destructive/10 border border-destructive/20 rounded p-3">
+                    <p className="text-xs font-medium mb-1 text-destructive">Error:</p>
+                    <p className="text-destructive/80">{execution.error_message}</p>
                   </div>
                 )}
 

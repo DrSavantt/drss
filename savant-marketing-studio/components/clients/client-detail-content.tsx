@@ -96,22 +96,21 @@ interface Activity {
   created_at: string
 }
 
-interface AIGeneration {
+interface AIExecution {
   id: string
+  client_id?: string | null
   task_type: string
-  complexity: string
-  model_id: string
-  input_tokens: number
-  output_tokens: number
-  cost_usd: number
-  duration_ms: number
+  model_id?: string | null
+  input_tokens?: number | null
+  output_tokens?: number | null
+  total_cost_usd?: number | null
+  duration_ms?: number | null
+  status?: string | null
+  complexity?: string | null
+  input_data?: Record<string, unknown> | null
+  output_data?: Record<string, unknown> | null
+  error_message?: string | null
   created_at: string
-  input_data?: {
-    messages?: Array<{ role: string; content: string }>
-  }
-  output_data?: {
-    content?: string
-  }
 }
 
 interface ClientDetailContentProps {
@@ -136,7 +135,7 @@ interface ClientDetailContentProps {
   questionnaireConfig: QuestionnaireConfig
   questionnaireVersions: QuestionnaireVersion[]
   currentQuestionnaireVersion: QuestionnaireVersion | null
-  aiGenerations: AIGeneration[]
+  aiExecutions: AIExecution[]
 }
 
 export function ClientDetailContent({
@@ -147,7 +146,7 @@ export function ClientDetailContent({
   questionnaireConfig,
   questionnaireVersions,
   currentQuestionnaireVersion,
-  aiGenerations
+  aiExecutions
 }: ClientDetailContentProps) {
   const [activeTab, setActiveTab] = useState('overview')
   
@@ -303,7 +302,7 @@ export function ClientDetailContent({
         <TabsContent value="ai" className="mt-6">
           <ClientAIHistoryTab
             clientId={client.id}
-            executions={aiGenerations}
+            executions={aiExecutions}
           />
         </TabsContent>
       </Tabs>
