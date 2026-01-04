@@ -33,6 +33,16 @@ interface DatabaseSection {
   enabled: boolean
 }
 
+// Help content structure (embedded in questions.help_content JSONB column)
+interface HelpContent {
+  title: string | null
+  where_to_find: string[] | null
+  how_to_extract: string[] | null
+  good_example: string | null
+  weak_example: string | null
+  quick_tip: string | null
+}
+
 interface DatabaseQuestion {
   id: string
   section_id: number
@@ -51,16 +61,8 @@ interface DatabaseQuestion {
   max_file_size: number | null
   max_files: number | null
   file_description: string | null
-  help?: {
-    id: number
-    question_id: string
-    title: string | null
-    where_to_find: string[] | null
-    how_to_extract: string[] | null
-    good_example: string | null
-    weak_example: string | null
-    quick_tip: string | null
-  }
+  help?: HelpContent | null  // Now uses JSONB structure, not separate table
+  help_content?: HelpContent | null  // Alternative name from DB
 }
 
 interface Client {
