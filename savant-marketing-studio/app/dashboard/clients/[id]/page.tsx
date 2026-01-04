@@ -156,12 +156,12 @@ async function ClientDetailLoader({ id }: { id: string }) {
 
   // Get response data from clients.intake_responses (single source of truth)
   // Format: { sections: {...} } or raw { avatar_definition: {...}, ... }
-  let responseData = null
+  let responseData: Record<string, unknown> | null = null
   if (client.intake_responses) {
     const intakeData = client.intake_responses as Record<string, unknown>
     if (intakeData.sections) {
       // Wrapped format - unwrap
-      responseData = intakeData.sections
+      responseData = intakeData.sections as Record<string, unknown>
     } else if (intakeData.avatar_definition || intakeData.dream_outcome) {
       // Raw format
       responseData = intakeData
