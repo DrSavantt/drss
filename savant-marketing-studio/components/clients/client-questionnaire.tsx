@@ -124,36 +124,6 @@ export function ClientQuestionnaire({
     fetchData()
   }, [clientId, refreshKey])
 
-  // Calculate progress from current responses
-  const calculateProgress = (): number => {
-    if (!currentVersion?.response_data) return 0
-    
-    const responseData = currentVersion.response_data
-    
-    // Handle edge case: empty response_data object
-    if (typeof responseData !== 'object' || Object.keys(responseData).length === 0) {
-      return 0
-    }
-    
-    let filled = 0
-    let total = 0
-    
-    // Iterate through sections and their responses
-    Object.values(responseData).forEach((section: any) => {
-      if (typeof section === 'object' && section !== null && !Array.isArray(section)) {
-        Object.values(section).forEach((answer: any) => {
-          total++
-          // Count as filled if answer has content
-          if (answer && answer !== '' && (Array.isArray(answer) ? answer.length > 0 : true)) {
-            filled++
-          }
-        })
-      }
-    })
-    
-    return total > 0 ? Math.round((filled / total) * 100) : 0
-  }
-
   // Copy questionnaire link with contextual message
   const handleCopyLink = () => {
     if (!questionnaireToken) {
@@ -164,9 +134,7 @@ export function ClientQuestionnaire({
     navigator.clipboard.writeText(link)
     
     if (questionnaireStatus === 'in_progress') {
-      toast.success('Resume link copied! Client will continue from their saved progress.', {
-        description: `Progress: ${calculateProgress()}% complete`
-      })
+      toast.success('Resume link copied! Client will continue from their saved progress.')
     } else if (questionnaireStatus === 'completed') {
       toast.success('Link copied! Questionnaire is already completed.')
     } else {
@@ -355,22 +323,6 @@ export function ClientQuestionnaire({
               {isCompleted ? 'Completed' : hasResponses ? 'In Progress' : 'Not Started'}
             </div>
           </div>
-          
-          {/* Progress bar for in_progress status */}
-          {questionnaireStatus === 'in_progress' && hasResponses && (
-            <div className="mt-4 pt-3 border-t">
-              <div className="flex justify-between items-center text-sm mb-2">
-                <span className="text-muted-foreground">Progress</span>
-                <span className="font-semibold text-foreground">{calculateProgress()}% complete</span>
-              </div>
-              <div className="w-full bg-muted rounded-full h-2 overflow-hidden">
-                <div 
-                  className="bg-gradient-to-r from-yellow-500 to-yellow-600 rounded-full h-2 transition-all duration-500"
-                  style={{ width: `${calculateProgress()}%` }}
-                />
-              </div>
-            </div>
-          )}
         </CardHeader>
       </Card>
 
