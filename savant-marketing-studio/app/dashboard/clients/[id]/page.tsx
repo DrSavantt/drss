@@ -6,6 +6,7 @@ import { Suspense } from 'react'
 import { createClient } from '@/lib/supabase/server'
 import { notFound } from 'next/navigation'
 import { ClientDetailContent } from '@/components/clients/client-detail-content'
+import { safeText } from '@/lib/utils/safe-render'
 
 // ISR: Cache page for 30 seconds, then revalidate in background
 export const revalidate = 30
@@ -186,12 +187,12 @@ async function ClientDetailLoader({ id }: { id: string }) {
     status = 'onboarding'
   }
 
-  // Extract brand info from responses
-  const brandVoice = client.intake_responses?.brand_voice || 
-                     client.brand_data?.voice || 
+  // Extract brand info from responses (use safeText to handle empty objects {})
+  const brandVoice = safeText(client.intake_responses?.brand_voice) || 
+                     safeText(client.brand_data?.voice) || 
                      'Not yet defined'
-  const targetAudience = client.intake_responses?.target_audience || 
-                        client.brand_data?.target_audience || 
+  const targetAudience = safeText(client.intake_responses?.target_audience) || 
+                        safeText(client.brand_data?.target_audience) || 
                         'Not yet defined'
 
   // Build the full client object with computed fields

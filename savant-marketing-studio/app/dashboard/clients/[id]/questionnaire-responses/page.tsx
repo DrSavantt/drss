@@ -158,8 +158,20 @@ export default async function QuestionnaireResponsesPage({
     return <File size={16} className="text-silver" />;
   };
 
-  const renderValue = (value: string | string[] | undefined) => {
+  const renderValue = (value: unknown) => {
+    // Handle null, undefined, empty string
     if (!value) return <span className="text-slate italic">Not answered</span>;
+    
+    // Handle empty objects {} (corrupted data from database)
+    if (typeof value === 'object' && !Array.isArray(value) && Object.keys(value as object).length === 0) {
+      return <span className="text-slate italic">Not answered</span>;
+    }
+    
+    // Handle non-empty objects (shouldn't happen but protect against it)
+    if (typeof value === 'object' && !Array.isArray(value)) {
+      console.warn('Unexpected object in questionnaire response:', value);
+      return <span className="text-slate italic">Not answered</span>;
+    }
 
     // Check if it's a file URL array
     if (Array.isArray(value) && value.length > 0 && typeof value[0] === 'string' && value[0].startsWith('http')) {
@@ -189,7 +201,7 @@ export default async function QuestionnaireResponsesPage({
       return <span className="text-foreground">{value.join(', ')}</span>;
     }
 
-    return <span className="text-foreground whitespace-pre-wrap">{value}</span>;
+    return <span className="text-foreground whitespace-pre-wrap">{String(value)}</span>;
   };
 
   return (
@@ -256,7 +268,7 @@ export default async function QuestionnaireResponsesPage({
                     {question.label}
                   </p>
                   <div className="text-sm">
-                    {renderValue(value as string | string[] | undefined)}
+                    {renderValue(value)}
                   </div>
                 </div>
               );
