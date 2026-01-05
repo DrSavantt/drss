@@ -611,10 +611,12 @@ export function QuestionnaireSettings({
                 toast.success('Question customized for this client')
               } else {
                 // Global mode - update global tables
-                await Promise.all([
-                  updateQuestion(editingQuestion.id, questionUpdates),
-                  helpUpdates && updateHelp(editingQuestion.id, helpUpdates)
-                ])
+                await updateQuestion(editingQuestion.id, questionUpdates)
+                
+                if (helpUpdates) {
+                  await updateHelp(editingQuestion.id, helpUpdates)
+                }
+                
                 setQuestions(questions.map(q =>
                   q.id === editingQuestion.id 
                     ? { ...q, ...questionUpdates, help: helpUpdates ? { ...q.help, ...helpUpdates } as any : q.help }
@@ -624,6 +626,7 @@ export function QuestionnaireSettings({
                 toast.success('Question updated')
               }
             } catch (error) {
+              console.error('Failed to update question:', error)
               toast.error('Failed to update question')
             }
           }}

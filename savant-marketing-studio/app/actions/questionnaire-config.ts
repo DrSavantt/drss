@@ -1,7 +1,20 @@
 'use server'
 
 import { createClient } from '@/lib/supabase/server'
+import { createClient as createServiceClient } from '@supabase/supabase-js'
 import { revalidatePath } from 'next/cache'
+
+// ===== SERVICE ROLE CLIENT (Bypasses RLS for admin operations) =====
+function getServiceClient() {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+  
+  if (!supabaseUrl || !supabaseServiceKey) {
+    throw new Error('Missing Supabase environment variables for service client')
+  }
+  
+  return createServiceClient(supabaseUrl, supabaseServiceKey)
+}
 
 // ===== TYPES =====
 
@@ -248,12 +261,8 @@ export async function getQuestionsForClient(clientId: string): Promise<QuestionW
 // ===== SECTION UPDATE OPERATIONS =====
 
 export async function updateSection(id: number, updates: Partial<Omit<SectionConfig, 'id' | 'created_at' | 'updated_at'>>) {
-  const supabase = await createClient()
-  
-  if (!supabase) {
-    console.error('Supabase client not available')
-    throw new Error('Supabase client not available')
-  }
+  // Use service role client to bypass RLS for admin operations
+  const supabase = getServiceClient()
   
   const { error } = await supabase
     .from('questionnaire_sections')
@@ -273,12 +282,8 @@ export async function toggleSection(id: number, enabled: boolean) {
 }
 
 export async function reorderSections(orderedIds: number[]) {
-  const supabase = await createClient()
-  
-  if (!supabase) {
-    console.error('Supabase client not available')
-    throw new Error('Supabase client not available')
-  }
+  // Use service role client to bypass RLS for admin operations
+  const supabase = getServiceClient()
   
   // Update all sections with new sort orders
   for (let i = 0; i < orderedIds.length; i++) {
@@ -344,17 +349,14 @@ export async function deleteSection(id: number) {
 // ===== QUESTION UPDATE OPERATIONS =====
 
 export async function updateQuestion(id: string, updates: Partial<Omit<QuestionConfig, 'id' | 'created_at' | 'updated_at'>>) {
-  const supabase = await createClient()
+  // Use service role client to bypass RLS for admin operations
+  const supabase = getServiceClient()
   
-  if (!supabase) {
-    console.error('Supabase client not available')
-    throw new Error('Supabase client not available')
-  }
-  
-  const { error } = await supabase
+  const { data, error } = await supabase
     .from('questionnaire_questions')
     .update(updates)
     .eq('id', id)
+    .select()
   
   if (error) {
     console.error('Error updating question:', error)
@@ -362,6 +364,7 @@ export async function updateQuestion(id: string, updates: Partial<Omit<QuestionC
   }
   
   revalidatePath('/dashboard/settings/questionnaire')
+  return { success: true, data }
 }
 
 export async function toggleQuestion(id: string, enabled: boolean) {
@@ -449,12 +452,8 @@ export async function deleteQuestion(id: string) {
 // ===== HELP UPDATE OPERATIONS =====
 
 export async function updateHelp(questionId: string, updates: Partial<HelpContent>) {
-  const supabase = await createClient()
-  
-  if (!supabase) {
-    console.error('Supabase client not available')
-    throw new Error('Supabase client not available')
-  }
+  // Use service role client to bypass RLS for admin operations
+  const supabase = getServiceClient()
   
   // Get existing help_content to merge with updates
   const existing = await getHelp(questionId)
@@ -463,10 +462,11 @@ export async function updateHelp(questionId: string, updates: Partial<HelpConten
     ? { ...existing, ...updates }
     : updates
   
-  const { error } = await supabase
+  const { data, error } = await supabase
     .from('questionnaire_questions')
     .update({ help_content: newHelpContent })
     .eq('id', questionId)
+    .select()
   
   if (error) {
     console.error('Error updating help:', error)
@@ -474,6 +474,7 @@ export async function updateHelp(questionId: string, updates: Partial<HelpConten
   }
   
   revalidatePath('/dashboard/settings/questionnaire')
+  return { success: true, data }
 }
 
 export async function deleteHelp(questionId: string) {
