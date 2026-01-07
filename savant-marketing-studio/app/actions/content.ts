@@ -1,9 +1,22 @@
 'use server'
 
 import { createClient as createSupabaseClient } from '@/lib/supabase/server'
+import { createClient as createServiceClient } from '@supabase/supabase-js'
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { logActivity } from '@/lib/activity-log'
+
+// ===== SERVICE ROLE CLIENT (Bypasses RLS for admin operations) =====
+function getServiceClient() {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+  
+  if (!supabaseUrl || !supabaseServiceKey) {
+    throw new Error('Missing Supabase environment variables for service client')
+  }
+  
+  return createServiceClient(supabaseUrl, supabaseServiceKey)
+}
 
 export async function getContentAssets(clientId: string) {
   const supabase = await createSupabaseClient()
@@ -119,18 +132,20 @@ export async function createContentAsset(clientId: string, formData: FormData) {
 }
 
 export async function updateContentAsset(id: string, formData: FormData) {
-  const supabase = await createSupabaseClient()
-  
-  if (!supabase) {
-    return { error: 'Database connection not configured' }
-  }
+  // Use service role client to bypass RLS for trusted server operations
+  const supabase = getServiceClient()
   
   // Get current content to find client_id
-  const { data: currentContent } = await supabase
+  const { data: currentContent, error: fetchError } = await supabase
     .from('content_assets')
     .select('client_id')
     .eq('id', id)
     .single()
+  
+  if (fetchError) {
+    console.error('[updateContentAsset] Failed to fetch content:', fetchError)
+    return { error: 'Content not found' }
+  }
   
   const title = formData.get('title') as string
   const project_id = formData.get('project_id') as string
@@ -140,16 +155,28 @@ export async function updateContentAsset(id: string, formData: FormData) {
     return { error: 'Title is required' }
   }
   
+  // Try to parse as JSON (for backwards compatibility), otherwise store as HTML string
+  let contentValue: string | object | undefined
+  if (content_json) {
+    try {
+      contentValue = JSON.parse(content_json)
+    } catch {
+      // It's HTML content, store as-is
+      contentValue = content_json
+    }
+  }
+  
   const { error } = await supabase
     .from('content_assets')
     .update({
       title,
       project_id: project_id || null,
-      content_json: content_json ? JSON.parse(content_json) : undefined
+      content_json: contentValue
     })
     .eq('id', id)
   
   if (error) {
+    console.error('[updateContentAsset] Update failed:', error)
     return { error: 'Failed to update content' }
   }
   
@@ -161,6 +188,12 @@ export async function updateContentAsset(id: string, formData: FormData) {
     entityName: title,
     clientId: currentContent?.client_id
   })
+  
+  revalidatePath('/dashboard/content')
+  revalidatePath(`/dashboard/content/${id}`)
+  if (currentContent?.client_id) {
+    revalidatePath(`/dashboard/clients/${currentContent.client_id}`)
+  }
   
   return { success: true }
 }
