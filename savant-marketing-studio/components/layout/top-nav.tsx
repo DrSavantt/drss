@@ -2,7 +2,7 @@
 
 import { memo, useMemo } from "react"
 import Link from "next/link"
-import { Moon, Sun, Bell, User, Settings as SettingsIcon, LogOut } from "lucide-react"
+import { Moon, Sun, Bell, User, Settings as SettingsIcon, LogOut, Search } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
@@ -29,9 +29,10 @@ interface User {
 
 interface TopNavProps {
   user?: User | null
+  onSearchClick?: () => void
 }
 
-export const TopNav = memo(function TopNav({ user }: TopNavProps) {
+export const TopNav = memo(function TopNav({ user, onSearchClick }: TopNavProps) {
   const [theme, setTheme] = useState<"dark" | "light">('dark') // Always start with 'dark' for SSR
   const [mounted, setMounted] = useState(false)
   const router = useRouter()
@@ -90,7 +91,7 @@ export const TopNav = memo(function TopNav({ user }: TopNavProps) {
   return (
     <header className="sticky top-0 z-30 flex h-16 items-center gap-4 border-b border-border bg-background px-4">
       {/* Hamburger Menu */}
-      <MobileNav />
+      <MobileNav onSearchClick={onSearchClick} />
       
       {/* Logo/Brand */}
       <Link href="/dashboard" className="flex items-center gap-2">
@@ -102,6 +103,17 @@ export const TopNav = memo(function TopNav({ user }: TopNavProps) {
       
       {/* Spacer */}
       <div className="flex-1" />
+      
+      {/* Search Button */}
+      <Button 
+        variant="ghost" 
+        size="icon" 
+        onClick={onSearchClick}
+        className="text-muted-foreground hover:text-foreground"
+        title="Search (⌘K)"
+      >
+        <Search className="h-5 w-5" />
+      </Button>
       
       {/* Theme Toggle */}
       <Button variant="ghost" size="icon" onClick={toggleTheme} className="text-muted-foreground hover:text-foreground">

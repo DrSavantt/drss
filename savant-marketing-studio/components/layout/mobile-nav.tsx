@@ -47,13 +47,22 @@ const bottomItems = [
   { href: '/dashboard/settings', label: 'Settings', icon: Settings },
 ]
 
-export function MobileNav() {
+interface MobileNavProps {
+  onSearchClick?: () => void
+}
+
+export function MobileNav({ onSearchClick }: MobileNavProps = {}) {
   const [open, setOpen] = useState(false)
   const pathname = usePathname()
 
   const handleLogout = async () => {
     setOpen(false)
     await logout()
+  }
+
+  const handleSearchClick = () => {
+    setOpen(false)
+    onSearchClick?.()
   }
 
   return (
@@ -74,6 +83,18 @@ export function MobileNav() {
           </SheetTitle>
         </SheetHeader>
         <nav className="flex flex-col h-[calc(100%-73px)]">
+          {/* Search Button */}
+          <div className="p-4 border-b">
+            <button 
+              onClick={handleSearchClick}
+              className="flex w-full items-center gap-3 rounded-lg border border-border bg-background px-3 py-2.5 text-sm text-muted-foreground transition-colors hover:border-primary/50 hover:text-foreground cursor-pointer"
+            >
+              <Search className="h-5 w-5 shrink-0" />
+              <span>Search...</span>
+              <kbd className="ml-auto rounded bg-muted px-1.5 py-0.5 text-xs">⌘K</kbd>
+            </button>
+          </div>
+
           <div className="flex-1 py-4 space-y-1 px-2 overflow-y-auto">
             {navItems.map((item) => {
               const Icon = item.icon
