@@ -5,6 +5,7 @@ import { searchFrameworks } from '@/lib/ai/rag';
 import { performWebResearch, WebSource } from '@/lib/ai/web-research';
 import { createClient } from '@/lib/supabase/server';
 import { revalidatePath } from 'next/cache';
+import { getModelIdFromName, getDefaultModelId } from '@/lib/ai/model-lookup';
 
 // Research phases for progress tracking
 export type ResearchPhase = 
@@ -336,28 +337,35 @@ export async function performDeepResearch(params: ResearchParams): Promise<Resea
     }
   }
 
-  // Also log to ai_generations for analytics
-  await supabase.from('ai_generations').insert({
-    user_id: user.id,
-    client_id: clientId || null,
-    generation_type: 'research',
-    model_used: modelUsed,
-    prompt: topic,
-    output_data: { 
-      report: result.content,
-      web_sources: webSources || [],
-      search_queries: searchQueries || [],
-    },
-    tokens_used: result.inputTokens + result.outputTokens,
-    cost_estimate: result.cost,
-    context_used: {
-      frameworks_count: frameworksUsed.length,
-      had_client_data: !!clientData,
-      depth,
-      used_web_search: shouldUseWebSearch,
-      sources_count: webSources?.length || 0,
-    },
-  });
+  // Log to ai_executions for analytics (migrated from ai_generations)
+  const modelId = await getModelIdFromName(modelUsed) || await getDefaultModelId();
+  
+  if (modelId) {
+    await supabase.from('ai_executions').insert({
+      user_id: user.id,
+      client_id: clientId || null,
+      model_id: modelId,
+      task_type: 'research',
+      complexity: depth === 'comprehensive' ? 'complex' : depth === 'standard' ? 'medium' : 'simple',
+      input_data: { 
+        topic,
+        depth,
+        frameworks_count: frameworksUsed.length,
+        had_client_data: !!clientData,
+        used_web_search: shouldUseWebSearch,
+      },
+      output_data: { 
+        report: result.content,
+        web_sources: webSources || [],
+        search_queries: searchQueries || [],
+        sources_count: webSources?.length || 0,
+      },
+      input_tokens: result.inputTokens,
+      output_tokens: result.outputTokens,
+      total_cost_usd: result.cost,
+      status: 'success',
+    });
+  }
 
   revalidatePath('/dashboard/research');
 
@@ -421,7 +429,7 @@ export async function saveResearchToClient(
 }
 
 /**
- * Get recent research sessions
+ * Get recent research sessions (migrated from ai_generations to ai_executions)
  */
 export async function getRecentResearch(limit: number = 10) {
   const supabase = await createClient();
@@ -431,20 +439,22 @@ export async function getRecentResearch(limit: number = 10) {
   if (!user) return [];
 
   const { data, error } = await supabase
-    .from('ai_generations')
+    .from('ai_executions')
     .select(`
       id,
-      prompt,
+      input_data,
       output_data,
-      model_used,
-      tokens_used,
-      cost_estimate,
+      input_tokens,
+      output_tokens,
+      total_cost_usd,
       created_at,
       client_id,
-      clients(name)
+      clients(name),
+      ai_models!inner(model_name, display_name)
     `)
     .eq('user_id', user.id)
-    .eq('generation_type', 'research')
+    .eq('task_type', 'research')
+    .eq('status', 'success')
     .order('created_at', { ascending: false })
     .limit(limit);
 
@@ -453,17 +463,23 @@ export async function getRecentResearch(limit: number = 10) {
     return [];
   }
 
-  return data?.map(item => ({
-    id: item.id,
-    topic: item.prompt,
-    report: (item.output_data as { report?: string })?.report || '',
-    modelUsed: item.model_used,
-    tokens: item.tokens_used || 0,
-    cost: item.cost_estimate || 0,
-    createdAt: item.created_at,
-    clientId: item.client_id,
-    clientName: (item.clients as { name?: string } | null)?.name || null,
-  })) || [];
+  return data?.map(item => {
+    const inputData = item.input_data as { topic?: string } || {};
+    const outputData = item.output_data as { report?: string } || {};
+    const model = item.ai_models as { model_name?: string; display_name?: string } | null;
+    
+    return {
+      id: item.id,
+      topic: inputData.topic || 'Research',
+      report: outputData.report || '',
+      modelUsed: model?.display_name || model?.model_name || 'Unknown',
+      tokens: (item.input_tokens || 0) + (item.output_tokens || 0),
+      cost: item.total_cost_usd || 0,
+      createdAt: item.created_at,
+      clientId: item.client_id,
+      clientName: (item.clients as { name?: string } | null)?.name || null,
+    };
+  }) || [];
 }
 
 // Helper functions for building prompts

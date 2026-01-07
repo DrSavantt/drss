@@ -12,13 +12,14 @@ export async function GET() {
     // OPTIMIZED: Single query with nested relations instead of N+1 queries
     // Previously: 1 + (N * 3) queries for N clients = 31 queries for 10 clients
     // Now: 1 query total - fetch clients with related data and count client-side
+    // Migrated from ai_generations to ai_executions
     const { data: clients, error } = await supabase
       .from('clients')
       .select(`
         *,
         projects(id, deleted_at),
         content_assets(id, deleted_at),
-        ai_generations(cost_estimate)
+        ai_executions(total_cost_usd)
       `)
       .is('deleted_at', null)
       .order('created_at', { ascending: false });
@@ -40,10 +41,10 @@ export async function GET() {
         ? client.content_assets.filter((c: any) => !c.deleted_at).length 
         : 0;
       
-      // Calculate AI spend from ai_generations array
-      const aiSpend = Array.isArray(client.ai_generations)
-        ? client.ai_generations.reduce(
-            (sum: number, gen: { cost_estimate: number | null }) => sum + (gen.cost_estimate || 0),
+      // Calculate AI spend from ai_executions array (migrated from ai_generations)
+      const aiSpend = Array.isArray(client.ai_executions)
+        ? client.ai_executions.reduce(
+            (sum: number, exec: { total_cost_usd: number | null }) => sum + (exec.total_cost_usd || 0),
             0
           )
         : 0;

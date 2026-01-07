@@ -39,14 +39,15 @@ export async function GET(
       .eq('client_id', id)
       .is('deleted_at', null);
 
-    // Count AI calls and calculate spend
-    const { data: aiGenerations } = await supabase
-      .from('ai_generations')
-      .select('cost_usd')
-      .eq('client_id', id);
+    // Count AI calls and calculate spend (migrated to ai_executions)
+    const { data: aiExecutions } = await supabase
+      .from('ai_executions')
+      .select('total_cost_usd')
+      .eq('client_id', id)
+      .eq('status', 'success');
 
-    const aiCalls = aiGenerations?.length || 0;
-    const aiSpend = aiGenerations?.reduce((sum, gen) => sum + (gen.cost_usd || 0), 0) || 0;
+    const aiCalls = aiExecutions?.length || 0;
+    const aiSpend = aiExecutions?.reduce((sum, exec) => sum + (exec.total_cost_usd || 0), 0) || 0;
 
     // Map status
     let status: "onboarded" | "onboarding" | "new" = "new"
