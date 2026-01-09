@@ -1,10 +1,11 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { Loader2 } from 'lucide-react';
 import { useQuestionnaireForm } from '@/lib/questionnaire/use-questionnaire-form';
-import { REQUIRED_QUESTIONS, QuestionnaireData } from '@/lib/questionnaire/types';
+import { QuestionnaireData, getRequiredQuestionKeys } from '@/lib/questionnaire/types';
+import { useQuestionnaireConfigOptional } from '@/lib/questionnaire/questionnaire-config-context';
 import { saveQuestionnaire } from '@/app/actions/questionnaire';
 import ReviewSectionCard from './review-section-card';
 
@@ -26,11 +27,26 @@ export default function QuestionnaireReview({
   const router = useRouter();
   const isEditMode = mode === 'edit';
   
+  // Get config from context for dynamic rendering
+  const configContext = useQuestionnaireConfigOptional();
+  
   // Use hook for internal forms, or use provided data for public forms
   const internalForm = useQuestionnaireForm(clientId);
   const formData = isPublic && publicFormData ? publicFormData : internalForm.formData;
   const completedQuestions = isPublic ? new Set<string>() : internalForm.completedQuestions;
   const progress = isPublic ? 100 : internalForm.progress; // Public forms don't block on progress
+  
+  // Get required question keys dynamically from config
+  const requiredQuestionKeys = useMemo(() => {
+    if (configContext?.questions) {
+      return getRequiredQuestionKeys(configContext.questions);
+    }
+    // Fallback: no required questions if config not available
+    return [];
+  }, [configContext?.questions]);
+  
+  // Get total required questions count for remaining calculation
+  const totalRequiredCount = requiredQuestionKeys.length;
   
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -111,6 +127,127 @@ export default function QuestionnaireReview({
     element?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   };
 
+  // Calculate remaining required questions dynamically
+  const completedRequiredCount = Array.from(completedQuestions)
+    .filter(q => requiredQuestionKeys.includes(q)).length;
+  const remainingRequired = totalRequiredCount - completedRequiredCount;
+
+  // Render sections dynamically from config if available
+  const renderSections = () => {
+    // If config is available, render dynamically
+    if (configContext?.sections && configContext?.questions) {
+      const enabledSections = configContext.getEnabledSections();
+      
+      return enabledSections.map(section => {
+        // Get questions for this section
+        const sectionQuestions = configContext.getQuestionsForSection(section.id);
+        const questionKeys = sectionQuestions.map(q => q.key);
+        
+        // Get section data from formData
+        const sectionData = formData[section.key] || {};
+        
+        return (
+          <ReviewSectionCard
+            key={section.id}
+            sectionNumber={section.id}
+            title={section.title}
+            questions={sectionData as Record<string, string | string[] | undefined>}
+            questionKeys={questionKeys}
+            requiredQuestions={requiredQuestionKeys}
+            completedQuestions={completedQuestions}
+            onEdit={() => handleEditSection(section.id)}
+          />
+        );
+      });
+    }
+    
+    // Fallback: render hardcoded sections if config not available
+    // This maintains backward compatibility but should be removed once all usages are updated
+    return (
+      <>
+        <ReviewSectionCard
+          sectionNumber={1}
+          title="Avatar Definition"
+          questions={(formData.avatar_definition || {}) as Record<string, string | string[] | undefined>}
+          questionKeys={['q1', 'q2', 'q3', 'q4', 'q5']}
+          requiredQuestions={requiredQuestionKeys}
+          completedQuestions={completedQuestions}
+          onEdit={() => handleEditSection(1)}
+        />
+
+        <ReviewSectionCard
+          sectionNumber={2}
+          title="Dream Outcome & Value Equation"
+          questions={(formData.dream_outcome || {}) as Record<string, string | string[] | undefined>}
+          questionKeys={['q6', 'q7', 'q8', 'q9', 'q10']}
+          requiredQuestions={requiredQuestionKeys}
+          completedQuestions={completedQuestions}
+          onEdit={() => handleEditSection(2)}
+        />
+
+        <ReviewSectionCard
+          sectionNumber={3}
+          title="Problems & Obstacles"
+          questions={(formData.problems_obstacles || {}) as Record<string, string | string[] | undefined>}
+          questionKeys={['q11', 'q12', 'q13', 'q14', 'q15']}
+          requiredQuestions={requiredQuestionKeys}
+          completedQuestions={completedQuestions}
+          onEdit={() => handleEditSection(3)}
+        />
+
+        <ReviewSectionCard
+          sectionNumber={4}
+          title="Solution & Methodology"
+          questions={(formData.solution_methodology || {}) as Record<string, string | string[] | undefined>}
+          questionKeys={['q16', 'q17', 'q18', 'q19']}
+          requiredQuestions={requiredQuestionKeys}
+          completedQuestions={completedQuestions}
+          onEdit={() => handleEditSection(4)}
+        />
+
+        <ReviewSectionCard
+          sectionNumber={5}
+          title="Brand Voice & Communication"
+          questions={(formData.brand_voice || {}) as Record<string, string | string[] | undefined>}
+          questionKeys={['q20', 'q21', 'q22', 'q23']}
+          requiredQuestions={requiredQuestionKeys}
+          completedQuestions={completedQuestions}
+          onEdit={() => handleEditSection(5)}
+        />
+
+        <ReviewSectionCard
+          sectionNumber={6}
+          title="Proof & Transformation"
+          questions={(formData.proof_transformation || {}) as Record<string, string | string[] | undefined>}
+          questionKeys={['q24', 'q25', 'q26', 'q27']}
+          requiredQuestions={requiredQuestionKeys}
+          completedQuestions={completedQuestions}
+          onEdit={() => handleEditSection(6)}
+        />
+
+        <ReviewSectionCard
+          sectionNumber={7}
+          title="Faith Integration"
+          questions={(formData.faith_integration || {}) as Record<string, string | string[] | undefined>}
+          questionKeys={['q28', 'q29', 'q30']}
+          requiredQuestions={requiredQuestionKeys}
+          completedQuestions={completedQuestions}
+          onEdit={() => handleEditSection(7)}
+        />
+
+        <ReviewSectionCard
+          sectionNumber={8}
+          title="Business Metrics"
+          questions={(formData.business_metrics || {}) as Record<string, string | string[] | undefined>}
+          questionKeys={['q31', 'q32']}
+          requiredQuestions={requiredQuestionKeys}
+          completedQuestions={completedQuestions}
+          onEdit={() => handleEditSection(8)}
+        />
+      </>
+    );
+  };
+
   return (
     <div className="max-w-4xl mx-auto p-8">
       <div className="mb-8">
@@ -139,91 +276,13 @@ export default function QuestionnaireReview({
         <p className="text-sm text-silver mt-2">
           {progress === 100
             ? '✓ All required questions completed'
-            : `${27 - Array.from(completedQuestions).filter(q => REQUIRED_QUESTIONS.includes(q)).length} required questions remaining`}
+            : `${remainingRequired} required questions remaining`}
         </p>
       </div>
 
-      {/* All sections */}
+      {/* All sections - rendered dynamically */}
       <div className="space-y-4 mb-8">
-        <ReviewSectionCard
-          sectionNumber={1}
-          title="Avatar Definition"
-          questions={formData.avatar_definition}
-          questionKeys={['q1', 'q2', 'q3', 'q4', 'q5']}
-          requiredQuestions={REQUIRED_QUESTIONS}
-          completedQuestions={completedQuestions}
-          onEdit={() => handleEditSection(1)}
-        />
-
-        <ReviewSectionCard
-          sectionNumber={2}
-          title="Dream Outcome & Value Equation"
-          questions={formData.dream_outcome}
-          questionKeys={['q6', 'q7', 'q8', 'q9', 'q10']}
-          requiredQuestions={REQUIRED_QUESTIONS}
-          completedQuestions={completedQuestions}
-          onEdit={() => handleEditSection(2)}
-        />
-
-        <ReviewSectionCard
-          sectionNumber={3}
-          title="Problems & Obstacles"
-          questions={formData.problems_obstacles}
-          questionKeys={['q11', 'q12', 'q13', 'q14', 'q15']}
-          requiredQuestions={REQUIRED_QUESTIONS}
-          completedQuestions={completedQuestions}
-          onEdit={() => handleEditSection(3)}
-        />
-
-        <ReviewSectionCard
-          sectionNumber={4}
-          title="Solution & Methodology"
-          questions={formData.solution_methodology}
-          questionKeys={['q16', 'q17', 'q18', 'q19']}
-          requiredQuestions={REQUIRED_QUESTIONS}
-          completedQuestions={completedQuestions}
-          onEdit={() => handleEditSection(4)}
-        />
-
-        <ReviewSectionCard
-          sectionNumber={5}
-          title="Brand Voice & Communication"
-          questions={formData.brand_voice}
-          questionKeys={['q20', 'q21', 'q22', 'q23']}
-          requiredQuestions={REQUIRED_QUESTIONS}
-          completedQuestions={completedQuestions}
-          onEdit={() => handleEditSection(5)}
-        />
-
-        <ReviewSectionCard
-          sectionNumber={6}
-          title="Proof & Transformation"
-          questions={formData.proof_transformation}
-          questionKeys={['q24', 'q25', 'q26', 'q27']}
-          requiredQuestions={REQUIRED_QUESTIONS}
-          completedQuestions={completedQuestions}
-          onEdit={() => handleEditSection(6)}
-        />
-
-        <ReviewSectionCard
-          sectionNumber={7}
-          title="Faith Integration"
-          questions={formData.faith_integration}
-          questionKeys={['q28', 'q29', 'q30']}
-          requiredQuestions={REQUIRED_QUESTIONS}
-          completedQuestions={completedQuestions}
-          onEdit={() => handleEditSection(7)}
-        />
-
-        <ReviewSectionCard
-          sectionNumber={8}
-          title="Business Metrics"
-          questions={formData.business_metrics}
-          questionKeys={['q31', 'q32']}
-          requiredQuestions={REQUIRED_QUESTIONS}
-          completedQuestions={completedQuestions}
-          onEdit={() => handleEditSection(8)}
-        />
+        {renderSections()}
       </div>
 
       {/* Error message */}

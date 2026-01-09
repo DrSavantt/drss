@@ -10,6 +10,20 @@ import {
   filterEnabledQuestions
 } from './questions-config';
 
+// ============================================
+// DATABASE FORMAT TYPES (snake_case from DB)
+// ============================================
+
+export interface DbQuestionConfig {
+  question_key: string;
+  type: 'long-text' | 'short-text' | 'multiple-choice' | 'checkbox' | 'file-upload';
+  required: boolean;
+  enabled: boolean;
+  min_length?: number | null;
+  max_length?: number | null;
+  conditional_on?: { questionId: string; notEquals?: string; equals?: string } | null;
+}
+
 /**
  * Generate a Zod schema for a single question based on its config
  */
@@ -292,4 +306,135 @@ export function calculateProgress(
   ).length;
   
   return Math.round((answeredCount / requiredKeys.length) * 100);
+}
+
+// ============================================
+// DATABASE FORMAT VALIDATION (snake_case)
+// ============================================
+// These functions work directly with database query results
+// without requiring transformation to camelCase
+
+/**
+ * Generate a Zod schema from a raw database question config (snake_case fields)
+ */
+export function generateSchemaFromDbQuestion(question: DbQuestionConfig): z.ZodTypeAny {
+  switch (question.type) {
+    case 'long-text':
+    case 'short-text': {
+      let schema = z.string();
+      
+      if (question.required && question.min_length && question.min_length > 0) {
+        schema = schema.min(
+          question.min_length, 
+          `Please provide at least ${question.min_length} characters`
+        );
+      } else if (question.required) {
+        schema = schema.min(1, 'This field is required');
+      }
+      
+      if (question.max_length) {
+        schema = schema.max(
+          question.max_length, 
+          `Please keep under ${question.max_length} characters`
+        );
+      }
+      
+      return question.required ? schema : schema.optional();
+    }
+    
+    case 'multiple-choice': {
+      const baseSchema = z.string();
+      return question.required 
+        ? baseSchema.min(1, 'Please select an option')
+        : baseSchema.optional();
+    }
+    
+    case 'checkbox': {
+      const baseSchema = z.array(z.string());
+      return question.required
+        ? baseSchema.min(1, 'Please select at least one option')
+        : baseSchema.optional();
+    }
+    
+    case 'file-upload': {
+      // File uploads are typically optional and validated separately
+      return z.array(z.any()).optional();
+    }
+    
+    default:
+      return z.any();
+  }
+}
+
+/**
+ * Generate a map of questionKey → schema from database questions
+ * This replaces the hardcoded questionSchemas object from validation-schemas.ts
+ * 
+ * @param questions - Array of questions from database (snake_case format)
+ * @returns Record mapping question keys (q1, q2, etc.) to Zod schemas
+ */
+export function generateQuestionKeySchemaMap(
+  questions: DbQuestionConfig[]
+): Record<string, z.ZodSchema> {
+  return Object.fromEntries(
+    questions
+      .filter(q => q.enabled)
+      .map(q => [q.question_key, generateSchemaFromDbQuestion(q)])
+  );
+}
+
+/**
+ * Validate a single question's value using database config
+ * Returns error message or null if valid
+ * 
+ * @param questions - Array of questions from database
+ * @param questionKey - Question key (e.g., "q1", "q2")
+ * @param value - Value to validate
+ */
+export function validateQuestionByKey(
+  questions: DbQuestionConfig[],
+  questionKey: string,
+  value: unknown
+): string | null {
+  const question = questions.find(q => q.question_key === questionKey);
+  if (!question) return null;
+  
+  // Skip validation for disabled questions
+  if (!question.enabled) return null;
+  
+  const schema = generateSchemaFromDbQuestion(question);
+  const result = schema.safeParse(value);
+  
+  if (!result.success) {
+    return result.error.errors[0]?.message || 'Invalid value';
+  }
+  
+  return null;
+}
+
+/**
+ * Check if a question should be validated based on conditional logic
+ * Works with database format (snake_case)
+ */
+export function shouldValidateQuestion(
+  question: DbQuestionConfig,
+  formData: Record<string, unknown>
+): boolean {
+  if (!question.enabled) return false;
+  
+  if (question.conditional_on) {
+    const dependsOnValue = formData[question.conditional_on.questionId];
+    
+    if (question.conditional_on.notEquals) {
+      return dependsOnValue !== question.conditional_on.notEquals && 
+             dependsOnValue !== '' && 
+             dependsOnValue !== undefined;
+    }
+    
+    if (question.conditional_on.equals) {
+      return dependsOnValue === question.conditional_on.equals;
+    }
+  }
+  
+  return true;
 }

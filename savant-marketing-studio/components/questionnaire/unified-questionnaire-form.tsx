@@ -101,7 +101,34 @@ export function UnifiedQuestionnaireForm({
   
   const [currentSectionIndex, setCurrentSectionIndex] = useState(0);
   const [completedSections, setCompletedSections] = useState<Set<string>>(new Set());
-  const [completedQuestions, setCompletedQuestions] = useState<Set<string>>(new Set());
+  
+  // Initialize completedQuestions from initialData if provided
+  const [completedQuestions, setCompletedQuestions] = useState<Set<string>>(() => {
+    if (!initialData) return new Set();
+    
+    // Scan all questions and mark those with valid answers as completed
+    const completed = new Set<string>();
+    const flatData: Record<string, unknown> = {};
+    
+    // Flatten initial data
+    Object.values(initialData as Record<string, Record<string, unknown>>).forEach(section => {
+      if (section && typeof section === 'object') {
+        Object.entries(section).forEach(([key, value]) => {
+          flatData[key] = value;
+        });
+      }
+    });
+    
+    // Check each question for valid answers
+    questions.forEach(q => {
+      const value = flatData[q.id];
+      if (hasValidAnswer(value)) {
+        completed.add(q.key);
+      }
+    });
+    
+    return completed;
+  });
   const [saveStatus, setSaveStatus] = useState<SaveStatus>('idle');
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -216,12 +243,17 @@ export function UnifiedQuestionnaireForm({
   }, [questions, sections]);
   
   // Mark question as completed (for onBlur)
+  // Note: questionKey is the short key (e.g., "q1"), but flatFormData uses question.id (e.g., "q1_ideal_customer")
   const markQuestionCompleted = useCallback((questionKey: string) => {
-    const value = flatFormData[questionKey];
+    // Find the question to get its id for lookup
+    const question = questions.find(q => q.key === questionKey);
+    if (!question) return;
+    
+    const value = flatFormData[question.id];
     if (hasValidAnswer(value)) {
       setCompletedQuestions(prev => new Set([...prev, questionKey]));
     }
-  }, [flatFormData]);
+  }, [flatFormData, questions]);
   
   // ============================================
   // EFFECTS
@@ -236,11 +268,17 @@ export function UnifiedQuestionnaireForm({
         q => q.sectionId === section.id && q.enabled && q.required
       );
       
+      // If section has no required questions, it's automatically complete
+      if (sectionQuestions.length === 0) {
+        newCompletedSections.add(section.key);
+        return;
+      }
+      
       const allRequiredAnswered = sectionQuestions.every(q => 
         completedQuestions.has(q.key)
       );
       
-      if (allRequiredAnswered && sectionQuestions.length > 0) {
+      if (allRequiredAnswered) {
         newCompletedSections.add(section.key);
       }
     });

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
-import { QuestionnaireData, FormStatus, EMPTY_QUESTIONNAIRE_DATA, UploadedFile } from './types';
+import { QuestionnaireData, FormStatus, UploadedFile, buildEmptyQuestionnaire } from './types';
 import type { 
   SectionConfig,
   QuestionConfig
@@ -92,7 +92,15 @@ export function useQuestionnaireForm(
   // STATE DECLARATIONS
   // ============================================
   
-  const [formData, setFormData] = useState<QuestionnaireData>(EMPTY_QUESTIONNAIRE_DATA);
+  // Initialize with empty object - will be populated when config loads or from existing data
+  const [formData, setFormData] = useState<QuestionnaireData>(() => {
+    // If we have existing data, use it
+    if (existingData && Object.keys(existingData).length > 0) {
+      return existingData;
+    }
+    // Otherwise start with empty object - will be initialized when config loads
+    return {};
+  });
   const [currentSection, setCurrentSection] = useState(1); // Will be updated in useEffect to first enabled section
   const [completedQuestions, setCompletedQuestions] = useState<Set<string>>(new Set());
   const [saveStatus, setSaveStatus] = useState<FormStatus>('saved');
@@ -299,6 +307,22 @@ export function useQuestionnaireForm(
     }
   }, [contextConfig, currentSection]);
 
+  // Initialize empty questionnaire structure when config loads (if no existing data)
+  const hasInitializedEmptyFormRef = useRef(false);
+  useEffect(() => {
+    if (contextConfig && contextConfig.isLoaded && !hasInitializedEmptyFormRef.current) {
+      // Only initialize if formData is empty and we don't have existing data
+      if (Object.keys(formData).length === 0 && !existingData) {
+        const emptyForm = buildEmptyQuestionnaire(
+          contextConfig.sections,
+          contextConfig.questions
+        );
+        setFormData(emptyForm);
+        hasInitializedEmptyFormRef.current = true;
+      }
+    }
+  }, [contextConfig, formData, existingData]);
+
   // Initialize with existing data in edit mode (takes priority over localStorage)
   useEffect(() => {
     if (isEditMode && existingData && !hasInitializedEditDataRef.current) {
@@ -307,6 +331,7 @@ export function useQuestionnaireForm(
       // Mark all questions that have values as completed
       const completed = new Set<string>();
       const checkSection = (sectionData: Record<string, unknown>) => {
+        if (!sectionData || typeof sectionData !== 'object') return;
         Object.entries(sectionData).forEach(([key, value]) => {
           // Extract question number from key (e.g., q1_ideal_customer -> q1)
           const match = key.match(/^(q\d+)_/);
@@ -319,14 +344,10 @@ export function useQuestionnaireForm(
         });
       };
       
-      checkSection(existingData.avatar_definition as unknown as Record<string, unknown>);
-      checkSection(existingData.dream_outcome as unknown as Record<string, unknown>);
-      checkSection(existingData.problems_obstacles as unknown as Record<string, unknown>);
-      checkSection(existingData.solution_methodology as unknown as Record<string, unknown>);
-      checkSection(existingData.brand_voice as unknown as Record<string, unknown>);
-      checkSection(existingData.proof_transformation as unknown as Record<string, unknown>);
-      checkSection(existingData.faith_integration as unknown as Record<string, unknown>);
-      checkSection(existingData.business_metrics as unknown as Record<string, unknown>);
+      // Dynamically iterate through all sections in existingData
+      Object.values(existingData).forEach(sectionData => {
+        checkSection(sectionData as Record<string, unknown>);
+      });
       
       setCompletedQuestions(completed);
       hasInitializedEditDataRef.current = true;
@@ -494,76 +515,36 @@ export function useQuestionnaireForm(
     );
   }, [completedQuestions, formData, contextConfig]);
 
-  // Update question value
+  // Update question value - dynamically looks up section from config
   const updateQuestion = useCallback((questionId: string, value: string | string[] | UploadedFile[]) => {
     setFormData(prev => {
-      const updated = { ...prev };
-      
-      // Get the question config to find the full key (use live config)
+      // Get the question config to find the full key and section (use live config)
       const question = getQuestionByKeyLive(questionId);
       if (!question) {
         console.warn(`Question not found in config: ${questionId}`);
         return prev;
       }
       
-      const fullKey = question.id; // e.g., "q1_ideal_customer"
-      const sectionId = question.sectionId;
-      
-      // Update the appropriate section
-      switch (sectionId) {
-        case 1:
-          updated.avatar_definition = {
-            ...updated.avatar_definition,
-            [fullKey]: value
-          } as typeof updated.avatar_definition;
-          break;
-        case 2:
-          updated.dream_outcome = {
-            ...updated.dream_outcome,
-            [fullKey]: value as string
-          };
-          break;
-        case 3:
-          updated.problems_obstacles = {
-            ...updated.problems_obstacles,
-            [fullKey]: value as string
-          };
-          break;
-        case 4:
-          updated.solution_methodology = {
-            ...updated.solution_methodology,
-            [fullKey]: value as string
-          };
-          break;
-        case 5:
-          updated.brand_voice = {
-            ...updated.brand_voice,
-            [fullKey]: value as string | UploadedFile[]
-          };
-          break;
-        case 6:
-          updated.proof_transformation = {
-            ...updated.proof_transformation,
-            [fullKey]: value as string | UploadedFile[]
-          };
-          break;
-        case 7:
-          updated.faith_integration = {
-            ...updated.faith_integration,
-            [fullKey]: value as string
-          };
-          break;
-        case 8:
-          updated.business_metrics = {
-            ...updated.business_metrics,
-            [fullKey]: value as string
-          };
-          break;
+      // Find the section for this question
+      const section = contextConfig.sections.find(s => s.id === question.sectionId);
+      if (!section) {
+        console.warn(`Section not found for question: ${questionId}`);
+        return prev;
       }
-
-      return updated;
+      
+      const fullKey = question.id; // e.g., "q1_ideal_customer"
+      const sectionKey = section.key; // e.g., "avatar_definition"
+      
+      // Update dynamically using section key from config
+      return {
+        ...prev,
+        [sectionKey]: {
+          ...(prev[sectionKey] || {}),
+          [fullKey]: value
+        }
+      };
     });
-  }, [getQuestionByKeyLive]);
+  }, [getQuestionByKeyLive, contextConfig.sections]);
 
   // Validate question using dynamic validation
   const validateQuestion = useCallback((questionId: string): string | undefined => {
@@ -571,7 +552,7 @@ export function useQuestionnaireForm(
     const question = getQuestionByKeyLive(questionId);
     if (!question) return undefined;
     
-    const value = getQuestionValue(questionId, formData, getQuestionByKeyLive);
+    const value = getQuestionValue(questionId, formData, getQuestionByKeyLive, contextConfig.sections);
     const error = dynamicValidateQuestion(contextConfig.questions, questionId, value);
     return error || undefined;
   }, [formData, getQuestionByKeyLive, contextConfig]);
@@ -695,10 +676,12 @@ export function useQuestionnaireForm(
 }
 
 // Helper function to get question value from formData using question key
+// Now uses dynamic section lookup from config instead of hardcoded section IDs
 function getQuestionValue(
   questionKey: string, 
   formData: QuestionnaireData,
-  getQuestionByKeyFn: (key: string) => QuestionConfig | undefined
+  getQuestionByKeyFn: (key: string) => QuestionConfig | undefined,
+  sections?: SectionConfig[]
 ): string | string[] {
   const question = getQuestionByKeyFn(questionKey);
   if (!question) return '';
@@ -708,29 +691,27 @@ function getQuestionValue(
   // Skip file upload questions - they don't need validation
   if (question.type === 'file-upload') return '';
   
-  // Get from appropriate section
-  switch (question.sectionId) {
-    case 1:
-      return (formData.avatar_definition as unknown as Record<string, string | string[]>)[fullKey] || '';
-    case 2:
-      return (formData.dream_outcome as unknown as Record<string, string>)[fullKey] || '';
-    case 3:
-      return (formData.problems_obstacles as unknown as Record<string, string>)[fullKey] || '';
-    case 4:
-      return (formData.solution_methodology as unknown as Record<string, string>)[fullKey] || '';
-    case 5: {
-      const value = (formData.brand_voice as unknown as Record<string, unknown>)[fullKey];
-      return typeof value === 'string' ? value : '';
+  // Find section key dynamically
+  const section = sections?.find(s => s.id === question.sectionId);
+  if (!section) {
+    // Fallback: try to find section data by iterating through formData
+    for (const sectionData of Object.values(formData)) {
+      if (sectionData && typeof sectionData === 'object' && fullKey in sectionData) {
+        const value = (sectionData as Record<string, unknown>)[fullKey];
+        if (typeof value === 'string') return value;
+        if (Array.isArray(value)) return value as string[];
+        return '';
+      }
     }
-    case 6: {
-      const value = (formData.proof_transformation as unknown as Record<string, unknown>)[fullKey];
-      return typeof value === 'string' ? value : '';
-    }
-    case 7:
-      return (formData.faith_integration as unknown as Record<string, string>)[fullKey] || '';
-    case 8:
-      return (formData.business_metrics as unknown as Record<string, string>)[fullKey] || '';
-    default:
-      return '';
+    return '';
   }
+  
+  // Get value from the section using dynamic key
+  const sectionData = formData[section.key];
+  if (!sectionData) return '';
+  
+  const value = sectionData[fullKey];
+  if (typeof value === 'string') return value;
+  if (Array.isArray(value) && value.every(v => typeof v === 'string')) return value as string[];
+  return '';
 }

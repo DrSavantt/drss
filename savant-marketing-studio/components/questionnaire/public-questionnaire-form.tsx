@@ -19,7 +19,7 @@ import { SectionRenderer } from '@/components/questionnaire/section-renderer'
 import { submitPublicQuestionnaire, savePublicQuestionnaireProgress } from '@/app/actions/questionnaire'
 import { cn } from '@/lib/utils'
 import type { QuestionConfig, SectionConfig } from '@/lib/questionnaire/questions-config'
-import { QuestionnaireData, EMPTY_QUESTIONNAIRE_DATA, UploadedFile } from '@/lib/questionnaire/types'
+import { QuestionnaireData, UploadedFile, buildEmptyQuestionnaire } from '@/lib/questionnaire/types'
 import { toast } from 'sonner'
 
 // Types for database format
@@ -91,15 +91,7 @@ export function PublicQuestionnaireForm({
   // Theme state (independent of app theme)
   const [isDarkMode, setIsDarkMode] = useState(true)
   
-  // Form state
-  const [currentSectionIndex, setCurrentSectionIndex] = useState(0)
-  const [formData, setFormData] = useState<QuestionnaireData>(EMPTY_QUESTIONNAIRE_DATA)
-  const [completedQuestions, setCompletedQuestions] = useState<Set<string>>(new Set())
-  const [isSubmitting, setIsSubmitting] = useState(false)
-  const [isSaving, setIsSaving] = useState(false)
-  const [lastSaved, setLastSaved] = useState<Date | null>(null)
-
-  // Transform database format to component format
+  // Transform database format to component format (moved up so it's available for initial state)
   const transformedSections: SectionConfig[] = useMemo(() => sections.map(s => ({
     id: s.id,
     key: s.key,
@@ -134,6 +126,16 @@ export function PublicQuestionnaireForm({
     helpWeakExample: q.help?.weak_example ?? undefined,
     helpQuickTip: q.help?.quick_tip ?? undefined,
   })), [questions])
+
+  // Form state - build empty questionnaire from config
+  const [currentSectionIndex, setCurrentSectionIndex] = useState(0)
+  const [formData, setFormData] = useState<QuestionnaireData>(() => 
+    buildEmptyQuestionnaire(transformedSections, transformedQuestions)
+  )
+  const [completedQuestions, setCompletedQuestions] = useState<Set<string>>(new Set())
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [isSaving, setIsSaving] = useState(false)
+  const [lastSaved, setLastSaved] = useState<Date | null>(null)
 
   const currentSection = transformedSections[currentSectionIndex]
   const totalSections = transformedSections.length

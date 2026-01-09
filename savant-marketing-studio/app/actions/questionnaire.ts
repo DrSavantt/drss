@@ -3,7 +3,11 @@
 import { createClient } from '@/lib/supabase/server';
 import { revalidatePath } from 'next/cache';
 import { QuestionnaireData, UploadedFile } from '@/lib/questionnaire/types';
-import { questionSchemas } from '@/lib/questionnaire/validation-schemas';
+import { 
+  generateQuestionKeySchemaMap, 
+  shouldValidateQuestion,
+  type DbQuestionConfig 
+} from '@/lib/questionnaire/dynamic-validation';
 import { logActivity } from '@/lib/activity-log';
 import { logPublicActivity } from '@/lib/activity-log-public';
 import { sanitizeForDb, hasQuestionnaireContent } from '@/lib/utils/safe-render';
@@ -119,19 +123,35 @@ async function uploadFiles(
 }
 
 /**
- * Validate questionnaire data against Zod schemas
- * Handles conditional logic (Q28 faith questions)
+ * Validate questionnaire data against dynamically generated Zod schemas
+ * Uses question config from database for validation rules
+ * Handles conditional logic from database configuration
  * Skips validation for file URLs (already uploaded)
+ * 
+ * @param data - Questionnaire data to validate
+ * @param questions - Questions config from database
  */
-function validateQuestionnaireData(data: QuestionnaireData): {
+function validateQuestionnaireData(
+  data: QuestionnaireData,
+  questions: DbQuestionConfig[]
+): {
   isValid: boolean;
   errors: Record<string, string>;
 } {
   const errors: Record<string, string> = {};
-
-  // Check if faith questions should be validated
-  const faithPreference = data.faith_integration?.q30_faith_preference;
-  const skipFaithQuestions = !faithPreference || faithPreference === 'separate';
+  
+  // Generate schema map from database config
+  const questionSchemas = generateQuestionKeySchemaMap(questions);
+  
+  // Build a flat form data object for conditional logic checking
+  const flatFormData: Record<string, unknown> = {};
+  Object.entries(data).forEach(([, sectionData]) => {
+    if (sectionData && typeof sectionData === 'object') {
+      Object.entries(sectionData as Record<string, unknown>).forEach(([key, value]) => {
+        flatFormData[key] = value;
+      });
+    }
+  });
 
   // Validate each section's questions
   Object.entries(data).forEach(([, sectionData]) => {
@@ -140,14 +160,22 @@ function validateQuestionnaireData(data: QuestionnaireData): {
     Object.entries(sectionData as Record<string, unknown>).forEach(([questionKey, value]) => {
       // Extract question ID (q1, q2, etc.)
       const questionId = questionKey.split('_')[0];
-
-      // Skip Q31 and Q32 if Q30 is "separate" or empty
-      if ((questionId === 'q31' || questionId === 'q32') && skipFaithQuestions) {
+      
+      // Find the question config from database
+      const questionConfig = questions.find(q => q.question_key === questionId);
+      
+      // Skip validation if question not found or disabled
+      if (!questionConfig || !questionConfig.enabled) {
+        return;
+      }
+      
+      // Skip validation if conditional logic says question shouldn't be shown
+      if (!shouldValidateQuestion(questionConfig, flatFormData)) {
         return;
       }
 
-      // Skip file upload fields (Q24, Q29) - they're validated separately
-      if (questionId === 'q24' || questionId === 'q29') {
+      // Skip file upload fields - they're validated separately
+      if (questionConfig.type === 'file-upload') {
         return;
       }
 
@@ -196,21 +224,41 @@ export async function saveQuestionnaire(
     if (!supabase) {
       return { success: false, error: 'Failed to connect to database' };
     }
+    
+    // Fetch questions config from database for dynamic validation
+    const { data: questionsData, error: questionsError } = await supabase
+      .from('questionnaire_questions')
+      .select('question_key, type, required, enabled, min_length, max_length, conditional_on')
+      .order('section_id, sort_order');
+    
+    if (questionsError) {
+      console.error('Failed to fetch questions config:', questionsError);
+      return { success: false, error: 'Failed to load validation rules' };
+    }
+    
+    const questions = (questionsData || []) as DbQuestionConfig[];
 
     // Upload files if present
     let brandAssetUrls: string[] = [];
     let proofAssetUrls: string[] = [];
 
-    if (data.brand_voice.q24_brand_assets && data.brand_voice.q24_brand_assets.length > 0) {
-      brandAssetUrls = await uploadFiles(supabase, clientId, data.brand_voice.q24_brand_assets, 'brand-assets');
+    // Access file upload fields safely with dynamic QuestionnaireData type
+    const brandVoiceSection = data['brand_voice'] as Record<string, unknown> | undefined;
+    const proofSection = data['proof_transformation'] as Record<string, unknown> | undefined;
+    
+    const brandAssets = brandVoiceSection?.['q24_brand_assets'] as UploadedFile[] | undefined;
+    const proofAssets = proofSection?.['q29_proof_assets'] as UploadedFile[] | undefined;
+
+    if (brandAssets && Array.isArray(brandAssets) && brandAssets.length > 0) {
+      brandAssetUrls = await uploadFiles(supabase, clientId, brandAssets, 'brand-assets');
     }
 
-    if (data.proof_transformation.q29_proof_assets && data.proof_transformation.q29_proof_assets.length > 0) {
-      proofAssetUrls = await uploadFiles(supabase, clientId, data.proof_transformation.q29_proof_assets, 'proof-assets');
+    if (proofAssets && Array.isArray(proofAssets) && proofAssets.length > 0) {
+      proofAssetUrls = await uploadFiles(supabase, clientId, proofAssets, 'proof-assets');
     }
 
-    // Validate questionnaire data before saving
-    const validation = validateQuestionnaireData(data);
+    // Validate questionnaire data before saving using dynamic schemas
+    const validation = validateQuestionnaireData(data, questions);
 
     if (!validation.isValid) {
       return {

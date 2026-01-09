@@ -1,3 +1,13 @@
+// ============================================
+// DYNAMIC QUESTIONNAIRE TYPES
+// Flexible types that work with ANY database-driven questions
+// ============================================
+
+import type { SectionConfig, QuestionConfig } from './questions-config';
+
+// ===== UPLOADED FILE TYPE =====
+// Used for file upload questions
+
 export interface UploadedFile {
   id: string;
   name: string;
@@ -7,124 +17,249 @@ export interface UploadedFile {
   file?: File;
 }
 
+// ===== RESPONSE VALUE TYPES =====
+// All possible values a question response can have
+
+export interface FileUploadValue {
+  url: string;
+  name: string;
+  size: number;
+  type: string;
+}
+
+/**
+ * Response values can be:
+ * - string: Text responses (short-text, long-text, multiple-choice single select)
+ * - string[]: Multi-select responses (checkbox)
+ * - UploadedFile[]: File upload responses
+ * - null: No response yet
+ */
+export type QuestionResponseValue = 
+  | string 
+  | string[] 
+  | UploadedFile[] 
+  | FileUploadValue 
+  | null;
+
+// ===== DYNAMIC QUESTIONNAIRE DATA =====
+// Flexible structure: section keys map to question responses
+
+/**
+ * QuestionnaireData is now dynamic - any section key can contain any question ID.
+ * This allows the database to define the structure, not hardcoded types.
+ * 
+ * Example structure:
+ * {
+ *   "avatar_definition": {
+ *     "q1_ideal_customer": "My ideal customer is...",
+ *     "q2_avatar_criteria": ["criterion1", "criterion2"]
+ *   },
+ *   "dream_outcome": {
+ *     "q6_dream_outcome": "Their dream is..."
+ *   }
+ * }
+ */
 export interface QuestionnaireData {
-  avatar_definition: {
-    q1_ideal_customer: string;
-    q2_avatar_criteria: string[];
-    q3_demographics: string;
-    q4_psychographics: string;
-    q5_platforms: string;
-  };
-  dream_outcome: {
-    q6_dream_outcome: string;
-    q7_status: string;
-    q8_time_to_result: string;
-    q9_effort_sacrifice: string;
-    q10_proof: string;
-  };
-  problems_obstacles: {
-    q11_external_problems: string;
-    q12_internal_problems: string;
-    q13_philosophical_problems: string;
-    q14_past_failures: string;
-    q15_limiting_beliefs: string;
-  };
-  solution_methodology: {
-    q16_core_offer: string;
-    q17_unique_mechanism: string;
-    q18_differentiation: string;
-    q19_delivery_vehicle: string;
-  };
-  brand_voice: {
-    q20_voice_type: string;
-    q21_personality_words: string;
-    q22_signature_phrases: string;
-    q23_avoid_topics: string;
-    q24_brand_assets?: UploadedFile[]; // Optional: logos, style guides, etc.
-  };
-  proof_transformation: {
-    q25_transformation_story: string;
-    q26_measurable_results: string;
-    q27_credentials: string;
-    q28_guarantees: string;
-    q29_proof_assets?: UploadedFile[]; // Optional: testimonials, case studies, etc.
-  };
-  faith_integration: {
-    q30_faith_preference: string;
-    q31_faith_mission: string;
-    q32_biblical_principles: string;
-  };
-  business_metrics: {
-    q33_annual_revenue: string;
-    q34_primary_goal: string;
+  [sectionKey: string]: {
+    [questionId: string]: QuestionResponseValue;
   };
 }
 
+// ===== STATUS TYPES =====
+
 export type FormStatus = 'idle' | 'saved' | 'saving' | 'error';
 
-export const REQUIRED_QUESTIONS = [
-  'q1', 'q2', 'q3', 'q4', 'q5',
-  'q6', 'q7', 'q8', 'q9', 'q10',
-  'q11', 'q12', 'q14', 'q15',
-  'q16', 'q17', 'q18', 'q19',
-  'q20', 'q21', 'q22', 'q23',
-  'q25', 'q26', 'q28',
-  'q33', 'q34'
-];
+export type QuestionnaireStatus = 'not_started' | 'in_progress' | 'completed';
 
-export const OPTIONAL_QUESTIONS = [
-  'q13', 'q24', 'q27', 'q29', 'q30', 'q31', 'q32'
-];
+// ===== HELPER FUNCTIONS =====
 
-export const EMPTY_QUESTIONNAIRE_DATA: QuestionnaireData = {
-  avatar_definition: {
-    q1_ideal_customer: '',
-    q2_avatar_criteria: [],
-    q3_demographics: '',
-    q4_psychographics: '',
-    q5_platforms: '',
-  },
-  dream_outcome: {
-    q6_dream_outcome: '',
-    q7_status: '',
-    q8_time_to_result: '',
-    q9_effort_sacrifice: '',
-    q10_proof: '',
-  },
-  problems_obstacles: {
-    q11_external_problems: '',
-    q12_internal_problems: '',
-    q13_philosophical_problems: '',
-    q14_past_failures: '',
-    q15_limiting_beliefs: '',
-  },
-  solution_methodology: {
-    q16_core_offer: '',
-    q17_unique_mechanism: '',
-    q18_differentiation: '',
-    q19_delivery_vehicle: '',
-  },
-  brand_voice: {
-    q20_voice_type: '',
-    q21_personality_words: '',
-    q22_signature_phrases: '',
-    q23_avoid_topics: '',
-    q24_brand_assets: [],
-  },
-  proof_transformation: {
-    q25_transformation_story: '',
-    q26_measurable_results: '',
-    q27_credentials: '',
-    q28_guarantees: '',
-    q29_proof_assets: [],
-  },
-  faith_integration: {
-    q30_faith_preference: '',
-    q31_faith_mission: '',
-    q32_biblical_principles: '',
-  },
-  business_metrics: {
-    q33_annual_revenue: '',
-    q34_primary_goal: '',
-  },
-};
+/**
+ * Build an empty questionnaire structure from config.
+ * Creates the correct nested structure with default values based on question types.
+ * 
+ * @param sections - Array of section configs from database
+ * @param questions - Array of question configs from database
+ * @returns Empty QuestionnaireData with proper structure
+ */
+export function buildEmptyQuestionnaire(
+  sections: SectionConfig[],
+  questions: QuestionConfig[]
+): QuestionnaireData {
+  const data: QuestionnaireData = {};
+  
+  for (const section of sections) {
+    if (!section.enabled) continue;
+    
+    data[section.key] = {};
+    const sectionQuestions = questions.filter(
+      q => q.sectionId === section.id && q.enabled
+    );
+    
+    for (const question of sectionQuestions) {
+      // Set default value based on question type
+      if (question.type === 'checkbox') {
+        data[section.key][question.id] = [];
+      } else if (question.type === 'file-upload') {
+        data[section.key][question.id] = [];
+      } else {
+        data[section.key][question.id] = '';
+      }
+    }
+  }
+  
+  return data;
+}
+
+/**
+ * Check if a question is required based on config (not hardcoded list).
+ * 
+ * @param questionId - The question ID to check (e.g., "q1_ideal_customer")
+ * @param questions - Array of question configs from database
+ * @returns true if question is required, false otherwise
+ */
+export function isQuestionRequired(
+  questionId: string,
+  questions: QuestionConfig[]
+): boolean {
+  const question = questions.find(q => q.id === questionId);
+  return question?.required ?? false;
+}
+
+/**
+ * Check if a question is required by key (e.g., "q1").
+ * 
+ * @param questionKey - The question key to check (e.g., "q1")
+ * @param questions - Array of question configs from database
+ * @returns true if question is required, false otherwise
+ */
+export function isQuestionRequiredByKey(
+  questionKey: string,
+  questions: QuestionConfig[]
+): boolean {
+  const question = questions.find(q => q.key === questionKey);
+  return question?.required ?? false;
+}
+
+/**
+ * Get all required question IDs from config.
+ * Use this instead of the old hardcoded REQUIRED_QUESTIONS array.
+ * 
+ * @param questions - Array of question configs from database
+ * @returns Array of required question IDs
+ */
+export function getRequiredQuestionIds(questions: QuestionConfig[]): string[] {
+  return questions
+    .filter(q => q.required && q.enabled)
+    .map(q => q.id);
+}
+
+/**
+ * Get all required question keys from config.
+ * Use this instead of the old hardcoded REQUIRED_QUESTIONS array.
+ * 
+ * @param questions - Array of question configs from database
+ * @returns Array of required question keys (e.g., ["q1", "q2", ...])
+ */
+export function getRequiredQuestionKeys(questions: QuestionConfig[]): string[] {
+  return questions
+    .filter(q => q.required && q.enabled)
+    .map(q => q.key);
+}
+
+/**
+ * Get all optional question IDs from config.
+ * 
+ * @param questions - Array of question configs from database
+ * @returns Array of optional question IDs
+ */
+export function getOptionalQuestionIds(questions: QuestionConfig[]): string[] {
+  return questions
+    .filter(q => !q.required && q.enabled)
+    .map(q => q.id);
+}
+
+/**
+ * Get all optional question keys from config.
+ * 
+ * @param questions - Array of question configs from database
+ * @returns Array of optional question keys
+ */
+export function getOptionalQuestionKeys(questions: QuestionConfig[]): string[] {
+  return questions
+    .filter(q => !q.required && q.enabled)
+    .map(q => q.key);
+}
+
+/**
+ * Get a flattened view of all question responses from nested QuestionnaireData.
+ * Useful for forms that work with flat key-value pairs.
+ * 
+ * @param data - Nested QuestionnaireData
+ * @returns Flat record of questionId -> value
+ */
+export function flattenQuestionnaireData(
+  data: QuestionnaireData
+): Record<string, QuestionResponseValue> {
+  const flat: Record<string, QuestionResponseValue> = {};
+  
+  for (const sectionKey of Object.keys(data)) {
+    const section = data[sectionKey];
+    if (section && typeof section === 'object') {
+      for (const questionId of Object.keys(section)) {
+        flat[questionId] = section[questionId];
+      }
+    }
+  }
+  
+  return flat;
+}
+
+/**
+ * Get a specific question's value from QuestionnaireData.
+ * Handles the nested section -> question structure.
+ * 
+ * @param data - The questionnaire data
+ * @param questionId - The question ID to look for
+ * @param sections - Section configs to know where to look
+ * @param questions - Question configs to find section mapping
+ * @returns The question's value or null if not found
+ */
+export function getQuestionValue(
+  data: QuestionnaireData,
+  questionId: string,
+  sections: SectionConfig[],
+  questions: QuestionConfig[]
+): QuestionResponseValue {
+  const question = questions.find(q => q.id === questionId);
+  if (!question) return null;
+  
+  const section = sections.find(s => s.id === question.sectionId);
+  if (!section) return null;
+  
+  return data[section.key]?.[questionId] ?? null;
+}
+
+/**
+ * Set a specific question's value in QuestionnaireData.
+ * Returns a new object (immutable update).
+ * 
+ * @param data - The current questionnaire data
+ * @param sectionKey - The section key (e.g., "avatar_definition")
+ * @param questionId - The question ID (e.g., "q1_ideal_customer")
+ * @param value - The new value
+ * @returns Updated QuestionnaireData
+ */
+export function setQuestionValue(
+  data: QuestionnaireData,
+  sectionKey: string,
+  questionId: string,
+  value: QuestionResponseValue
+): QuestionnaireData {
+  return {
+    ...data,
+    [sectionKey]: {
+      ...data[sectionKey],
+      [questionId]: value,
+    },
+  };
+}

@@ -2,11 +2,23 @@
 
 ## 🚀 SERVER LAUNCH RULES - CRITICAL
 
-When launching development servers:
-1. **ALWAYS** kill all running servers first: `lsof -ti:3000,3001,3002,3003 | xargs kill -9 2>/dev/null`
-2. **ALWAYS** launch on port 3000 only
+**BEFORE starting ANY dev server, ALWAYS run this command first:**
+```bash
+lsof -ti:3000,3001,3002,3003 | xargs kill -9 2>/dev/null; cd /Users/rocky/DRSS/savant-marketing-studio && npm run dev
+```
+
+### Rules:
+1. **ALWAYS** kill ALL running servers on ports 3000-3003 before starting
+2. **ALWAYS** use port 3000 - never allow fallback to other ports
 3. **NEVER** run multiple instances simultaneously
-4. Use command: `cd savant-marketing-studio && npm run dev` (defaults to 3000)
+4. **NEVER** start a server without killing existing ones first
+
+### One-liner for starting dev server:
+```bash
+lsof -ti:3000,3001,3002,3003 | xargs kill -9 2>/dev/null; cd /Users/rocky/DRSS/savant-marketing-studio && npm run dev
+```
+
+This ensures port 3000 is always free before starting.
 
 ## 📤 GIT & DEPLOYMENT RULES - CRITICAL
 

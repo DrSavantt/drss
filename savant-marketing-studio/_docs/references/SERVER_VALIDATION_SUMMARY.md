@@ -1,8 +1,34 @@
 # Server-Side Validation Implementation
 
-**Date:** December 11, 2024  
-**Feature:** Added Zod validation to questionnaire server action  
+**Date:** December 11, 2024 (Updated: January 8, 2026)  
+**Feature:** Dynamic Zod validation from database config  
 **Priority:** High (identified in audit report)
+
+---
+
+## Architecture
+
+### Before (Hardcoded - Removed)
+```typescript
+// OLD: lib/questionnaire/validation-schemas.ts (DELETED)
+import { questionSchemas } from '@/lib/questionnaire/validation-schemas';
+```
+- 34 hardcoded Zod schemas (q1Schema through q34Schema)
+- Required code changes to add/modify questions
+- No sync with database configuration
+
+### After (Dynamic - Current)
+```typescript
+// NEW: lib/questionnaire/dynamic-validation.ts
+import { 
+  generateQuestionKeySchemaMap, 
+  shouldValidateQuestion,
+  type DbQuestionConfig 
+} from '@/lib/questionnaire/dynamic-validation';
+```
+- Schemas generated dynamically from database
+- Adding/removing questions in database automatically updates validation
+- Conditional logic read from database config
 
 ---
 
@@ -10,149 +36,129 @@
 
 ### 1. Modified `app/actions/questionnaire.ts`
 
-#### Added Import
+#### New Import (Dynamic Validation)
 ```typescript
-import { questionSchemas } from '@/lib/questionnaire/validation-schemas';
+import { 
+  generateQuestionKeySchemaMap, 
+  shouldValidateQuestion,
+  type DbQuestionConfig 
+} from '@/lib/questionnaire/dynamic-validation';
 ```
 
-#### New Validation Function (60 lines)
+#### Updated Validation Function
 ```typescript
-function validateQuestionnaireData(data: QuestionnaireData): {
+function validateQuestionnaireData(
+  data: QuestionnaireData,
+  questions: DbQuestionConfig[]  // Now accepts DB config
+): {
   isValid: boolean;
   errors: Record<string, string>;
 }
 ```
 
 **Key Features:**
-- Validates each question against its Zod schema
-- Handles conditional logic for Q28 (faith questions)
-- Skips validation for Q29/Q30 if Q28 is "separate" or empty
-- Skips file upload fields (Q33, Q34) - validated separately
-- Handles optional fields gracefully
+- Fetches question config from database
+- Generates Zod schemas dynamically
+- Uses conditional logic from database configuration
+- Skips file upload fields (validated separately)
 - Returns detailed error messages per field
 
-#### Updated Return Type
+#### Database Fetch Before Validation
 ```typescript
-Promise<{
-  success: boolean;
-  error?: string;
-  mode?: 'create' | 'edit';
-  validationErrors?: Record<string, string>; // NEW
-}>
+// Fetch questions config from database for dynamic validation
+const { data: questionsData } = await supabase
+  .from('questionnaire_questions')
+  .select('question_key, type, required, enabled, min_length, max_length, conditional_on')
+  .order('section_id, sort_order');
+
+const questions = (questionsData || []) as DbQuestionConfig[];
+
+// Validate questionnaire data before saving using dynamic schemas
+const validation = validateQuestionnaireData(data, questions);
 ```
 
-#### Validation Call (Before Database Save)
-```typescript
-// Validate questionnaire data before saving
-const validation = validateQuestionnaireData(data);
+### 2. Added to `lib/questionnaire/dynamic-validation.ts`
 
-if (!validation.isValid) {
-  console.error('Server-side validation failed:', validation.errors);
-  return {
-    success: false,
-    error: 'Please check your answers and try again.',
-    validationErrors: validation.errors,
-  };
+#### New Type for Database Format
+```typescript
+export interface DbQuestionConfig {
+  question_key: string;
+  type: 'long-text' | 'short-text' | 'multiple-choice' | 'checkbox' | 'file-upload';
+  required: boolean;
+  enabled: boolean;
+  min_length?: number | null;
+  max_length?: number | null;
+  conditional_on?: { questionId: string; notEquals?: string; equals?: string } | null;
 }
 ```
 
-### 2. Modified `components/questionnaire/review/questionnaire-review.tsx`
-
-#### Enhanced Error Handling
+#### New Functions
 ```typescript
-if (result.validationErrors && Object.keys(result.validationErrors).length > 0) {
-  const errorCount = Object.keys(result.validationErrors).length;
-  const errorList = Object.entries(result.validationErrors)
-    .slice(0, 3) // Show first 3 errors
-    .map(([field, message]) => `${field}: ${message}`)
-    .join('\n');
-  
-  setError(
-    `${errorCount} validation ${errorCount === 1 ? 'error' : 'errors'} found:\n\n${errorList}${
-      errorCount > 3 ? `\n\n...and ${errorCount - 3} more` : ''
-    }`
-  );
-  console.error('Validation errors:', result.validationErrors);
-}
+// Generate schema from database question config
+export function generateSchemaFromDbQuestion(question: DbQuestionConfig): z.ZodTypeAny
+
+// Generate map of questionKey → schema (replaces hardcoded questionSchemas)
+export function generateQuestionKeySchemaMap(questions: DbQuestionConfig[]): Record<string, z.ZodSchema>
+
+// Validate single question by key
+export function validateQuestionByKey(questions: DbQuestionConfig[], questionKey: string, value: unknown): string | null
+
+// Check if question should be validated based on conditional logic
+export function shouldValidateQuestion(question: DbQuestionConfig, formData: Record<string, unknown>): boolean
 ```
 
-#### Updated Error Display
-```typescript
-<p className="text-red-500 font-medium whitespace-pre-line">{error}</p>
-```
-- Added `whitespace-pre-line` for multi-line error messages
+### 3. Deleted `lib/questionnaire/validation-schemas.ts`
+- Removed 215 lines of hardcoded schemas
+- All functionality now in dynamic-validation.ts
 
 ---
 
-## Validation Rules
+## Validation Rules (Now Database-Driven)
 
-### Required Questions (27 total)
-All questions marked as required in `REQUIRED_QUESTIONS` must pass validation:
-- Q1-Q5 (Avatar Definition)
-- Q6-Q10 (Dream Outcome)
-- Q11-Q12, Q14-Q15 (Problems) - Q13 is optional
-- Q16-Q19 (Solution)
-- Q20-Q23 (Brand Voice)
-- Q24-Q25, Q27 (Proof) - Q26 is optional
-- Q31-Q32 (Business Metrics)
-
-### Optional Questions (7 total)
-These can be empty without failing validation:
-- Q13 (Philosophical problems)
-- Q26 (Credentials)
-- Q28-Q30 (Faith integration - all optional)
+### Question Types Supported
+| Type | Validation |
+|------|------------|
+| `long-text` | min_length, max_length from DB |
+| `short-text` | min_length, max_length from DB |
+| `multiple-choice` | Requires selection if required |
+| `checkbox` | Requires at least one selection if required |
+| `file-upload` | Skipped (validated separately) |
 
 ### Conditional Logic
-- **Q28 (Faith Preference):** If "separate" or empty
-  - Q29 and Q30 are skipped in validation
-  - They won't cause validation errors even if empty
-
-### File Uploads
-- Q33 (Brand assets) and Q34 (Proof assets) are skipped
-- Files are validated during upload process
-- Already-uploaded file URLs are preserved
+Stored in `conditional_on` column:
+```json
+{
+  "questionId": "q30_faith_preference",
+  "notEquals": "separate"
+}
+```
+- Questions with unmet conditions are skipped during validation
+- Supports both `equals` and `notEquals` conditions
 
 ---
 
-## Edge Cases Handled
+## Benefits of Dynamic Approach
 
-### 1. Empty Optional Fields ✅
-```typescript
-// Skip validation if value is empty and schema is optional
-if (!value || (typeof value === 'string' && value.trim() === '')) {
-  const testResult = schema.safeParse(undefined);
-  if (testResult.success) {
-    return; // Optional field, skip validation
-  }
-}
-```
+### Configuration Changes
+| Before | After |
+|--------|-------|
+| Edit TypeScript file | Update database |
+| Redeploy application | Instant effect |
+| Developer required | Admin can modify |
 
-### 2. Faith Questions Conditional Logic ✅
-```typescript
-const faithPreference = data.faith_integration?.q28_faith_preference;
-const skipFaithQuestions = !faithPreference || faithPreference === 'separate';
+### Maintenance
+| Before | After |
+|--------|-------|
+| 34 hardcoded schemas | 0 hardcoded schemas |
+| Duplicate logic | Single source of truth |
+| Manual sync required | Automatic sync |
 
-if ((questionId === 'q29' || questionId === 'q30') && skipFaithQuestions) {
-  return; // Skip validation
-}
-```
-
-### 3. File URLs Already Uploaded ✅
-```typescript
-// Skip file upload fields (Q33, Q34)
-if (questionId === 'q33' || questionId === 'q34') {
-  return;
-}
-```
-
-### 4. Multiple Validation Errors ✅
-```typescript
-// Show first 3 errors, indicate if there are more
-const errorList = Object.entries(result.validationErrors)
-  .slice(0, 3)
-  .map(([field, message]) => `${field}: ${message}`)
-  .join('\n');
-```
+### Flexibility
+| Before | After |
+|--------|-------|
+| Fixed question count | Unlimited questions |
+| Hardcoded limits | Database-configurable |
+| Code changes needed | Database updates only |
 
 ---
 
@@ -160,10 +166,7 @@ const errorList = Object.entries(result.validationErrors)
 
 ### Manual Test Cases
 
-#### Test 1: Submit Valid Data ✅
-**Expected:** Success, data saved to database
-
-#### Test 2: Submit with Missing Required Field
+#### Test 1: Submit with Missing Required Field
 **Steps:**
 1. Fill out questionnaire
 2. Leave Q1 empty (required)
@@ -176,164 +179,42 @@ const errorList = Object.entries(result.validationErrors)
 q1_ideal_customer: Please provide at least 20 characters
 ```
 
-#### Test 3: Submit with Multiple Errors
+#### Test 2: Conditional Question Skip
 **Steps:**
-1. Fill out questionnaire
-2. Leave Q1, Q6, Q16 empty
-3. Try to submit
-
-**Expected:**
-```
-3 validation errors found:
-
-q1_ideal_customer: Please provide at least 20 characters
-q6_dream_outcome: Please provide at least 20 characters
-q16_core_offer: Please provide at least 20 characters
-```
-
-#### Test 4: Faith Questions Conditional
-**Steps:**
-1. Set Q28 to "separate"
-2. Leave Q29 and Q30 empty
+1. Set Q30 (Faith Preference) to "separate"
+2. Leave Q31 and Q32 empty
 3. Submit
 
-**Expected:** Success (Q29/Q30 skipped)
+**Expected:** Success (Q31/Q32 skipped due to conditional logic)
 
-#### Test 5: Too Short Text
+#### Test 3: Too Short Text
 **Steps:**
-1. Enter "test" in Q1 (needs 20+ chars)
+1. Enter "test" in Q1 (needs min_length from DB)
 2. Submit
 
-**Expected:**
-```
-1 validation error found:
-
-q1_ideal_customer: Please provide at least 20 characters
-```
-
-#### Test 6: Too Long Text
-**Steps:**
-1. Enter 1500 characters in Q1 (max 1000)
-2. Submit
-
-**Expected:**
-```
-1 validation error found:
-
-q1_ideal_customer: Please keep under 1000 characters
-```
-
-### Automated Testing (Future)
-```typescript
-// Example test structure
-describe('Questionnaire Server Validation', () => {
-  it('should reject empty required fields', async () => {
-    const result = await saveQuestionnaire(clientId, incompleteData, 'create');
-    expect(result.success).toBe(false);
-    expect(result.validationErrors).toBeDefined();
-  });
-
-  it('should accept valid data', async () => {
-    const result = await saveQuestionnaire(clientId, validData, 'create');
-    expect(result.success).toBe(true);
-    expect(result.validationErrors).toBeUndefined();
-  });
-
-  it('should skip Q29/Q30 when Q28 is "separate"', async () => {
-    const data = { ...validData };
-    data.faith_integration.q28_faith_preference = 'separate';
-    data.faith_integration.q29_faith_mission = '';
-    data.faith_integration.q30_biblical_principles = '';
-    
-    const result = await saveQuestionnaire(clientId, data, 'create');
-    expect(result.success).toBe(true);
-  });
-});
-```
+**Expected:** Validation error with character count from database
 
 ---
 
 ## Security Benefits
 
-### Before
-- ❌ Trusted all client data
-- ❌ No server-side validation
-- ❌ Could save malformed data
-- ❌ Could bypass client validation
-
-### After
 - ✅ Validates all data server-side
-- ✅ Enforces length limits
+- ✅ Enforces database-defined length limits
 - ✅ Prevents database corruption
 - ✅ Protects against client manipulation
-- ✅ Clear error messages for debugging
+- ✅ Respects conditional logic
 
 ---
 
-## Performance Impact
+## Files Changed
 
-- **Validation time:** ~5-10ms for 34 questions
-- **Network overhead:** +100-500 bytes (error messages)
-- **User experience:** Better (catches errors before database)
-- **Database integrity:** Significantly improved
-
----
-
-## Future Improvements
-
-1. **Batch Validation**
-   - Validate sections incrementally
-   - Show errors per section, not just on submit
-
-2. **Custom Error Messages**
-   - More user-friendly field names
-   - Context-aware messages
-
-3. **Async Validation**
-   - Check for duplicate values
-   - Validate URLs are accessible
-   - Verify file upload integrity
-
-4. **Sanitization**
-   - Strip HTML from text fields
-   - Normalize whitespace
-   - Trim excess spaces
-
-5. **Rate Limiting**
-   - Prevent rapid submission attempts
-   - Implement exponential backoff
-
----
-
-## Integration Status
-
-| Component | Status | Notes |
-|-----------|--------|-------|
-| Server Action | ✅ Complete | Full validation implemented |
-| Client Review Page | ✅ Complete | Error display updated |
-| Error Handling | ✅ Complete | Multi-error display |
-| Conditional Logic | ✅ Complete | Q28 faith questions |
-| File Handling | ✅ Complete | Skips file fields |
-| Optional Fields | ✅ Complete | Graceful handling |
-| Return Type | ✅ Complete | Updated with validationErrors |
-| Linter | ✅ Passed | No errors |
-
----
-
-## Deployment Checklist
-
-- [x] Import validation schemas
-- [x] Create validation function
-- [x] Add validation before database save
-- [x] Update return type
-- [x] Handle validation errors in client
-- [x] Test edge cases
-- [x] No linter errors
-- [ ] Manual testing (recommended)
-- [ ] Update audit report
+| File | Change |
+|------|--------|
+| `app/actions/questionnaire.ts` | Updated to use dynamic validation |
+| `lib/questionnaire/dynamic-validation.ts` | Added DB format functions |
+| `lib/questionnaire/validation-schemas.ts` | **DELETED** |
 
 ---
 
 **Implementation Complete ✅**  
-Server-side validation now prevents invalid data from reaching the database while providing clear feedback to users.
-
+Server-side validation now uses database configuration for all validation rules.
