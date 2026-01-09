@@ -2,16 +2,28 @@
 
 import { useState, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
-import { Copy, FileText, Eye, PencilLine } from 'lucide-react'
+import { Copy, FileText, Eye, PencilLine, RotateCcw } from 'lucide-react'
 import { format } from 'date-fns'
 import { ResponseViewer } from '@/components/questionnaire/response-viewer'
 import { EmbeddedQuestionnaireForm } from '../embedded-questionnaire-form'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
 import { sanitizeResponses, hasValidResponseData } from '@/lib/utils/safe-render'
+import { resetQuestionnaire } from '@/app/actions/questionnaire'
 
 // ============================================================================
 // CLIENT QUESTIONNAIRE TAB
@@ -72,6 +84,8 @@ export function ClientQuestionnaireTab({
   const router = useRouter()
   const [activeTab, setActiveTab] = useState<TabValue>('view')
   const [refreshKey, setRefreshKey] = useState(0)
+  const [isResetting, setIsResetting] = useState(false)
+  const [resetDialogOpen, setResetDialogOpen] = useState(false)
 
   // Copy questionnaire link with contextual message
   const handleCopyLink = () => {
@@ -98,6 +112,31 @@ export function ClientQuestionnaireTab({
     router.refresh()
     toast.success('Questionnaire submitted successfully!')
   }
+
+  // Handle questionnaire reset
+  const handleReset = async () => {
+    setIsResetting(true)
+    try {
+      const result = await resetQuestionnaire(clientId)
+      if (result.success) {
+        toast.success('Questionnaire reset successfully')
+        setRefreshKey(prev => prev + 1)
+        setActiveTab('view')
+        router.refresh()
+      } else {
+        toast.error(result.error || 'Failed to reset questionnaire')
+      }
+    } catch (error) {
+      console.error('Reset error:', error)
+      toast.error('Failed to reset questionnaire')
+    } finally {
+      setIsResetting(false)
+      setResetDialogOpen(false)
+    }
+  }
+
+  // Show reset button only when there's something to reset
+  const showResetButton = questionnaireStatus === 'in_progress' || questionnaireStatus === 'completed'
 
   // Transform sections for ResponseViewer
   const transformedSections = config.sections
@@ -148,6 +187,43 @@ export function ClientQuestionnaireTab({
               <Copy className="h-4 w-4 mr-2" />
               Copy Link
             </Button>
+            
+            {/* Reset Form Button - only show when there's something to reset */}
+            {showResetButton && (
+              <AlertDialog open={resetDialogOpen} onOpenChange={setResetDialogOpen}>
+                <AlertDialogTrigger asChild>
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    disabled={isResetting}
+                  >
+                    <RotateCcw className={cn("h-4 w-4 mr-2", isResetting && "animate-spin")} />
+                    {isResetting ? 'Resetting...' : 'Reset Form'}
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Reset Questionnaire?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      This will clear all questionnaire responses for {clientName}. This cannot be undone.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel disabled={isResetting}>Cancel</AlertDialogCancel>
+                    <AlertDialogAction
+                      onClick={(e) => {
+                        e.preventDefault()  // Prevent auto-close so async action can complete
+                        handleReset()
+                      }}
+                      disabled={isResetting}
+                      className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                    >
+                      {isResetting ? 'Resetting...' : 'Reset Form'}
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            )}
           </div>
         </div>
 

@@ -407,7 +407,6 @@ export async function resetQuestionnaire(
       .update({
         intake_responses: null,
         questionnaire_status: 'not_started',
-        questionnaire_progress: null,
         questionnaire_completed_at: null,
       })
       .eq('id', clientId);
