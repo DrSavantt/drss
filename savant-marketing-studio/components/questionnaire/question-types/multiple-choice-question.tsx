@@ -45,8 +45,8 @@ export default function MultipleChoiceQuestion({
             border transition-all duration-200
             text-left
             ${isSelected(option.value)
-              ? 'bg-red-500/10 border-red-500 text-white'
-              : 'bg-black/30 border-[#333333] text-gray-300 hover:border-[#444444] hover:bg-white/5'
+              ? 'bg-primary/10 border-primary text-foreground'
+              : 'bg-muted/50 border-border text-muted-foreground hover:border-border/80 hover:bg-muted'
             }
           `}
         >
@@ -57,13 +57,13 @@ export default function MultipleChoiceQuestion({
               border-2 flex items-center justify-center
               transition-all duration-200
               ${isSelected(option.value)
-                ? 'bg-red-500 border-red-500'
-                : 'border-[#555555]'
+                ? 'bg-primary border-primary'
+                : 'border-muted-foreground/50'
               }
             `}
           >
             {isSelected(option.value) && (
-              <Check className="w-3 h-3 text-white" strokeWidth={3} />
+              <Check className="w-3 h-3 text-primary-foreground" strokeWidth={3} />
             )}
           </div>
           
@@ -74,7 +74,7 @@ export default function MultipleChoiceQuestion({
       
       {/* Error message */}
       {error && (
-        <div className="flex items-center gap-2 text-xs text-red-500 mt-2">
+        <div className="flex items-center gap-2 text-xs text-destructive mt-2">
           <AlertCircle className="w-3 h-3" />
           {error}
         </div>

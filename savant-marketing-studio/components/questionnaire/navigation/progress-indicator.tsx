@@ -31,7 +31,7 @@ export default function ProgressIndicator({
       {/* z-30: Below help panel (z-50) and backdrop (z-40) to prevent overlap */}
       <div className="max-w-7xl mx-auto px-4">
         <div className="text-center mb-3">
-          <span className="text-sm text-silver">
+          <span className="text-sm text-muted-foreground">
             Step <span className="font-bold text-foreground text-lg">{currentSection}</span> of 8
           </span>
         </div>
@@ -54,19 +54,19 @@ export default function ProgressIndicator({
                     state === 'completed'
                       ? 'w-10 h-10 bg-green-500 text-white'
                       : state === 'current'
-                      ? 'w-12 h-12 bg-red-primary text-white scale-110'
+                      ? 'w-12 h-12 bg-primary text-primary-foreground scale-110'
                       : 'w-8 h-8 border-2 border-border bg-transparent'
                   }`}
                 >
                   {state === 'completed' ? (
                     <Check className="w-5 h-5" />
                   ) : (
-                    <span className={`text-sm font-semibold ${state === 'future' ? 'text-silver' : ''}`}>
+                    <span className={`text-sm font-semibold ${state === 'future' ? 'text-muted-foreground' : ''}`}>
                       {sectionNumber}
                     </span>
                   )}
                 </div>
-                <span className="text-xs text-silver whitespace-nowrap">
+                <span className="text-xs text-muted-foreground whitespace-nowrap">
                   {state === 'current' ? 'Current' : state === 'completed' ? 'Done' : ''}
                 </span>
               </button>

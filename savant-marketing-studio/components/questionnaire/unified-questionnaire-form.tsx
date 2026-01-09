@@ -462,7 +462,7 @@ export function UnifiedQuestionnaireForm({
   
   // Render questions for current section
   const questionsContent = (
-    <div className="space-y-6">
+    <div className="space-y-8">
       {currentQuestions.map((question) => {
         // Check if question should be shown (conditional logic)
         const shouldShow = configLike.shouldShowQuestion(question.id, flatFormData);

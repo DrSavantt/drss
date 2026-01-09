@@ -48,17 +48,17 @@ export default function ShortTextQuestion({
         placeholder={placeholder}
         className={`
           w-full
-          bg-black/50 
+          bg-background 
           border rounded-lg 
           px-4 py-3
-          text-white text-base
-          placeholder:text-gray-600
+          text-foreground text-base
+          placeholder:text-muted-foreground
           transition-all duration-200
           ${error 
-            ? 'border-red-500 focus:border-red-500 focus:ring-1 focus:ring-red-500' 
+            ? 'border-destructive focus:border-destructive focus:ring-1 focus:ring-destructive' 
             : isFocused 
-              ? 'border-red-500 ring-1 ring-red-500/50' 
-              : 'border-[#333333] hover:border-[#444444]'
+              ? 'border-primary ring-1 ring-ring' 
+              : 'border-border hover:border-border/80'
           }
           focus:outline-none
         `}
@@ -68,7 +68,7 @@ export default function ShortTextQuestion({
       {(error || isNearMax) && (
         <div className="flex items-center justify-between text-xs">
           {error && (
-            <span className="flex items-center gap-1 text-red-500">
+            <span className="flex items-center gap-1 text-destructive">
               <AlertCircle className="w-3 h-3" />
               {error}
             </span>
@@ -76,7 +76,7 @@ export default function ShortTextQuestion({
           {!error && <span />}
           
           {isNearMax && (
-            <span className={isOverMax ? 'text-red-500' : 'text-yellow-500'}>
+            <span className={isOverMax ? 'text-destructive' : 'text-amber-500'}>
               {charCount}/{maxLength}
             </span>
           )}

@@ -17,7 +17,7 @@ export function ConfigHelpContent({ questionId, config }: ConfigHelpContentProps
   if (!question) {
     return (
       <div className="text-center py-8">
-        <p className="text-silver">Help content not available for this question yet.</p>
+        <p className="text-muted-foreground">Help content not available for this question yet.</p>
       </div>
     );
   }
@@ -31,12 +31,12 @@ export function ConfigHelpContent({ questionId, config }: ConfigHelpContentProps
       </div>
 
       {question.helpWhereToFind && question.helpWhereToFind.length > 0 && (
-        <div className="bg-surface p-4 rounded-lg border border-border">
+        <div className="bg-muted p-4 rounded-lg border border-border">
           <h4 className="font-semibold text-foreground mb-2">📍 WHERE TO FIND THIS</h4>
           <ul className="space-y-2">
             {question.helpWhereToFind.map((item, index) => (
               <li key={index} className="text-foreground text-sm flex items-start gap-2">
-                <span className="text-silver mt-1">•</span>
+                <span className="text-muted-foreground mt-1">•</span>
                 <span>{item}</span>
               </li>
             ))}
@@ -45,12 +45,12 @@ export function ConfigHelpContent({ questionId, config }: ConfigHelpContentProps
       )}
 
       {question.helpHowToExtract && question.helpHowToExtract.length > 0 && (
-        <div className="bg-surface p-4 rounded-lg border border-border">
+        <div className="bg-muted p-4 rounded-lg border border-border">
           <h4 className="font-semibold text-foreground mb-2">🔍 HOW TO EXTRACT IT</h4>
           <ul className="space-y-2">
             {question.helpHowToExtract.map((item, index) => (
               <li key={index} className="text-foreground text-sm flex items-start gap-2">
-                <span className="text-silver mt-1">•</span>
+                <span className="text-muted-foreground mt-1">•</span>
                 <span>{item}</span>
               </li>
             ))}

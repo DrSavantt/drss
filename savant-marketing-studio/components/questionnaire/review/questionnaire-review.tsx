@@ -254,7 +254,7 @@ export default function QuestionnaireReview({
         <h1 className="text-3xl font-bold text-foreground mb-2">
           {isEditMode ? 'Review Your Changes' : 'Review Your Answers'}
         </h1>
-        <p className="text-silver">
+        <p className="text-muted-foreground">
           {isEditMode 
             ? 'Review your updated responses before saving. You can edit any section if needed.'
             : 'Review all your responses before submitting. You can edit any section if needed.'}
@@ -262,18 +262,18 @@ export default function QuestionnaireReview({
       </div>
 
       {/* Progress */}
-      <div className="mb-8 p-6 bg-surface rounded-lg border border-border">
+      <div className="mb-8 p-6 bg-card rounded-lg border border-border">
         <div className="flex justify-between items-center mb-3">
           <span className="font-semibold text-foreground">Overall Progress</span>
           <span className="text-2xl font-bold text-foreground">{progress}%</span>
         </div>
-        <div className="w-full bg-surface-highlight rounded-full h-3">
+        <div className="w-full bg-muted rounded-full h-3">
           <div
-            className="bg-red-primary h-3 rounded-full transition-all duration-300"
+            className="bg-primary h-3 rounded-full transition-all duration-300"
             style={{ width: `${progress}%` }}
           />
         </div>
-        <p className="text-sm text-silver mt-2">
+        <p className="text-sm text-muted-foreground mt-2">
           {progress === 100
             ? '✓ All required questions completed'
             : `${remainingRequired} required questions remaining`}
@@ -287,8 +287,8 @@ export default function QuestionnaireReview({
 
       {/* Error message */}
       {error && (
-        <div className="mb-8 p-4 bg-red-500/10 border border-red-500 rounded-lg">
-          <p className="text-red-500 font-medium whitespace-pre-line">{error}</p>
+        <div className="mb-8 p-4 bg-destructive/10 border border-destructive rounded-lg">
+          <p className="text-destructive font-medium whitespace-pre-line">{error}</p>
         </div>
       )}
 
@@ -303,7 +303,7 @@ export default function QuestionnaireReview({
       <button
         onClick={handleSubmit}
         disabled={submitting || (!isPublic && progress < 100) || !!successMessage}
-        className="w-full bg-red-primary text-white py-4 px-6 rounded-lg font-bold text-lg hover:bg-red-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-all min-h-[56px] flex items-center justify-center gap-2"
+        className="w-full bg-primary text-primary-foreground py-4 px-6 rounded-lg font-bold text-lg hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-all min-h-[56px] flex items-center justify-center gap-2"
       >
         {submitting && <Loader2 className="h-5 w-5 animate-spin" />}
         {submitting 
@@ -312,7 +312,7 @@ export default function QuestionnaireReview({
       </button>
 
       {!isPublic && progress < 100 && (
-        <p className="text-center text-sm text-silver mt-4">
+        <p className="text-center text-sm text-muted-foreground mt-4">
           Please complete all required questions before {isEditMode ? 'saving' : 'submitting'}
         </p>
       )}

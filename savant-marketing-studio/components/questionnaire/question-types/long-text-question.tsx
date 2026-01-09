@@ -54,18 +54,18 @@ export default function LongTextQuestion({
         rows={5}
         className={`
           w-full min-h-[140px] max-h-[400px]
-          bg-black/50 
+          bg-background 
           border rounded-lg 
           p-4 
-          text-white text-base leading-relaxed
-          placeholder:text-gray-600
+          text-foreground text-base leading-relaxed
+          placeholder:text-muted-foreground
           resize-y
           transition-all duration-200
           ${error 
-            ? 'border-red-500 focus:border-red-500 focus:ring-1 focus:ring-red-500' 
+            ? 'border-destructive focus:border-destructive focus:ring-1 focus:ring-destructive' 
             : isFocused 
-              ? 'border-red-500 ring-1 ring-red-500/50' 
-              : 'border-[#333333] hover:border-[#444444]'
+              ? 'border-primary ring-1 ring-ring' 
+              : 'border-border hover:border-border/80'
           }
           focus:outline-none
         `}
@@ -76,20 +76,20 @@ export default function LongTextQuestion({
         <div className="flex items-center justify-between text-xs">
           <div className="flex items-center gap-2">
             {error && (
-              <span className="flex items-center gap-1 text-red-500">
+              <span className="flex items-center gap-1 text-destructive">
                 <AlertCircle className="w-3 h-3" />
                 {error}
               </span>
             )}
             {!error && isUnderMin && (
-              <span className="text-yellow-500">
+              <span className="text-amber-500">
                 Add more detail ({charCount}/{minLength} min)
               </span>
             )}
           </div>
           
           {(isNearMax || isOverMax) && (
-            <span className={isOverMax ? 'text-red-500' : 'text-yellow-500'}>
+            <span className={isOverMax ? 'text-destructive' : 'text-amber-500'}>
               {charCount}/{maxLength}
             </span>
           )}

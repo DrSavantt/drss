@@ -100,7 +100,7 @@ export function QuestionRenderer({
         );
       
       default:
-        return <div className="text-red-500">Unknown question type: {question.type}</div>;
+        return <div className="text-destructive">Unknown question type: {question.type}</div>;
     }
   };
   

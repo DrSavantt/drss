@@ -26,13 +26,13 @@ export default function HelpPanel({ isOpen, onClose, children }: HelpPanelProps)
             animate={{ x: 0 }}
             exit={{ x: 400 }}
             transition={{ type: 'spring', damping: 30, stiffness: 300 }}
-            className="fixed inset-y-0 right-0 w-[400px] bg-surface shadow-2xl border-l border-border z-50 flex flex-col overflow-hidden"
+            className="fixed inset-y-0 right-0 w-[400px] bg-card shadow-2xl border-l border-border z-50 flex flex-col overflow-hidden"
           >
             <div className="flex items-center justify-between p-6 border-b border-border">
               <h2 className="text-xl font-bold text-foreground">Help Guide</h2>
               <button
                 onClick={onClose}
-                className="p-2 rounded-full hover:bg-surface-highlight transition-colors"
+                className="p-2 rounded-full hover:bg-muted transition-colors"
                 aria-label="Close help panel"
               >
                 <X className="w-5 h-5 text-foreground" />

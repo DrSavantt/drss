@@ -221,10 +221,10 @@ export function PublicFormWrapper({
  */
 function PublicFormHeader() {
   return (
-    <header className="border-b border-border bg-surface sticky top-0 z-40 backdrop-blur-xl bg-surface/95">
+    <header className="border-b border-border bg-card sticky top-0 z-40 backdrop-blur-xl bg-card/95">
       <div className="max-w-4xl mx-auto px-4 py-4">
-        <h1 className="text-xl font-bold text-red-primary">DRSS Marketing</h1>
-        <p className="text-sm text-silver">Client Onboarding</p>
+        <h1 className="text-xl font-bold text-primary">DRSS Marketing</h1>
+        <p className="text-sm text-muted-foreground">Client Onboarding</p>
       </div>
     </header>
   );

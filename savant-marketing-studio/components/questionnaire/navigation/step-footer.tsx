@@ -24,14 +24,14 @@ export default function StepFooter({
   saveStatus,
 }: StepFooterProps) {
   return (
-    <div className="fixed bottom-0 left-0 right-0 bg-surface border-t border-border z-40">
+    <div className="fixed bottom-0 left-0 right-0 bg-card border-t border-border z-40">
       <div className="max-w-7xl mx-auto px-4 py-4">
         <div className="flex items-center justify-between gap-4">
           {/* Previous Button */}
           <button
             onClick={onPrevious}
             disabled={!canGoPrevious}
-            className="flex items-center gap-2 px-4 py-2 rounded-lg border border-border hover:bg-surface-highlight disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            className="flex items-center gap-2 px-4 py-2 rounded-lg border border-border hover:bg-muted disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
             <ArrowLeft className="w-4 h-4" />
             <span>Previous</span>
@@ -39,7 +39,7 @@ export default function StepFooter({
 
           {/* Center: Step indicator and Save */}
           <div className="flex items-center gap-4">
-            <span className="text-sm text-silver">
+            <span className="text-sm text-muted-foreground">
               Step <span className="font-bold text-foreground">{currentStep}</span> of {totalSteps}
             </span>
 
@@ -47,7 +47,7 @@ export default function StepFooter({
             <button
               onClick={onSave}
               disabled={saveStatus === 'saving'}
-              className="flex items-center gap-2 px-4 py-2 rounded-lg border border-border hover:bg-surface-highlight transition-colors disabled:opacity-50"
+              className="flex items-center gap-2 px-4 py-2 rounded-lg border border-border hover:bg-muted transition-colors disabled:opacity-50"
             >
               {saveStatus === 'saving' ? (
                 <>
@@ -61,7 +61,7 @@ export default function StepFooter({
                 </>
               ) : saveStatus === 'error' ? (
                 <>
-                  <AlertCircle className="w-4 h-4 text-red-500" />
+                  <AlertCircle className="w-4 h-4 text-destructive" />
                   <span>Error</span>
                 </>
               ) : (
@@ -77,7 +77,7 @@ export default function StepFooter({
           <button
             onClick={onNext}
             disabled={!canGoNext}
-            className="flex items-center gap-2 px-6 py-2 rounded-lg bg-red-primary text-white hover:bg-red-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-semibold"
+            className="flex items-center gap-2 px-6 py-2 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-semibold"
           >
             <span>{currentStep === totalSteps ? 'Review' : 'Next'}</span>
             <ArrowRight className="w-4 h-4" />

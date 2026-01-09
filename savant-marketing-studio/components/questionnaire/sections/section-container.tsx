@@ -38,13 +38,13 @@ export default function SectionContainer({
           <span className="text-xs md:text-sm font-medium text-foreground">
             Questions: {currentProgress.answered}/{currentProgress.total}
           </span>
-          <span className="text-xs md:text-sm text-silver">
+          <span className="text-xs md:text-sm text-muted-foreground">
             {Math.round(progressPercentage)}%
           </span>
         </div>
-        <div className="w-full h-1.5 md:h-2 bg-surface-highlight rounded-full overflow-hidden">
+        <div className="w-full h-1.5 md:h-2 bg-muted rounded-full overflow-hidden">
           <div
-            className="h-full bg-red-primary transition-all duration-300"
+            className="h-full bg-primary transition-all duration-300"
             style={{ width: `${progressPercentage}%` }}
           />
         </div>

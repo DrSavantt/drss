@@ -34,20 +34,20 @@ export default function ReviewSectionCard({
   return (
     <div
       className={`border rounded-lg overflow-hidden transition-all ${
-        allRequiredComplete ? 'border-border' : 'border-red-500'
+        allRequiredComplete ? 'border-border' : 'border-destructive'
       }`}
     >
       <button
         onClick={() => setExpanded(!expanded)}
-        className="w-full p-4 flex items-center justify-between bg-surface hover:bg-surface-highlight transition-colors"
+        className="w-full p-4 flex items-center justify-between bg-card hover:bg-muted transition-colors"
       >
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-full bg-red-primary text-white flex items-center justify-center font-bold">
+          <div className="w-10 h-10 rounded-full bg-primary text-primary-foreground flex items-center justify-center font-bold">
             {sectionNumber}
           </div>
           <div className="text-left">
             <h3 className="font-bold text-foreground">{title}</h3>
-            <p className="text-sm text-silver">
+            <p className="text-sm text-muted-foreground">
               {completedCount}/{questionKeys.length} questions answered
             </p>
           </div>
@@ -56,12 +56,12 @@ export default function ReviewSectionCard({
           {allRequiredComplete ? (
             <Check className="w-5 h-5 text-green-500" />
           ) : (
-            <AlertCircle className="w-5 h-5 text-red-500" />
+            <AlertCircle className="w-5 h-5 text-destructive" />
           )}
           {expanded ? (
-            <ChevronUp className="w-5 h-5 text-silver" />
+            <ChevronUp className="w-5 h-5 text-muted-foreground" />
           ) : (
-            <ChevronDown className="w-5 h-5 text-silver" />
+            <ChevronDown className="w-5 h-5 text-muted-foreground" />
           )}
         </div>
       </button>
@@ -80,15 +80,15 @@ export default function ReviewSectionCard({
               <div
                 key={key}
                 className={`p-3 rounded-lg ${
-                  isRequired && !isCompleted ? 'bg-red-500/10 border border-red-500' : 'bg-background'
+                  isRequired && !isCompleted ? 'bg-destructive/10 border border-destructive' : 'bg-background'
                 }`}
               >
                 <div className="flex items-start justify-between mb-2">
                   <span className="text-sm font-semibold text-foreground">
-                    Q{questionNumber.substring(1)} {isRequired && <span className="text-red-500">*</span>}
+                    Q{questionNumber.substring(1)} {isRequired && <span className="text-primary">*</span>}
                   </span>
                   {isRequired && !isCompleted && (
-                    <span className="text-xs text-red-500">Required</span>
+                    <span className="text-xs text-destructive">Required</span>
                   )}
                 </div>
                 {displayValue ? (
@@ -98,7 +98,7 @@ export default function ReviewSectionCard({
                       : displayValue}
                   </p>
                 ) : (
-                  <p className="text-sm text-silver italic">Not answered</p>
+                  <p className="text-sm text-muted-foreground italic">Not answered</p>
                 )}
               </div>
             );
@@ -106,7 +106,7 @@ export default function ReviewSectionCard({
 
           <button
             onClick={onEdit}
-            className="w-full mt-4 px-4 py-2 border border-border rounded-lg hover:bg-surface-highlight transition-colors text-foreground font-medium"
+            className="w-full mt-4 px-4 py-2 border border-border rounded-lg hover:bg-muted transition-colors text-foreground font-medium"
           >
             Edit Section
           </button>

@@ -129,9 +129,9 @@ export function FileUploadQuestion({
   );
 
   const getFileIcon = (type: string) => {
-    if (type.startsWith('image/')) return <ImageIcon size={20} className="text-info" />;
-    if (type === 'application/pdf') return <FileText size={20} className="text-red-primary" />;
-    return <File size={20} className="text-silver" />;
+    if (type.startsWith('image/')) return <ImageIcon size={20} className="text-blue-500" />;
+    if (type === 'application/pdf') return <FileText size={20} className="text-primary" />;
+    return <File size={20} className="text-muted-foreground" />;
   };
 
   const formatFileSize = (bytes: number) => {
@@ -147,7 +147,7 @@ export function FileUploadQuestion({
           {label}
         </label>
         {description && (
-          <p className="text-sm text-silver mb-4">{description}</p>
+          <p className="text-sm text-muted-foreground mb-4">{description}</p>
         )}
       </div>
 
@@ -159,8 +159,8 @@ export function FileUploadQuestion({
         className={`
           relative border-2 border-dashed rounded-lg p-8 text-center transition-all duration-200
           ${isDragging
-            ? 'border-red-primary bg-red-primary/5'
-            : 'border-mid-gray hover:border-red-primary/50 bg-charcoal'
+            ? 'border-primary bg-primary/5'
+            : 'border-border hover:border-primary/50 bg-muted'
           }
           ${value.length >= maxFiles ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}
         `}
@@ -174,22 +174,22 @@ export function FileUploadQuestion({
           className="absolute inset-0 w-full h-full opacity-0 cursor-pointer disabled:cursor-not-allowed"
         />
         
-        <Upload size={40} className="mx-auto mb-4 text-silver" />
+        <Upload size={40} className="mx-auto mb-4 text-muted-foreground" />
         
         <p className="text-sm font-medium text-foreground mb-1">
           {isDragging ? 'Drop files here' : 'Drag & drop files here'}
         </p>
-        <p className="text-xs text-silver mb-2">
+        <p className="text-xs text-muted-foreground mb-2">
           or click to browse
         </p>
-        <p className="text-xs text-slate">
+        <p className="text-xs text-muted-foreground/70">
           Max {maxFiles} files • Up to {maxSizeInMB}MB each
         </p>
       </div>
 
       {/* Error Messages */}
       {(error || uploadError) && (
-        <div className="text-sm text-red-primary bg-red-primary/10 border border-red-primary/30 rounded-lg p-3">
+        <div className="text-sm text-destructive bg-destructive/10 border border-destructive/30 rounded-lg p-3">
           {error || uploadError}
         </div>
       )}
@@ -197,13 +197,13 @@ export function FileUploadQuestion({
       {/* Uploaded Files List */}
       {value.length > 0 && (
         <div className="space-y-2">
-          <p className="text-xs text-silver font-medium">
+          <p className="text-xs text-muted-foreground font-medium">
             Uploaded Files ({value.length}/{maxFiles})
           </p>
           {value.map((file) => (
             <div
               key={file.id}
-              className="flex items-center gap-3 bg-charcoal border border-mid-gray rounded-lg p-3 hover:border-red-primary/50 transition-all duration-200"
+              className="flex items-center gap-3 bg-muted border border-border rounded-lg p-3 hover:border-primary/50 transition-all duration-200"
             >
               <div className="flex-shrink-0">
                 {getFileIcon(file.type)}
@@ -212,17 +212,17 @@ export function FileUploadQuestion({
                 <p className="text-sm font-medium text-foreground truncate">
                   {file.name}
                 </p>
-                <p className="text-xs text-silver">
+                <p className="text-xs text-muted-foreground">
                   {formatFileSize(file.size)}
                 </p>
               </div>
               <button
                 type="button"
                 onClick={() => removeFile(file.id)}
-                className="flex-shrink-0 p-1 hover:bg-red-primary/10 rounded transition-colors"
+                className="flex-shrink-0 p-1 hover:bg-destructive/10 rounded transition-colors"
                 aria-label="Remove file"
               >
-                <X size={16} className="text-silver hover:text-red-primary" />
+                <X size={16} className="text-muted-foreground hover:text-destructive" />
               </button>
             </div>
           ))}
