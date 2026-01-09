@@ -90,6 +90,36 @@
   --active-shadow: rgba(220, 38, 38, 0.1);
 }
 
+/* Dark Mode Explicit (same as :root, for when .dark class is added) */
+.dark {
+  --background: 0 0% 4%;
+  --foreground: 0 0% 98%;
+  --card: 0 0% 8%;
+  --card-foreground: 0 0% 98%;
+  --popover: 0 0% 10%;
+  --popover-foreground: 0 0% 98%;
+  --primary: 0 84% 49%;
+  --primary-foreground: 0 0% 100%;
+  --secondary: 0 0% 10%;
+  --secondary-foreground: 0 0% 98%;
+  --muted: 0 0% 8%;
+  --muted-foreground: 0 0% 63%;
+  --accent: 0 0% 10%;
+  --accent-foreground: 0 0% 98%;
+  --destructive: 0 84% 60%;
+  --destructive-foreground: 0 0% 100%;
+  --border: 0 0% 15%;
+  --input: 0 0% 8%;
+  --ring: 0 84% 49%;
+  --sidebar: 0 0% 4%;
+  --sidebar-foreground: 0 0% 98%;
+  --sidebar-primary: 0 84% 49%;
+  --sidebar-primary-foreground: 0 0% 100%;
+  --sidebar-accent: 0 84% 49% / 0.1;
+  --sidebar-accent-foreground: 0 0% 98%;
+  --sidebar-border: 0 0% 15%;
+}
+
 /* Light Mode Override */
 .light {
   --background: 0 0% 98%;

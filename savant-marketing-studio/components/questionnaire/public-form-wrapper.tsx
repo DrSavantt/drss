@@ -8,6 +8,96 @@ import type { SectionConfig, QuestionConfig } from '@/lib/questionnaire/question
 import type { QuestionnaireData } from '@/lib/questionnaire/types';
 import { toast } from 'sonner';
 
+// ============================================
+// PUBLIC FORM THEME HOOK
+// Shares localStorage key 'theme' with global ThemeProvider
+// to prevent conflicts when both manipulate classList
+// ============================================
+
+type PublicFormTheme = 'light' | 'dark' | 'system';
+
+// Use same key as global ThemeProvider to stay in sync
+const THEME_STORAGE_KEY = 'theme';
+
+function usePublicFormTheme() {
+  const [theme, setTheme] = useState<PublicFormTheme>('system');
+  const [mounted, setMounted] = useState(false);
+  const [resolvedDark, setResolvedDark] = useState(false);
+
+  // Initialize on mount
+  useEffect(() => {
+    setMounted(true);
+    const stored = localStorage.getItem(THEME_STORAGE_KEY) as PublicFormTheme | null;
+    if (stored && ['light', 'dark', 'system'].includes(stored)) {
+      setTheme(stored);
+    }
+  }, []);
+
+  // Apply theme and listen for system changes
+  useEffect(() => {
+    if (!mounted) return;
+
+    const applyTheme = () => {
+      let isDark: boolean;
+      
+      if (theme === 'system') {
+        isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+      } else {
+        isDark = theme === 'dark';
+      }
+      
+      // Apply theme class to <html> element
+      // CSS uses :root for dark (default) and .light for light mode
+      // We toggle .light class since :root is already dark-styled
+      document.documentElement.classList.remove('light', 'dark');
+      document.documentElement.classList.add(isDark ? 'dark' : 'light');
+      
+      setResolvedDark(isDark);
+    };
+
+    // Apply immediately
+    applyTheme();
+
+    // Listen for system preference changes (only matters when theme is 'system')
+    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+    const handleChange = () => {
+      if (theme === 'system') {
+        applyTheme();
+      }
+    };
+
+    mediaQuery.addEventListener('change', handleChange);
+    return () => mediaQuery.removeEventListener('change', handleChange);
+  }, [theme, mounted]);
+
+  // Persist theme choice
+  useEffect(() => {
+    if (mounted) {
+      localStorage.setItem(THEME_STORAGE_KEY, theme);
+    }
+  }, [theme, mounted]);
+
+  // Toggle between light and dark (skips system on toggle)
+  const toggle = useCallback(() => {
+    setTheme(prev => {
+      // If currently system, determine what to switch to
+      if (prev === 'system') {
+        const systemDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+        return systemDark ? 'light' : 'dark';
+      }
+      return prev === 'dark' ? 'light' : 'dark';
+    });
+  }, []);
+
+  return { 
+    theme, 
+    setTheme, 
+    toggle, 
+    mounted, 
+    isDark: resolvedDark 
+  };
+}
+
 // Database format types (snake_case from server)
 interface DatabaseSection {
   id: number;
@@ -111,7 +201,8 @@ function transformQuestion(q: DatabaseQuestion): QuestionConfig {
  * This replaces the old PublicQuestionnaireForm with the unified component.
  * 
  * Features:
- * - Independent theme control (dark/light toggle stored in localStorage)
+ * - Theme control (dark/light/system toggle stored in localStorage)
+ * - Uses shared 'theme' key to stay in sync with global ThemeProvider
  * - Database persistence (saves via server actions, loads from DB on mount)
  * - Auto-save functionality
  */
@@ -123,12 +214,14 @@ export function PublicFormWrapper({
 }: PublicFormWrapperProps) {
   const router = useRouter();
   
+  // Independent theme control for public form
+  const { isDark, toggle: toggleTheme, mounted } = usePublicFormTheme();
+  
   // State
   // Initial data is now provided by the server, properly formatted
   const [existingData] = useState<QuestionnaireData | null>(
     client.intake_responses as QuestionnaireData | null
   );
-  const [theme, setTheme] = useState<'light' | 'dark'>('dark');
 
   // Transform database format to client format
   const transformedSections = useMemo(() => 
@@ -140,23 +233,6 @@ export function PublicFormWrapper({
     questions.filter(q => q.enabled).map(transformQuestion),
     [questions]
   );
-
-  // Load theme preference from localStorage
-  useEffect(() => {
-    const saved = localStorage.getItem('questionnaire_theme');
-    if (saved === 'light' || saved === 'dark') {
-      setTheme(saved);
-    }
-  }, []);
-
-  // Toggle theme with persistence
-  const toggleTheme = useCallback(() => {
-    setTheme(prev => {
-      const next = prev === 'dark' ? 'light' : 'dark';
-      localStorage.setItem('questionnaire_theme', next);
-      return next;
-    });
-  }, []);
 
   // Save handler - auto-save draft via server action
   const handleSave = useCallback(async (data: QuestionnaireData) => {
@@ -187,31 +263,45 @@ export function PublicFormWrapper({
     }
   }, [token, router]);
 
-  return (
-    <div className={theme === 'dark' ? 'dark' : ''}>
-      <div className="min-h-screen bg-background transition-colors">
+  // Prevent hydration mismatch by not rendering until mounted
+  if (!mounted) {
+    return (
+      <div className="min-h-screen bg-background">
         <PublicFormHeader />
         <main className="max-w-4xl mx-auto px-4 py-6 md:py-8 pb-32">
-          <UnifiedQuestionnaireForm
-            mode="public"
-            clientId={client.id}
-            clientName={client.name}
-            token={token}
-            sections={transformedSections}
-            questions={transformedQuestions}
-            initialData={existingData}
-            onSave={handleSave}
-            onSubmit={handleSubmit}
-            showThemeToggle={true}
-            showHeader={true}
-            isDarkMode={theme === 'dark'}
-            onToggleTheme={toggleTheme}
-            layout="pills"
-            autoSave={true}
-            autoSaveDelay={3000}
-          />
+          <div className="animate-pulse space-y-6">
+            <div className="h-8 bg-muted rounded w-1/3" />
+            <div className="h-4 bg-muted rounded w-1/4" />
+            <div className="h-2 bg-muted rounded-full" />
+          </div>
         </main>
       </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-background transition-colors">
+      <PublicFormHeader />
+      <main className="max-w-4xl mx-auto px-4 py-6 md:py-8 pb-32">
+        <UnifiedQuestionnaireForm
+          mode="public"
+          clientId={client.id}
+          clientName={client.name}
+          token={token}
+          sections={transformedSections}
+          questions={transformedQuestions}
+          initialData={existingData}
+          onSave={handleSave}
+          onSubmit={handleSubmit}
+          showThemeToggle={true}
+          showHeader={true}
+          isDarkMode={isDark}
+          onToggleTheme={toggleTheme}
+          layout="pills"
+          autoSave={true}
+          autoSaveDelay={3000}
+        />
+      </main>
     </div>
   );
 }
