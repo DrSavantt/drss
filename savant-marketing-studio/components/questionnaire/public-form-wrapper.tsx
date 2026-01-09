@@ -10,27 +10,47 @@ import { toast } from 'sonner';
 
 // ============================================
 // PUBLIC FORM THEME HOOK
-// Shares localStorage key 'theme' with global ThemeProvider
-// to prevent conflicts when both manipulate classList
+// Uses separate 'questionnaire-theme' key to stay independent from main app
+// This allows public form visitors to have different theme than main app users
 // ============================================
 
 type PublicFormTheme = 'light' | 'dark' | 'system';
 
-// Use same key as global ThemeProvider to stay in sync
-const THEME_STORAGE_KEY = 'theme';
+// Separate key from main app to maintain independence
+const THEME_STORAGE_KEY = 'questionnaire-theme';
 
 function usePublicFormTheme() {
   const [theme, setTheme] = useState<PublicFormTheme>('system');
   const [mounted, setMounted] = useState(false);
   const [resolvedDark, setResolvedDark] = useState(false);
 
-  // Initialize on mount
+  // On mount: sync React state with what inline script already set in DOM
+  // The inline script (in app/form/[token]/layout.tsx) reads localStorage and
+  // resolves 'system' to 'dark' or 'light' based on system preference.
+  // We read from DOM, not localStorage, to avoid state/DOM mismatch that causes
+  // the "two clicks required" bug.
   useEffect(() => {
-    setMounted(true);
-    const stored = localStorage.getItem(THEME_STORAGE_KEY) as PublicFormTheme | null;
-    if (stored && ['light', 'dark', 'system'].includes(stored)) {
-      setTheme(stored);
+    // Read what the DOM currently has (set by inline script)
+    const domIsDark = document.documentElement.classList.contains('dark');
+    setResolvedDark(domIsDark);
+    
+    // Also read the actual stored preference for toggle logic
+    const stored = localStorage.getItem(THEME_STORAGE_KEY);
+    if (stored) {
+      let savedTheme: string | null = stored;
+      if (stored.startsWith('"') || stored.startsWith('{')) {
+        try {
+          savedTheme = JSON.parse(stored);
+        } catch (e) {
+          // Keep original value if parse fails
+        }
+      }
+      if (savedTheme && ['light', 'dark', 'system'].includes(savedTheme)) {
+        setTheme(savedTheme as PublicFormTheme);
+      }
     }
+    
+    setMounted(true);
   }, []);
 
   // Apply theme and listen for system changes

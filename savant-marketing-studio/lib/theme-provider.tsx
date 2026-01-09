@@ -1,7 +1,6 @@
 'use client'
 
-import { createContext, useContext, useEffect, useState } from 'react'
-import { setStorageItem, getStorageItemSync } from '@/lib/utils/async-storage'
+import { createContext, useContext, useEffect, useState, ReactNode } from 'react'
 
 type Theme = 'light' | 'dark'
 
@@ -11,49 +10,46 @@ interface ThemeContextType {
   toggleTheme: () => void
 }
 
-const ThemeContext = createContext<ThemeContextType>({
-  theme: 'dark',
-  setTheme: () => {},
-  toggleTheme: () => {},
-})
+const ThemeContext = createContext<ThemeContextType | undefined>(undefined)
 
-export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const [theme, setTheme] = useState<Theme>('dark')
+export function ThemeProvider({ children }: { children: ReactNode }) {
+  const [theme, setThemeState] = useState<Theme>('dark')
   const [mounted, setMounted] = useState(false)
 
+  // On mount: sync React state with what inline script already set in DOM
+  // This prevents the "two clicks required" bug where React state is 'dark'
+  // but DOM class is 'light' (set by inline script from localStorage).
+  // We read from DOM, not localStorage, because the inline script already handled that.
   useEffect(() => {
-    // Get initial theme from localStorage or default to dark
-    // Use sync version here to prevent flash of wrong theme
-    const stored = getStorageItemSync<Theme>('theme')
-    const initialTheme = stored || 'dark'
-    
-    setTheme(initialTheme)
+    const domTheme = document.documentElement.classList.contains('dark') ? 'dark' : 'light'
+    setThemeState(domTheme)
     setMounted(true)
-    
-    // Apply theme class immediately
-    document.documentElement.classList.remove('light', 'dark')
-    document.documentElement.classList.add(initialTheme)
   }, [])
 
+  // Apply theme class whenever theme changes
   useEffect(() => {
     if (!mounted) return
     
-    // Save to localStorage (async, non-blocking)
-    setStorageItem('theme', theme)
+    const root = document.documentElement
+    root.classList.remove('light', 'dark')
+    root.classList.add(theme)
     
-    // Apply theme class
-    document.documentElement.classList.remove('light', 'dark')
-    document.documentElement.classList.add(theme)
+    // Save to localStorage (direct string, no JSON.stringify)
+    try {
+      localStorage.setItem('theme', theme)
+    } catch (e) {
+      console.error('Failed to save theme:', e)
+    }
   }, [theme, mounted])
 
-  const toggleTheme = () => {
-    setTheme(prev => {
-      const newTheme = prev === 'dark' ? 'light' : 'dark'
-      return newTheme
-    })
+  const setTheme = (newTheme: Theme) => {
+    setThemeState(newTheme)
   }
 
-  // Prevent flash of unstyled content - show children immediately
+  const toggleTheme = () => {
+    setThemeState(prev => prev === 'dark' ? 'light' : 'dark')
+  }
+
   return (
     <ThemeContext.Provider value={{ theme, setTheme, toggleTheme }}>
       {children}
@@ -61,4 +57,10 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   )
 }
 
-export const useTheme = () => useContext(ThemeContext)
+export function useTheme() {
+  const context = useContext(ThemeContext)
+  if (!context) {
+    throw new Error('useTheme must be used within ThemeProvider')
+  }
+  return context
+}

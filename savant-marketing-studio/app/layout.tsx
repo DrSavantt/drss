@@ -33,7 +33,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" suppressHydrationWarning className={`dark ${roboto.variable} ${geistMono.variable}`}>
+    <html lang="en" suppressHydrationWarning>
       <head>
         {/* Preconnect to Supabase for faster first API call */}
         <link 
@@ -45,16 +45,22 @@ export default function RootLayout({
           rel="dns-prefetch" 
           href={process.env.NEXT_PUBLIC_SUPABASE_URL || ''} 
         />
-        {/* Prevent FOUC - set dark mode immediately */}
+        {/* Prevent FOUC - set theme immediately before React hydrates */}
         <script
           dangerouslySetInnerHTML={{
             __html: `
               (function() {
                 try {
                   var theme = localStorage.getItem('theme') || 'dark';
+                  // Handle if it's JSON wrapped (legacy)
+                  if (theme.startsWith('"')) {
+                    try { theme = JSON.parse(theme); } catch(e) {}
+                  }
                   document.documentElement.classList.remove('light', 'dark');
                   document.documentElement.classList.add(theme);
-                } catch (e) {}
+                } catch (e) {
+                  document.documentElement.classList.add('dark');
+                }
               })();
             `,
           }}

@@ -532,7 +532,7 @@ export function UnifiedQuestionnaireForm({
   );
   
   return (
-    <div className={isDark ? 'dark' : ''}>
+    <>
       {formContent}
       
       {/* Help Panel - Slides in from right */}
@@ -547,7 +547,7 @@ export function UnifiedQuestionnaireForm({
           />
         )}
       </HelpPanel>
-    </div>
+    </>
   );
 }
 
