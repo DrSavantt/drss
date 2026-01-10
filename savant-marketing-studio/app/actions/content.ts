@@ -252,16 +252,17 @@ export async function deleteContentAsset(id: string, clientId: string, deleteOpt
       }
     }
   } else if (deleteOption === 'all') {
-    // Delete all journal entries mentioning this content
+    // Soft delete all journal entries mentioning this content
     await supabase
       .from('journal_entries')
-      .delete()
+      .update({ deleted_at: new Date().toISOString() })
       .contains('mentioned_content', [id])
   }
   
+  // Soft delete the content asset
   const { error } = await supabase
     .from('content_assets')
-    .delete()
+    .update({ deleted_at: new Date().toISOString() })
     .eq('id', id)
   
   if (error) {
@@ -274,10 +275,13 @@ export async function deleteContentAsset(id: string, clientId: string, deleteOpt
     entityType: 'content',
     entityId: id,
     entityName: title,
-    clientId: clientId
+    clientId: clientId,
+    metadata: { can_restore: true }
   })
   
   revalidatePath(`/dashboard/clients/${clientId}`)
+  revalidatePath('/dashboard/content')
+  revalidatePath('/dashboard/archive')
   return { success: true }
 }
 
@@ -419,9 +423,10 @@ export async function bulkDeleteContent(contentIds: string[]) {
     return { error: 'No content IDs provided' }
   }
   
+  // Soft delete instead of hard delete
   const { error } = await supabase
     .from('content_assets')
-    .delete()
+    .update({ deleted_at: new Date().toISOString() })
     .in('id', contentIds)
   
   if (error) {
@@ -429,7 +434,79 @@ export async function bulkDeleteContent(contentIds: string[]) {
   }
   
   revalidatePath('/dashboard/content')
+  revalidatePath('/dashboard/archive')
   return { success: true, count: contentIds.length }
+}
+
+export async function restoreContentAsset(id: string) {
+  const supabase = await createSupabaseClient()
+  if (!supabase) return { error: 'Database not configured' }
+
+  // First, get the content to find client_id for revalidation
+  const { data: content } = await supabase
+    .from('content_assets')
+    .select('client_id')
+    .eq('id', id)
+    .single()
+
+  const { error } = await supabase
+    .from('content_assets')
+    .update({ deleted_at: null })
+    .eq('id', id)
+
+  if (error) {
+    console.error('Failed to restore content:', error)
+    return { error: 'Failed to restore content' }
+  }
+
+  revalidatePath('/dashboard/content')
+  revalidatePath('/dashboard/archive')
+  
+  // Also revalidate client page if content belongs to a client
+  if (content?.client_id) {
+    revalidatePath(`/dashboard/clients/${content.client_id}`)
+  }
+  
+  return { success: true }
+}
+
+export async function permanentlyDeleteContentAsset(id: string) {
+  const supabase = await createSupabaseClient()
+  if (!supabase) return { error: 'Database not configured' }
+
+  const { error } = await supabase
+    .from('content_assets')
+    .delete()
+    .eq('id', id)
+
+  if (error) {
+    console.error('Failed to permanently delete content:', error)
+    return { error: 'Failed to permanently delete content' }
+  }
+
+  revalidatePath('/dashboard/archive')
+  return { success: true }
+}
+
+export async function getArchivedContent() {
+  const supabase = await createSupabaseClient()
+  if (!supabase) return []
+
+  const { data, error } = await supabase
+    .from('content_assets')
+    .select(`
+      *,
+      clients (id, name)
+    `)
+    .not('deleted_at', 'is', null)
+    .order('deleted_at', { ascending: false })
+
+  if (error) {
+    console.error('Failed to fetch archived content:', error)
+    return []
+  }
+
+  return data || []
 }
 
 export async function bulkArchiveContent(contentIds: string[]) {

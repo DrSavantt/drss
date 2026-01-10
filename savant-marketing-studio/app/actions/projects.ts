@@ -154,6 +154,13 @@ export async function updateProject(id: string, formData: FormData) {
     }
   })
   
+  // Revalidate all relevant paths for UI refresh
+  revalidatePath('/dashboard/projects')
+  revalidatePath('/dashboard/projects/board')
+  if (currentProject?.client_id) {
+    revalidatePath(`/dashboard/clients/${currentProject.client_id}`)
+  }
+  
   return { success: true }
 }
 
@@ -205,6 +212,7 @@ export async function updateProjectStatus(
     })
   }
   
+  revalidatePath('/dashboard/projects')
   revalidatePath('/dashboard/projects/board')
   return { success: true }
 }
@@ -229,7 +237,7 @@ export async function deleteProject(id: string, clientId: string, projectName?: 
   
   const { error } = await supabase
     .from('projects')
-    .delete()
+    .update({ deleted_at: new Date().toISOString() })
     .eq('id', id)
   
   if (error) {
@@ -242,9 +250,85 @@ export async function deleteProject(id: string, clientId: string, projectName?: 
     entityType: 'project',
     entityId: id,
     entityName: name,
-    clientId: clientId
+    clientId: clientId,
+    metadata: { can_restore: true }
   })
   
   revalidatePath(`/dashboard/clients/${clientId}`)
+  revalidatePath('/dashboard/projects')
+  revalidatePath('/dashboard/projects/board')
+  revalidatePath('/dashboard/archive')
   return { success: true }
+}
+
+export async function restoreProject(id: string) {
+  const supabase = await createSupabaseClient()
+  if (!supabase) return { error: 'Database not configured' }
+
+  // First, get the project to find client_id for revalidation
+  const { data: project } = await supabase
+    .from('projects')
+    .select('client_id')
+    .eq('id', id)
+    .single()
+
+  const { error } = await supabase
+    .from('projects')
+    .update({ deleted_at: null })
+    .eq('id', id)
+
+  if (error) {
+    console.error('Failed to restore project:', error)
+    return { error: 'Failed to restore project' }
+  }
+
+  revalidatePath('/dashboard/projects')
+  revalidatePath('/dashboard/projects/board')
+  revalidatePath('/dashboard/archive')
+  
+  // Also revalidate client page if project belongs to a client
+  if (project?.client_id) {
+    revalidatePath(`/dashboard/clients/${project.client_id}`)
+  }
+  
+  return { success: true }
+}
+
+export async function permanentlyDeleteProject(id: string) {
+  const supabase = await createSupabaseClient()
+  if (!supabase) return { error: 'Database not configured' }
+
+  const { error } = await supabase
+    .from('projects')
+    .delete()
+    .eq('id', id)
+
+  if (error) {
+    console.error('Failed to permanently delete project:', error)
+    return { error: 'Failed to permanently delete project' }
+  }
+
+  revalidatePath('/dashboard/archive')
+  return { success: true }
+}
+
+export async function getArchivedProjects() {
+  const supabase = await createSupabaseClient()
+  if (!supabase) return []
+
+  const { data, error } = await supabase
+    .from('projects')
+    .select(`
+      *,
+      clients (id, name)
+    `)
+    .not('deleted_at', 'is', null)
+    .order('deleted_at', { ascending: false })
+
+  if (error) {
+    console.error('Failed to fetch archived projects:', error)
+    return []
+  }
+
+  return data || []
 }
