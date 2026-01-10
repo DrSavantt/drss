@@ -200,8 +200,8 @@ export async function permanentlyDeleteFramework(id: string): Promise<{ success:
   return { success: true };
 }
 
-// Get archived frameworks
-export async function getArchivedFrameworks(): Promise<Framework[]> {
+// Get archived frameworks (only those with deleted_at set)
+export async function getArchivedFrameworks(): Promise<(Framework & { deleted_at: string })[]> {
   const supabase = await createClient();
   if (!supabase) return [];
   
@@ -216,7 +216,7 @@ export async function getArchivedFrameworks(): Promise<Framework[]> {
     return [];
   }
 
-  return data || [];
+  return (data || []) as (Framework & { deleted_at: string })[];
 }
 
 // Duplicate framework
