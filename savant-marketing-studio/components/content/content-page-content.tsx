@@ -2,14 +2,23 @@
 
 import { useState, useMemo } from "react"
 import Link from "next/link"
-import { Plus, Search, Filter, Mail, Megaphone, FileText, PenTool, Sparkles, Trash2 } from "lucide-react"
+import { Plus, Search, Filter, Mail, Megaphone, FileText, PenTool, Sparkles, Trash2, FolderInput } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Badge } from "@/components/ui/badge"
 import { cn } from "@/lib/utils"
-import { bulkDeleteContent } from "@/app/actions/content"
+import { bulkDeleteContent, bulkChangeProject } from "@/app/actions/content"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import { toast } from "sonner"
 import { useRouter } from "next/navigation"
 import { CreateContentModal } from "./create-content-modal"
 
@@ -33,9 +42,16 @@ interface Client {
   name: string
 }
 
+interface Project {
+  id: string
+  name: string
+  clientName: string | null
+}
+
 interface ContentPageContentProps {
   initialContent: ContentItem[]
   initialClients: Client[]
+  initialProjects: Project[]
 }
 
 // ============================================================================
@@ -54,15 +70,17 @@ const typeConfig = {
 // MAIN COMPONENT
 // ============================================================================
 
-export function ContentPageContent({ initialContent, initialClients }: ContentPageContentProps) {
+export function ContentPageContent({ initialContent, initialClients, initialProjects }: ContentPageContentProps) {
   const [content, setContent] = useState<ContentItem[]>(initialContent)
   const [clients] = useState<Client[]>([{ id: "all", name: "All Clients" }, ...initialClients])
+  const [projects] = useState<Project[]>(initialProjects)
   const [searchQuery, setSearchQuery] = useState("")
   const [clientFilter, setClientFilter] = useState("all")
   const [typeFilter, setTypeFilter] = useState("all")
   const [aiFilter, setAiFilter] = useState("all")
   const [selectedItems, setSelectedItems] = useState<string[]>([])
   const [deleting, setDeleting] = useState(false)
+  const [moving, setMoving] = useState(false)
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)
   const router = useRouter()
 
@@ -107,6 +125,28 @@ export function ContentPageContent({ initialContent, initialClients }: ContentPa
       alert('Failed to delete content items')
     } finally {
       setDeleting(false)
+    }
+  }
+
+  const handleBulkMove = async (projectId: string | null) => {
+    setMoving(true)
+    try {
+      const result = await bulkChangeProject(selectedItems, projectId)
+      if (result.error) {
+        toast.error(result.error)
+        return
+      }
+      const projectName = projectId 
+        ? projects.find(p => p.id === projectId)?.name || 'project'
+        : 'no project'
+      toast.success(`Moved ${selectedItems.length} item(s) to ${projectName}`)
+      setSelectedItems([])
+      router.refresh()
+    } catch (error) {
+      console.error('Failed to move:', error)
+      toast.error('Failed to move items')
+    } finally {
+      setMoving(false)
     }
   }
 
@@ -256,9 +296,44 @@ export function ContentPageContent({ initialContent, initialClients }: ContentPa
             <Trash2 className="mr-2 h-4 w-4" />
             {deleting ? 'Deleting...' : 'Delete'}
           </Button>
-          <Button variant="outline" size="sm">
-            Move to...
-          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="sm" disabled={moving}>
+                <FolderInput className="mr-2 h-4 w-4" />
+                {moving ? 'Moving...' : 'Move to...'}
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start" className="w-64">
+              <DropdownMenuLabel>Move to project</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem 
+                className="text-muted-foreground"
+                onClick={() => handleBulkMove(null)}
+                disabled={moving}
+              >
+                Remove from project
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              {projects.length === 0 ? (
+                <DropdownMenuItem disabled>No projects available</DropdownMenuItem>
+              ) : (
+                projects.map((project) => (
+                  <DropdownMenuItem
+                    key={project.id}
+                    onClick={() => handleBulkMove(project.id)}
+                    disabled={moving}
+                  >
+                    <span className="truncate">{project.name}</span>
+                    {project.clientName && (
+                      <span className="ml-auto text-xs text-muted-foreground">
+                        {project.clientName}
+                      </span>
+                    )}
+                  </DropdownMenuItem>
+                ))
+              )}
+            </DropdownMenuContent>
+          </DropdownMenu>
           <Button variant="outline" size="sm">
             Export
           </Button>

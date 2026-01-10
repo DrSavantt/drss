@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useMemo } from "react"
+import { useState, useEffect, useMemo, useCallback } from "react"
 import { Plus, Upload, Search, FileText } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -29,12 +29,18 @@ export function FrameworkLibrary() {
   const [searchQuery, setSearchQuery] = useState("")
   const [selectedCategory, setSelectedCategory] = useState("All")
   const [dialogOpen, setDialogOpen] = useState(false)
+  const [refreshKey, setRefreshKey] = useState(0)
+
+  // Callback to trigger refetch after mutations (delete, duplicate)
+  const handleRefresh = useCallback(() => {
+    setRefreshKey(k => k + 1)
+  }, [])
 
   // Fetch frameworks
   useEffect(() => {
     async function fetchFrameworks() {
       try {
-        const res = await fetch('/api/frameworks')
+        const res = await fetch('/api/frameworks', { cache: 'no-store' })
         const data = await res.json()
         
         // Transform to v0 format
@@ -55,7 +61,7 @@ export function FrameworkLibrary() {
       }
     }
     fetchFrameworks()
-  }, [dialogOpen]) // Refetch when dialog closes
+  }, [dialogOpen, refreshKey]) // Refetch when dialog closes OR refreshKey changes
 
   // PERFORMANCE OPTIMIZATION: Memoize filtered frameworks
   // Prevents recalculation on every render - only recalculates when dependencies change
@@ -139,7 +145,7 @@ export function FrameworkLibrary() {
       {/* Framework Grid */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
         {filteredFrameworks.map((framework) => (
-          <FrameworkCard key={framework.id} framework={framework} />
+          <FrameworkCard key={framework.id} framework={framework} onRefresh={handleRefresh} />
         ))}
       </div>
 

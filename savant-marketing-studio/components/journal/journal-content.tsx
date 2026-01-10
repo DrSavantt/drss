@@ -3,6 +3,7 @@
 import type React from "react"
 import { useState, useEffect, useRef, useCallback } from "react"
 import Link from "next/link"
+import { format } from 'date-fns'
 import { Plus, Hash, AtSign, Send, Users, FolderKanban, FileText, Trash2, X, Pin, PinOff, Check, ArrowRight } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
@@ -725,12 +726,7 @@ export function JournalContent({
                   
                   <div className="pl-6">
                     <p className="text-xs text-muted-foreground mb-2">
-                      {entry.timestamp.toLocaleDateString("en-US", {
-                        month: "short",
-                        day: "numeric",
-                        hour: "numeric",
-                        minute: "2-digit",
-                      })}
+                      {format(entry.timestamp, "MMM d 'at' h:mm a")}
                     </p>
                     <p 
                       className="text-sm text-foreground whitespace-pre-wrap"

@@ -21,7 +21,8 @@ export async function GET(request: Request) {
           id,
           name
         )
-      `);
+      `)
+      .is('deleted_at', null);  // Exclude soft-deleted projects
 
     // Filter by client_id if provided
     if (clientId) {

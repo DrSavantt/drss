@@ -120,13 +120,15 @@ export async function deleteJournalEntry(id: string) {
     throw new Error('Database connection not configured')
   }
 
+  // Soft delete instead of hard delete
   const { error } = await supabase
     .from('journal_entries')
-    .delete()
+    .update({ deleted_at: new Date().toISOString() })
     .eq('id', id)
 
   if (error) throw error
   revalidatePath('/dashboard/journal')
+  revalidatePath('/dashboard/archive')
 }
 
 export async function getJournalEntries(chatId?: string) {
@@ -508,15 +510,93 @@ export async function bulkDeleteJournalEntries(ids: string[]) {
     throw new Error('Not authenticated')
   }
 
+  // Soft delete instead of hard delete
   const { error } = await supabase
     .from('journal_entries')
-    .delete()
+    .update({ deleted_at: new Date().toISOString() })
     .in('id', ids)
     .eq('user_id', user.id) // Safety: only delete user's own entries
 
   if (error) throw error
   revalidatePath('/dashboard/journal')
+  revalidatePath('/dashboard/archive')
   return { success: true }
+}
+
+export async function restoreJournalEntry(id: string) {
+  const supabase = await createClient()
+  if (!supabase) return { error: 'Database not configured' }
+
+  // Get current user
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) {
+    return { error: 'Not authenticated' }
+  }
+
+  const { error } = await supabase
+    .from('journal_entries')
+    .update({ deleted_at: null })
+    .eq('id', id)
+    .eq('user_id', user.id) // Safety: only restore user's own entries
+
+  if (error) {
+    console.error('Failed to restore journal entry:', error)
+    return { error: 'Failed to restore journal entry' }
+  }
+
+  revalidatePath('/dashboard/journal')
+  revalidatePath('/dashboard/archive')
+  return { success: true }
+}
+
+export async function permanentlyDeleteJournalEntry(id: string) {
+  const supabase = await createClient()
+  if (!supabase) return { error: 'Database not configured' }
+
+  // Get current user
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) {
+    return { error: 'Not authenticated' }
+  }
+
+  const { error } = await supabase
+    .from('journal_entries')
+    .delete()
+    .eq('id', id)
+    .eq('user_id', user.id) // Safety: only delete user's own entries
+
+  if (error) {
+    console.error('Failed to permanently delete journal entry:', error)
+    return { error: 'Failed to permanently delete journal entry' }
+  }
+
+  revalidatePath('/dashboard/archive')
+  return { success: true }
+}
+
+export async function getArchivedJournalEntries() {
+  const supabase = await createClient()
+  if (!supabase) return []
+
+  // Get current user
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) {
+    return []
+  }
+
+  const { data, error } = await supabase
+    .from('journal_entries')
+    .select('*')
+    .eq('user_id', user.id)
+    .not('deleted_at', 'is', null)
+    .order('deleted_at', { ascending: false })
+
+  if (error) {
+    console.error('Failed to fetch archived journal entries:', error)
+    return []
+  }
+
+  return data || []
 }
 
 export async function togglePinJournalEntry(id: string, isPinned: boolean) {

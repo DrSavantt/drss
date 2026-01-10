@@ -62,6 +62,7 @@ export async function getFrameworksByCategory(category: string): Promise<{ id: s
     .from('marketing_frameworks')
     .select('id, name, content')
     .eq('category', category)
+    .is('deleted_at', null)  // Exclude soft-deleted frameworks
     .limit(10);
 
   if (error) {

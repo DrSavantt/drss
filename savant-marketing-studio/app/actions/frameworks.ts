@@ -15,7 +15,7 @@ export interface Framework {
   updated_at: string;
 }
 
-// Get all frameworks for current user
+// Get all frameworks for current user (excluding soft-deleted)
 export async function getFrameworks(): Promise<Framework[]> {
   const supabase = await createClient();
   if (!supabase) return [];
@@ -23,6 +23,7 @@ export async function getFrameworks(): Promise<Framework[]> {
   const { data, error } = await supabase
     .from('marketing_frameworks')
     .select('*')
+    .is('deleted_at', null)  // Exclude soft-deleted frameworks
     .order('created_at', { ascending: false });
 
   if (error) {
@@ -33,7 +34,7 @@ export async function getFrameworks(): Promise<Framework[]> {
   return data || [];
 }
 
-// Get single framework
+// Get single framework (excluding soft-deleted)
 export async function getFramework(id: string): Promise<Framework | null> {
   const supabase = await createClient();
   if (!supabase) return null;
@@ -42,6 +43,7 @@ export async function getFramework(id: string): Promise<Framework | null> {
     .from('marketing_frameworks')
     .select('*')
     .eq('id', id)
+    .is('deleted_at', null)  // Exclude soft-deleted frameworks
     .single();
 
   if (error) {
@@ -138,8 +140,49 @@ export async function updateFramework(id: string, formData: FormData): Promise<{
   return { success: true };
 }
 
-// Delete framework (embeddings cascade delete)
+// Delete framework (soft delete - embeddings preserved for restore)
 export async function deleteFramework(id: string): Promise<{ success: boolean } | { error: string }> {
+  const supabase = await createClient();
+  if (!supabase) return { error: 'Database not configured' };
+
+  // Soft delete instead of hard delete
+  const { error } = await supabase
+    .from('marketing_frameworks')
+    .update({ deleted_at: new Date().toISOString() })
+    .eq('id', id);
+
+  if (error) {
+    console.error('Failed to delete framework:', error);
+    return { error: 'Failed to delete framework' };
+  }
+
+  revalidatePath('/dashboard/frameworks');
+  revalidatePath('/dashboard/archive');
+  return { success: true };
+}
+
+// Restore framework from soft delete
+export async function restoreFramework(id: string): Promise<{ success: boolean } | { error: string }> {
+  const supabase = await createClient();
+  if (!supabase) return { error: 'Database not configured' };
+
+  const { error } = await supabase
+    .from('marketing_frameworks')
+    .update({ deleted_at: null })
+    .eq('id', id);
+
+  if (error) {
+    console.error('Failed to restore framework:', error);
+    return { error: 'Failed to restore framework' };
+  }
+
+  revalidatePath('/dashboard/frameworks');
+  revalidatePath('/dashboard/archive');
+  return { success: true };
+}
+
+// Permanently delete framework (hard delete with cascade)
+export async function permanentlyDeleteFramework(id: string): Promise<{ success: boolean } | { error: string }> {
   const supabase = await createClient();
   if (!supabase) return { error: 'Database not configured' };
 
@@ -149,12 +192,31 @@ export async function deleteFramework(id: string): Promise<{ success: boolean } 
     .eq('id', id);
 
   if (error) {
-    console.error('Failed to delete framework:', error);
-    return { error: 'Failed to delete framework' };
+    console.error('Failed to permanently delete framework:', error);
+    return { error: 'Failed to permanently delete framework' };
   }
 
-  revalidatePath('/dashboard/frameworks');
+  revalidatePath('/dashboard/archive');
   return { success: true };
+}
+
+// Get archived frameworks
+export async function getArchivedFrameworks(): Promise<Framework[]> {
+  const supabase = await createClient();
+  if (!supabase) return [];
+  
+  const { data, error } = await supabase
+    .from('marketing_frameworks')
+    .select('*')
+    .not('deleted_at', 'is', null)
+    .order('deleted_at', { ascending: false });
+
+  if (error) {
+    console.error('Failed to fetch archived frameworks:', error);
+    return [];
+  }
+
+  return data || [];
 }
 
 // Duplicate framework
@@ -290,6 +352,7 @@ export async function getFrameworkCategories(): Promise<string[]> {
   const { data } = await supabase
     .from('marketing_frameworks')
     .select('category')
+    .is('deleted_at', null)  // Exclude soft-deleted frameworks
     .not('category', 'is', null);
 
   if (!data) return ['copywriting', 'strategy', 'funnel', 'ads', 'email'];

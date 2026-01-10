@@ -9,10 +9,11 @@ export async function GET() {
   }
 
   try {
-    // Fetch all frameworks
+    // Fetch all frameworks (excluding soft-deleted)
     const { data: frameworks, error } = await supabase
       .from('marketing_frameworks')
       .select('*')
+      .is('deleted_at', null)  // Exclude soft-deleted frameworks
       .order('created_at', { ascending: false });
 
     if (error) {
@@ -37,12 +38,8 @@ export async function GET() {
 
     const response = NextResponse.json(frameworksWithChunks);
     
-    // Cache for 60 seconds, allow stale-while-revalidate for 120 seconds
-    // Frameworks change less frequently, so we can use longer cache
-    response.headers.set(
-      'Cache-Control',
-      'private, s-maxage=60, stale-while-revalidate=120'
-    );
+    // No cache - frameworks need to update immediately after mutations
+    response.headers.set('Cache-Control', 'no-store');
     
     return response;
   } catch (error) {

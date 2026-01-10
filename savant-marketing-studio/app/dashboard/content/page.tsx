@@ -99,11 +99,11 @@ async function ContentListLoader() {
   const supabase = await createClient()
 
   if (!supabase) {
-    return <ContentPageContent initialContent={[]} initialClients={[]} />
+    return <ContentPageContent initialContent={[]} initialClients={[]} initialProjects={[]} />
   }
 
-  // Fetch content and clients in parallel
-  const [contentResult, clientsResult] = await Promise.all([
+  // Fetch content, clients, and projects in parallel
+  const [contentResult, clientsResult, projectsResult] = await Promise.all([
     supabase
       .from('content_assets')
       .select(`
@@ -114,16 +114,23 @@ async function ContentListLoader() {
         )
       `)
       .eq('is_archived', false)
+      .is('deleted_at', null)  // Exclude soft-deleted content
       .order('created_at', { ascending: false }),
     supabase
       .from('clients')
       .select('id, name')
+      .is('deleted_at', null)
+      .order('name'),
+    supabase
+      .from('projects')
+      .select('id, name, clients(name)')
       .is('deleted_at', null)
       .order('name')
   ])
 
   const { data: content, error: contentError } = contentResult
   const { data: clients, error: clientsError } = clientsResult
+  const { data: projects, error: projectsError } = projectsResult
 
   if (contentError) {
     console.error('Error fetching content:', contentError)
@@ -131,6 +138,10 @@ async function ContentListLoader() {
 
   if (clientsError) {
     console.error('Error fetching clients:', clientsError)
+  }
+
+  if (projectsError) {
+    console.error('Error fetching projects:', projectsError)
   }
 
   // Transform content to UI format
@@ -151,10 +162,18 @@ async function ContentListLoader() {
     name: c.name,
   }))
 
+  // Transform projects for Move To dropdown
+  const transformedProjects = (projects || []).map((p: any) => ({
+    id: p.id,
+    name: p.name,
+    clientName: p.clients?.name || null,
+  }))
+
   return (
     <ContentPageContent 
       initialContent={transformedContent} 
       initialClients={transformedClients}
+      initialProjects={transformedProjects}
     />
   )
 }

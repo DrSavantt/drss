@@ -1,9 +1,19 @@
 import { getArchivedClients } from '@/app/actions/clients'
+import { getArchivedProjects } from '@/app/actions/projects'
+import { getArchivedContent } from '@/app/actions/content'
+import { getArchivedFrameworks } from '@/app/actions/frameworks'
+import { getArchivedJournalEntries } from '@/app/actions/journal'
 import { ArchiveList } from '@/components/archive/archive-list'
 
 export default async function ArchivePage() {
-  const archivedClients = await getArchivedClients()
-  
+  const [clients, projects, content, frameworks, journalEntries] = await Promise.all([
+    getArchivedClients(),
+    getArchivedProjects(),
+    getArchivedContent(),
+    getArchivedFrameworks(),
+    getArchivedJournalEntries(),
+  ])
+
   return (
     <div className="container py-8">
       <div className="mb-8">
@@ -13,8 +23,13 @@ export default async function ArchivePage() {
         </p>
       </div>
       
-      <ArchiveList clients={archivedClients} />
+      <ArchiveList 
+        clients={clients}
+        projects={projects}
+        content={content}
+        frameworks={frameworks}
+        journalEntries={journalEntries}
+      />
     </div>
   )
 }
-

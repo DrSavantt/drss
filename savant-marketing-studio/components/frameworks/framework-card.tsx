@@ -13,6 +13,16 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
 import { Button } from "@/components/ui/button"
 import { deleteFramework, duplicateFramework } from "@/app/actions/frameworks"
 
@@ -27,13 +37,15 @@ interface Framework {
 
 interface FrameworkCardProps {
   framework: Framework
+  onRefresh?: () => void
 }
 
 // PERFORMANCE OPTIMIZATION: Memoized to prevent re-renders when parent state changes
-export const FrameworkCard = memo(function FrameworkCard({ framework }: FrameworkCardProps) {
+export const FrameworkCard = memo(function FrameworkCard({ framework, onRefresh }: FrameworkCardProps) {
   const router = useRouter();
   const [isDeleting, setIsDeleting] = useState(false);
   const [isDuplicating, setIsDuplicating] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 
   // PERFORMANCE OPTIMIZATION: Memoized callbacks to prevent child re-renders
   const handleEdit = useCallback((e: React.MouseEvent) => {
@@ -51,6 +63,7 @@ export const FrameworkCard = memo(function FrameworkCard({ framework }: Framewor
       if ('error' in result) {
         alert(result.error);
       } else {
+        onRefresh?.();
         router.refresh();
       }
     } catch (error) {
@@ -59,22 +72,23 @@ export const FrameworkCard = memo(function FrameworkCard({ framework }: Framewor
     } finally {
       setIsDuplicating(false);
     }
-  }, [framework.id, router]);
+  }, [framework.id, router, onRefresh]);
 
-  const handleDelete = useCallback(async (e: React.MouseEvent) => {
+  const handleDeleteClick = useCallback((e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    
-    if (!confirm(`Are you sure you want to delete "${framework.name}"? This action cannot be undone.`)) {
-      return;
-    }
+    setDeleteDialogOpen(true);
+  }, []);
 
+  const handleDeleteConfirm = useCallback(async () => {
     setIsDeleting(true);
     try {
       const result = await deleteFramework(framework.id);
       if (result && 'error' in result) {
         alert(result.error);
       } else {
+        setDeleteDialogOpen(false);
+        onRefresh?.();
         router.refresh();
       }
     } catch (error) {
@@ -83,7 +97,7 @@ export const FrameworkCard = memo(function FrameworkCard({ framework }: Framewor
     } finally {
       setIsDeleting(false);
     }
-  }, [framework.id, framework.name, router]);
+  }, [framework.id, router, onRefresh]);
 
   return (
     <Link href={`/dashboard/frameworks/${framework.id}`}>
@@ -122,11 +136,11 @@ export const FrameworkCard = memo(function FrameworkCard({ framework }: Framewor
                 <DropdownMenuSeparator />
                 <DropdownMenuItem 
                   className="text-destructive cursor-pointer"
-                  onClick={handleDelete}
+                  onClick={handleDeleteClick}
                   disabled={isDeleting}
                 >
                   <Trash2 className="mr-2 h-4 w-4" />
-                  {isDeleting ? 'Deleting...' : 'Delete'}
+                  Delete
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
@@ -146,6 +160,28 @@ export const FrameworkCard = memo(function FrameworkCard({ framework }: Framewor
           </div>
         </CardContent>
       </Card>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent onClick={(e) => e.stopPropagation()}>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Framework?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will move &quot;{framework.name}&quot; to archive. You can restore it later from the Archive page.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleDeleteConfirm}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              disabled={isDeleting}
+            >
+              {isDeleting ? 'Deleting...' : 'Delete'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Link>
   )
 })

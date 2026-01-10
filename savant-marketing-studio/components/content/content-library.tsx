@@ -2,14 +2,23 @@
 
 import { useState, useEffect, useMemo } from "react"
 import Link from "next/link"
-import { Plus, Search, Filter, Mail, Megaphone, FileText, PenTool, Sparkles, Trash2 } from "lucide-react"
+import { Plus, Search, Filter, Mail, Megaphone, FileText, PenTool, Sparkles, Trash2, FolderInput } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Badge } from "@/components/ui/badge"
 import { cn } from "@/lib/utils"
-import { bulkDeleteContent } from "@/app/actions/content"
+import { bulkDeleteContent, bulkChangeProject, getAllProjects } from "@/app/actions/content"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import { toast } from "sonner"
 import { useRouter } from "next/navigation"
 import { CreateContentModal } from "./create-content-modal"
 
@@ -46,21 +55,23 @@ export function ContentLibrary() {
   const [aiFilter, setAiFilter] = useState("all")
   const [selectedItems, setSelectedItems] = useState<string[]>([])
   const [deleting, setDeleting] = useState(false)
+  const [moving, setMoving] = useState(false)
+  const [projects, setProjects] = useState<Array<{ id: string; name: string; clientName: string | null }>>([])
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)
   const router = useRouter()
 
-  // Fetch content and clients - OPTIMIZED: Parallel fetches with AbortController
+  // Fetch content, clients, and projects - OPTIMIZED: Parallel fetches with AbortController
   useEffect(() => {
     const abortController = new AbortController()
     
     async function fetchData() {
       try {
         // OPTIMIZED: Parallel fetches instead of sequential waterfall
-        // Previously: content fetched THEN clients - sequential
-        // Now: Both fetch simultaneously - parallel
-        const [contentRes, clientsRes] = await Promise.all([
+        // All fetch simultaneously - parallel
+        const [contentRes, clientsRes, projectsData] = await Promise.all([
           fetch('/api/content', { signal: abortController.signal }),
-          fetch('/api/clients', { signal: abortController.signal })
+          fetch('/api/clients', { signal: abortController.signal }),
+          getAllProjects()
         ])
         
         // Check if aborted before processing
@@ -94,6 +105,14 @@ export function ContentLibrary() {
         ]
         
         setClients(clientOptions)
+        
+        // Transform projects for Move To dropdown
+        const transformedProjects = (projectsData || []).map((p: any) => ({
+          id: p.id,
+          name: p.name,
+          clientName: p.clients?.name || null,
+        }))
+        setProjects(transformedProjects)
       } catch (error) {
         // Ignore abort errors - component unmounted
         if (error instanceof Error && error.name === 'AbortError') return
@@ -154,6 +173,28 @@ export function ContentLibrary() {
       alert('Failed to delete content items')
     } finally {
       setDeleting(false)
+    }
+  }
+
+  const handleBulkMove = async (projectId: string | null) => {
+    setMoving(true)
+    try {
+      const result = await bulkChangeProject(selectedItems, projectId)
+      if (result.error) {
+        toast.error(result.error)
+        return
+      }
+      const projectName = projectId 
+        ? projects.find(p => p.id === projectId)?.name || 'project'
+        : 'no project'
+      toast.success(`Moved ${selectedItems.length} item(s) to ${projectName}`)
+      setSelectedItems([])
+      router.refresh()
+    } catch (error) {
+      console.error('Failed to move:', error)
+      toast.error('Failed to move items')
+    } finally {
+      setMoving(false)
     }
   }
 
@@ -321,9 +362,44 @@ export function ContentLibrary() {
             <Trash2 className="mr-2 h-4 w-4" />
             {deleting ? 'Deleting...' : 'Delete'}
           </Button>
-          <Button variant="outline" size="sm">
-            Move to...
-          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="sm" disabled={moving}>
+                <FolderInput className="mr-2 h-4 w-4" />
+                {moving ? 'Moving...' : 'Move to...'}
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start" className="w-64">
+              <DropdownMenuLabel>Move to project</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem 
+                className="text-muted-foreground"
+                onClick={() => handleBulkMove(null)}
+                disabled={moving}
+              >
+                Remove from project
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              {projects.length === 0 ? (
+                <DropdownMenuItem disabled>No projects available</DropdownMenuItem>
+              ) : (
+                projects.map((project) => (
+                  <DropdownMenuItem
+                    key={project.id}
+                    onClick={() => handleBulkMove(project.id)}
+                    disabled={moving}
+                  >
+                    <span className="truncate">{project.name}</span>
+                    {project.clientName && (
+                      <span className="ml-auto text-xs text-muted-foreground">
+                        {project.clientName}
+                      </span>
+                    )}
+                  </DropdownMenuItem>
+                ))
+              )}
+            </DropdownMenuContent>
+          </DropdownMenu>
           <Button variant="outline" size="sm">
             Export
           </Button>
