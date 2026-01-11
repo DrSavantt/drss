@@ -208,35 +208,50 @@ export function ChatInterface() {
 
         {/* Chat Content */}
         <div className="flex flex-1 flex-col overflow-hidden">
-          {messages.length === 0 ? (
-            // Empty State
-            <div className="flex flex-1 flex-col items-center justify-center px-4">
-              <div className="flex flex-col items-center text-center">
-                <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-muted">
-                  <MessageSquare className="h-8 w-8 text-muted-foreground" />
+          <AnimatePresence mode="wait">
+            {messages.length === 0 ? (
+              // Empty State
+              <motion.div
+                key="empty-state"
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                transition={{ duration: 0.2 }}
+                className="flex flex-1 flex-col items-center justify-center px-4"
+              >
+                <div className="flex flex-col items-center text-center">
+                  <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-muted">
+                    <MessageSquare className="h-8 w-8 text-muted-foreground" />
+                  </div>
+                  <h2 className="mb-2 text-xl font-semibold text-foreground">Start a conversation</h2>
+                  <p className="max-w-sm text-muted-foreground">
+                    Use <span className="font-mono text-primary">@client</span> or{" "}
+                    <span className="font-mono text-primary">@framework</span> to add context
+                  </p>
                 </div>
-                <h2 className="mb-2 text-xl font-semibold text-foreground">Start a conversation</h2>
-                <p className="max-w-sm text-muted-foreground">
-                  Use <span className="font-mono text-primary">@client</span> or{" "}
-                  <span className="font-mono text-primary">@framework</span> to add context
-                </p>
-              </div>
-            </div>
-          ) : (
-            // Message Thread
-            <div className="flex-1 overflow-y-auto">
-              <div className="mx-auto max-w-3xl px-4 py-6">
-                <MessageThread
-                  messages={messages}
-                  isGenerating={isGenerating}
-                  onCopy={handleCopyMessage}
-                  onSave={handleSaveToLibrary}
-                  onRegenerate={handleRegenerateMessage}
-                />
-                <div ref={messagesEndRef} />
-              </div>
-            </div>
-          )}
+              </motion.div>
+            ) : (
+              // Message Thread
+              <motion.div
+                key="messages"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ duration: 0.2 }}
+                className="flex-1 overflow-y-auto"
+              >
+                <div className="mx-auto max-w-3xl px-4 py-6">
+                  <MessageThread
+                    messages={messages}
+                    isGenerating={isGenerating}
+                    onCopy={handleCopyMessage}
+                    onSave={handleSaveToLibrary}
+                    onRegenerate={handleRegenerateMessage}
+                  />
+                  <div ref={messagesEndRef} />
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
 
           {/* Chat Input */}
           <div className="border-t border-border bg-background p-4">
