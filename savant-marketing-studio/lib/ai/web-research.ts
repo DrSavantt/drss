@@ -109,9 +109,8 @@ export async function performWebResearch(
           parts: [{ text: researchPrompt }] 
         }],
         tools: [{
-          // NOTE: API changed from googleSearchRetrieval to googleSearch
           googleSearch: {}
-        }],
+        }] as any,  // Type assertion - SDK types don't include googleSearch yet
         generationConfig: {
           temperature: 0.7,
           maxOutputTokens: maxTokens,
