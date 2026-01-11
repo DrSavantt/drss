@@ -2,14 +2,14 @@
 
 import { useState, useMemo } from "react"
 import Link from "next/link"
-import { Plus, Search, Filter, Mail, Megaphone, FileText, PenTool, Sparkles, Trash2, FolderInput } from "lucide-react"
+import { Plus, Search, Filter, Mail, Megaphone, FileText, PenTool, Sparkles, Trash2, FolderInput, Users } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Badge } from "@/components/ui/badge"
 import { cn } from "@/lib/utils"
-import { bulkDeleteContent, bulkChangeProject } from "@/app/actions/content"
+import { bulkDeleteContent, bulkChangeProject, bulkReassignContentToClient } from "@/app/actions/content"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -81,6 +81,7 @@ export function ContentPageContent({ initialContent, initialClients, initialProj
   const [selectedItems, setSelectedItems] = useState<string[]>([])
   const [deleting, setDeleting] = useState(false)
   const [moving, setMoving] = useState(false)
+  const [reassigning, setReassigning] = useState(false)
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)
   const router = useRouter()
 
@@ -147,6 +148,26 @@ export function ContentPageContent({ initialContent, initialClients, initialProj
       toast.error('Failed to move items')
     } finally {
       setMoving(false)
+    }
+  }
+
+  const handleBulkReassign = async (clientId: string) => {
+    setReassigning(true)
+    try {
+      const result = await bulkReassignContentToClient(selectedItems, clientId)
+      if (result.error) {
+        toast.error(result.error)
+        return
+      }
+      const clientName = clients.find(c => c.id === clientId)?.name || 'client'
+      toast.success(`Reassigned ${selectedItems.length} item(s) to ${clientName}`)
+      setSelectedItems([])
+      router.refresh()
+    } catch (error) {
+      console.error('Failed to reassign:', error)
+      toast.error('Failed to reassign items')
+    } finally {
+      setReassigning(false)
     }
   }
 
@@ -334,9 +355,31 @@ export function ContentPageContent({ initialContent, initialClients, initialProj
               )}
             </DropdownMenuContent>
           </DropdownMenu>
-          <Button variant="outline" size="sm">
-            Export
-          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="sm" disabled={reassigning}>
+                <Users className="mr-2 h-4 w-4" />
+                {reassigning ? 'Reassigning...' : 'Change Client...'}
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-56">
+              <DropdownMenuLabel>Reassign to client</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              {clients.filter(c => c.id !== 'all').length === 0 ? (
+                <DropdownMenuItem disabled>No clients available</DropdownMenuItem>
+              ) : (
+                clients.filter(c => c.id !== 'all').map((client) => (
+                  <DropdownMenuItem
+                    key={client.id}
+                    onClick={() => handleBulkReassign(client.id)}
+                    disabled={reassigning}
+                  >
+                    {client.name}
+                  </DropdownMenuItem>
+                ))
+              )}
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       )}
 
