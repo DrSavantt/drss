@@ -641,14 +641,15 @@ export async function reassignContentToClient(
   
   // Log activity
   await logActivity({
-    activityType: 'content_reassigned',
+    activityType: 'content_updated',
     entityType: 'content',
     entityId: contentAssetId,
     entityName: currentContent?.title,
     clientId: newClientId || undefined,
     metadata: { 
       old_client_id: oldClientId,
-      new_client_id: newClientId 
+      new_client_id: newClientId,
+      action: 'reassigned_client'
     }
   })
   
