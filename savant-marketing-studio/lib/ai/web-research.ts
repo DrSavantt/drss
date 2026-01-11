@@ -21,12 +21,27 @@ export interface WebResearchResult {
 }
 
 /**
+ * Client context for personalized research
+ * Extracted from client's intake_responses and brand_data
+ */
+export interface ClientContext {
+  name: string;
+  industry?: string;
+  targetAudience?: string;
+  brandVoice?: string;
+  goals?: string;
+  additionalContext?: string;
+}
+
+/**
  * Perform REAL web research using Gemini's grounding feature
  * This actually searches the web and cites sources
+ * Now supports client context for personalized research
  */
 export async function performWebResearch(
   query: string,
-  depth: 'quick' | 'standard' | 'comprehensive' = 'standard'
+  depth: 'quick' | 'standard' | 'comprehensive' = 'standard',
+  clientContext?: ClientContext
 ): Promise<WebResearchResult> {
   const apiKey = process.env.GOOGLE_AI_API_KEY;
   
@@ -36,46 +51,82 @@ export async function performWebResearch(
 
   const genAI = new GoogleGenerativeAI(apiKey);
   
-  // Select model based on depth
-  // Flash for quick research (faster, cheaper)
-  // Pro for standard and comprehensive (better quality, more sources)
-  const modelName = depth === 'quick' ? 'gemini-1.5-flash' : 'gemini-1.5-pro';
+  // Model selection based on depth - using latest Gemini 3 models
+  const getModelForDepth = (d: 'quick' | 'standard' | 'comprehensive'): string => {
+    switch (d) {
+      case 'quick':
+        return 'gemini-3-flash-preview';
+      case 'standard':
+        return 'gemini-2.5-flash';
+      case 'comprehensive':
+        return 'gemini-3-pro-preview';
+      default:
+        return 'gemini-3-flash-preview';
+    }
+  };
+
+  const getMaxTokensForDepth = (d: 'quick' | 'standard' | 'comprehensive'): number => {
+    switch (d) {
+      case 'quick':
+        return 2048;
+      case 'standard':
+        return 4096;
+      case 'comprehensive':
+        return 8192;
+      default:
+        return 2048;
+    }
+  };
+  
+  const modelName = getModelForDepth(depth);
+  const maxTokens = getMaxTokensForDepth(depth);
   
   const model = genAI.getGenerativeModel({ 
     model: modelName,
   });
 
-  // Build research prompt based on depth
-  const researchPrompt = buildResearchPrompt(query, depth);
+  // Build research prompt based on depth (with optional client context)
+  const researchPrompt = buildResearchPrompt(query, depth, clientContext);
 
-  // Set dynamic threshold based on depth
-  // Lower threshold = more search results used = deeper research
-  const dynamicThreshold = 
-    depth === 'comprehensive' ? 0.1 :  // Very low = use lots of search results
-    depth === 'standard' ? 0.3 :       // Medium = balanced
-    0.5;                                // High = only use most relevant results
+  // DEBUG LOGGING
+  console.log('[WebResearch] Starting research with:', {
+    topic: query,
+    depth,
+    model: modelName,
+    hasApiKey: !!process.env.GOOGLE_AI_API_KEY,
+    apiKeyPrefix: process.env.GOOGLE_AI_API_KEY?.substring(0, 10) + '...'
+  });
 
   try {
-    // THIS IS THE KEY: googleSearchRetrieval tool enables real web search
-    const result = await model.generateContent({
-      contents: [{ 
-        role: 'user', 
-        parts: [{ text: researchPrompt }] 
-      }],
-      tools: [{
-        googleSearchRetrieval: {
-          dynamicRetrievalConfig: {
-            dynamicThreshold,
-          }
+    // THIS IS THE KEY: googleSearch tool enables real web search (formerly googleSearchRetrieval)
+    console.log('[WebResearch] About to call Gemini generateContent...');
+    
+    let result;
+    try {
+      result = await model.generateContent({
+        contents: [{ 
+          role: 'user', 
+          parts: [{ text: researchPrompt }] 
+        }],
+        tools: [{
+          // NOTE: API changed from googleSearchRetrieval to googleSearch
+          googleSearch: {}
+        }],
+        generationConfig: {
+          temperature: 0.7,
+          maxOutputTokens: maxTokens,
         }
-      }],
-      generationConfig: {
-        temperature: 0.7,
-        maxOutputTokens: depth === 'comprehensive' ? 8192 : 
-                        depth === 'standard' ? 4096 : 
-                        2048,
-      }
-    });
+      });
+      console.log('[WebResearch] Gemini response received successfully');
+    } catch (geminiError) {
+      console.error('[WebResearch] Gemini API call FAILED:', {
+        error: geminiError,
+        message: geminiError instanceof Error ? geminiError.message : 'Unknown',
+        stack: geminiError instanceof Error ? geminiError.stack : undefined,
+        name: geminiError instanceof Error ? geminiError.name : undefined
+      });
+      throw geminiError; // Re-throw to trigger outer catch
+    }
 
     const response = result.response;
     const text = response.text();
@@ -124,9 +175,13 @@ export async function performWebResearch(
 }
 
 /**
- * Build research prompt based on depth
+ * Build research prompt based on depth, with optional client context for personalization
  */
-function buildResearchPrompt(query: string, depth: 'quick' | 'standard' | 'comprehensive'): string {
+function buildResearchPrompt(
+  query: string, 
+  depth: 'quick' | 'standard' | 'comprehensive',
+  clientContext?: ClientContext
+): string {
   const depthInstructions = {
     quick: `
 Provide a concise overview with:
@@ -162,11 +217,31 @@ Cite all sources. Be extremely thorough. Include counterarguments where relevant
 `
   };
 
+  // Build client context section if available
+  let clientSection = '';
+  if (clientContext) {
+    const contextLines = [
+      `Business Name: ${clientContext.name}`,
+      clientContext.industry ? `Industry: ${clientContext.industry}` : null,
+      clientContext.targetAudience ? `Target Audience: ${clientContext.targetAudience}` : null,
+      clientContext.brandVoice ? `Brand Voice/Tone: ${clientContext.brandVoice}` : null,
+      clientContext.goals ? `Business Goals: ${clientContext.goals}` : null,
+      clientContext.additionalContext ? `Additional Context: ${clientContext.additionalContext}` : null,
+    ].filter(Boolean).join('\n');
+
+    clientSection = `
+## CLIENT CONTEXT - Tailor this research for:
+${contextLines}
+
+IMPORTANT: Frame all findings, recommendations, and strategies specifically for this client's business context, industry, and target audience. Make the research actionable for their specific situation.
+`;
+  }
+
   return `
 # Research Topic: ${query}
 
 ${depthInstructions[depth]}
-
+${clientSection}
 Please search for current, reliable information and provide a well-researched report. 
 Cite your sources with [Source Name](URL) format throughout the response.
 Focus on recent information (last 2 years) when possible.

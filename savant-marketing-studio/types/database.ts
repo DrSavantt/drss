@@ -118,6 +118,7 @@ export type Database = {
         Row: {
           client_id: string | null
           complexity: string | null
+          content_asset_id: string | null
           conversation_id: string | null
           created_at: string | null
           duration_ms: number | null
@@ -138,6 +139,7 @@ export type Database = {
         Insert: {
           client_id?: string | null
           complexity?: string | null
+          content_asset_id?: string | null
           conversation_id?: string | null
           created_at?: string | null
           duration_ms?: number | null
@@ -158,6 +160,7 @@ export type Database = {
         Update: {
           client_id?: string | null
           complexity?: string | null
+          content_asset_id?: string | null
           conversation_id?: string | null
           created_at?: string | null
           duration_ms?: number | null
@@ -181,6 +184,13 @@ export type Database = {
             columns: ["client_id"]
             isOneToOne: false
             referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ai_executions_content_asset_id_fkey"
+            columns: ["content_asset_id"]
+            isOneToOne: false
+            referencedRelation: "content_assets"
             referencedColumns: ["id"]
           },
           {

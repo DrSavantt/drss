@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef, useEffect } from "react"
+import { useState, useRef, useEffect, useCallback } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import {
   Search,
@@ -23,12 +23,20 @@ import {
   ExternalLink,
   Sparkles,
   Globe,
+  History,
+  Trash2,
+  BookOpen,
+  PanelLeftClose,
+  PanelLeft,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { sanitizeHtml } from "@/lib/utils/sanitize-html"
-import { performDeepResearch, generateResearchPlan, type ResearchResult } from "@/app/actions/research"
+import { performDeepResearch, generateResearchPlan, saveResearchToContent, getResearchHistory, deleteResearchFromContent, type ResearchResult } from "@/app/actions/research"
 import { createGoogleDoc } from "@/app/actions/google-docs"
 import { getClientsForDropdown } from "@/app/actions/ai"
+import { reassignContentToClient } from "@/app/actions/content"
+import { formatDistanceToNow } from "date-fns"
+import { toast } from "sonner"
 
 type ResearchPhase = 'idle' | 'planning' | 'plan-ready' | 'researching' | 'complete'
 type ResearchMode = 'quick' | 'standard' | 'comprehensive'
@@ -44,6 +52,30 @@ interface ResearchPlan {
   estimatedSources: string
 }
 
+interface ResearchHistoryItem {
+  id: string
+  title: string
+  content_json: { content?: Array<{ content?: Array<{ text?: string }> }> } | null
+  metadata: {
+    research_topic?: string
+    research_depth?: string
+    model_used?: string
+    cost_usd?: number
+    sources?: Array<{ title: string; url: string; snippet?: string }>
+    search_queries?: string[]
+    grounding_support?: number
+  } | null
+  created_at: string
+  client_id: string | null
+  user_id: string | null
+  clients: { id: string; name: string } | null
+}
+
+interface ClientDropdownItem {
+  id: string
+  name: string
+}
+
 export default function DeepResearchPage() {
   const [phase, setPhase] = useState<ResearchPhase>('idle')
   const [mode, setMode] = useState<ResearchMode>('standard')
@@ -53,9 +85,41 @@ export default function DeepResearchPage() {
   const [progress, setProgress] = useState(0)
   const [result, setResult] = useState<ResearchResult | null>(null)
   
+  // History panel state
+  const [history, setHistory] = useState<ResearchHistoryItem[]>([])
+  const [historyLoading, setHistoryLoading] = useState(true)
+  const [selectedHistoryId, setSelectedHistoryId] = useState<string | null>(null)
+  const [showHistory, setShowHistory] = useState(true)
+  
+  // Save state
+  const [saving, setSaving] = useState(false)
+  const [saved, setSaved] = useState(false)
+  const [clients, setClients] = useState<ClientDropdownItem[]>([])
+  const [selectedClientId, setSelectedClientId] = useState<string>('')
+  const [savedAssetId, setSavedAssetId] = useState<string | null>(null)
+  
   // Track intervals and timeouts for cleanup
   const intervalsRef = useRef<{ progress?: NodeJS.Timeout; update?: NodeJS.Timeout }>({})
   const timeoutRef = useRef<NodeJS.Timeout | null>(null)
+  
+  // Fetch history on mount
+  const refreshHistory = useCallback(async () => {
+    setHistoryLoading(true)
+    try {
+      const data = await getResearchHistory()
+      setHistory(data as ResearchHistoryItem[])
+    } catch (error) {
+      console.error('Failed to fetch history:', error)
+    } finally {
+      setHistoryLoading(false)
+    }
+  }, [])
+  
+  useEffect(() => {
+    refreshHistory()
+    // Fetch clients for dropdown
+    getClientsForDropdown().then(setClients).catch(console.error)
+  }, [refreshHistory])
   
   // Cleanup on unmount
   useEffect(() => {
@@ -133,6 +197,7 @@ export default function DeepResearchPage() {
         topic: query,
         depth: mode,
         useWebSearch: true,
+        clientId: selectedClientId || undefined,
       })
 
       clearInterval(progressInterval)
@@ -141,6 +206,11 @@ export default function DeepResearchPage() {
       
       setProgress(100)
       setLiveUpdates(prev => prev.map(u => ({ ...u, status: 'complete' })))
+      
+      // Capture savedAssetId for later reassignment if needed
+      if (researchResult.savedAssetId) {
+        setSavedAssetId(researchResult.savedAssetId)
+      }
       
       // Store timeout for cleanup
       timeoutRef.current = setTimeout(() => {
@@ -187,66 +257,255 @@ export default function DeepResearchPage() {
     setResult(null)
     setLiveUpdates([])
     setProgress(0)
+    setSaved(false)
+    setSelectedHistoryId(null)
+    setSelectedClientId('')
+    setSavedAssetId(null)
+  }
+  
+  // Save research to content library
+  const handleSaveToLibrary = async () => {
+    if (!result) return
+    
+    setSaving(true)
+    try {
+      await saveResearchToContent({
+        title: `Research: ${query.substring(0, 50)}${query.length > 50 ? '...' : ''}`,
+        content: result.report,
+        sources: result.webSources,
+        searchQueries: result.searchQueries,
+        clientId: selectedClientId || undefined,
+        metadata: {
+          research_topic: query,
+          research_depth: mode,
+          model_used: result.modelUsed,
+          cost_usd: result.cost,
+          grounding_support: result.groundingSupport,
+        }
+      })
+      
+      setSaved(true)
+      toast.success('Research saved to content library')
+      refreshHistory()
+    } catch (error) {
+      console.error('Failed to save:', error)
+      toast.error('Failed to save research')
+    } finally {
+      setSaving(false)
+    }
+  }
+  
+  // Load research from history
+  const handleLoadFromHistory = (item: ResearchHistoryItem) => {
+    setSelectedHistoryId(item.id)
+    
+    // Extract content from content_json
+    const content = item.content_json?.content?.[0]?.content?.[0]?.text || ''
+    
+    setQuery(item.metadata?.research_topic || item.title.replace('Research: ', ''))
+    setMode((item.metadata?.research_depth as ResearchMode) || 'standard')
+    setResult({
+      report: content,
+      modelUsed: item.metadata?.model_used || 'unknown',
+      cost: item.metadata?.cost_usd || 0,
+      inputTokens: 0,
+      outputTokens: 0,
+      frameworksUsed: [],
+      webSources: item.metadata?.sources || [],
+      searchQueries: item.metadata?.search_queries || [],
+      groundingSupport: item.metadata?.grounding_support,
+    })
+    setPhase('complete')
+    setSaved(true) // Already saved since it's from history
+    setSavedAssetId(item.id) // Set asset ID for potential reassignment
+    setSelectedClientId(item.client_id || '') // Set current client association
+  }
+  
+  // Delete research from history
+  const handleDeleteFromHistory = async (id: string, e: React.MouseEvent) => {
+    e.stopPropagation() // Don't trigger load
+    
+    if (!confirm('Delete this research?')) return
+    
+    try {
+      await deleteResearchFromContent(id)
+      toast.success('Research deleted')
+      refreshHistory()
+      
+      if (selectedHistoryId === id) {
+        handleNewResearch()
+      }
+    } catch (error) {
+      console.error('Failed to delete:', error)
+      toast.error('Failed to delete research')
+    }
   }
 
   return (
-    <div className="flex flex-col min-h-[calc(100vh-4rem)] items-center justify-center p-4">
-      <AnimatePresence mode="wait">
-        {phase === 'idle' && (
-          <IdleState
-            key="idle"
-            query={query}
-            setQuery={setQuery}
-            mode={mode}
-            setMode={setMode}
-            onSubmit={handleStartPlanning}
-          />
-        )}
-
-        {phase === 'planning' && (
-          <PlanningState key="planning" />
-        )}
-
-        {phase === 'plan-ready' && plan && (
-          <PlanReadyState
-            key="plan-ready"
-            query={query}
-            plan={plan}
-            mode={mode}
-            onEdit={() => setPhase('idle')}
-            onConfirm={handleStartResearch}
-          />
-        )}
-
-        {phase === 'researching' && (
-          <ResearchingState
-            key="researching"
-            updates={liveUpdates}
-            progress={progress}
-          />
-        )}
-
-        {phase === 'complete' && result && (
-          <CompleteState
-            key="complete"
-            query={query}
-            result={result}
-            onExportGoogleDocs={handleExportGoogleDocs}
-            onNewResearch={handleNewResearch}
-          />
+    <div className="flex h-[calc(100vh-4rem)]">
+      {/* History Sidebar */}
+      <AnimatePresence>
+        {showHistory && (
+          <motion.div
+            initial={{ width: 0, opacity: 0 }}
+            animate={{ width: 320, opacity: 1 }}
+            exit={{ width: 0, opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="border-r border-border flex flex-col bg-card/50 overflow-hidden"
+          >
+            <div className="p-4 border-b border-border flex items-center justify-between shrink-0">
+              <div className="flex items-center gap-2">
+                <History className="w-4 h-4 text-muted-foreground" />
+                <h2 className="font-semibold text-sm">Research History</h2>
+              </div>
+              <button
+                onClick={() => setShowHistory(false)}
+                className="p-1 hover:bg-muted rounded transition-colors"
+              >
+                <PanelLeftClose className="w-4 h-4 text-muted-foreground" />
+              </button>
+            </div>
+            <div className="flex-1 overflow-y-auto">
+              {historyLoading ? (
+                <div className="p-4 flex items-center justify-center">
+                  <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
+                </div>
+              ) : history.length === 0 ? (
+                <div className="p-6 text-center">
+                  <BookOpen className="w-8 h-8 mx-auto text-muted-foreground/50 mb-2" />
+                  <p className="text-sm text-muted-foreground">No saved research yet</p>
+                  <p className="text-xs text-muted-foreground/70 mt-1">
+                    Research will appear here when saved
+                  </p>
+                </div>
+              ) : (
+                <div className="divide-y divide-border">
+                  {history.map((item) => (
+                    <div
+                      key={item.id}
+                      onClick={() => handleLoadFromHistory(item)}
+                      className={cn(
+                        "w-full p-4 text-left hover:bg-accent/50 transition-colors group relative cursor-pointer",
+                        selectedHistoryId === item.id && "bg-accent"
+                      )}
+                      role="button"
+                      tabIndex={0}
+                    >
+                      <p className="font-medium text-sm truncate pr-8">
+                        {item.metadata?.research_topic || item.title.replace('Research: ', '')}
+                      </p>
+                      {item.clients?.name && (
+                        <p className="text-xs text-primary/80 mt-1 truncate">
+                          {item.clients.name}
+                        </p>
+                      )}
+                      <div className="flex items-center gap-2 mt-2 text-xs text-muted-foreground">
+                        <Clock className="w-3 h-3" />
+                        {formatDistanceToNow(new Date(item.created_at), { addSuffix: true })}
+                      </div>
+                      {item.metadata?.sources && item.metadata.sources.length > 0 && (
+                        <div className="flex items-center gap-1 mt-1 text-xs text-muted-foreground">
+                          <Globe className="w-3 h-3" />
+                          {item.metadata.sources.length} sources
+                        </div>
+                      )}
+                      <button
+                        onClick={(e) => handleDeleteFromHistory(item.id, e)}
+                        className="absolute top-4 right-4 p-1 opacity-0 group-hover:opacity-100 hover:bg-destructive/10 hover:text-destructive rounded transition-all"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </motion.div>
         )}
       </AnimatePresence>
+      
+      {/* Toggle button when sidebar is hidden */}
+      {!showHistory && (
+        <button
+          onClick={() => setShowHistory(true)}
+          className="absolute left-4 top-20 p-2 bg-card border border-border rounded-lg shadow-sm hover:bg-accent transition-colors z-10"
+        >
+          <PanelLeft className="w-4 h-4 text-muted-foreground" />
+        </button>
+      )}
+      
+      {/* Main Content */}
+      <div className="flex-1 flex flex-col items-center justify-center p-4 overflow-y-auto">
+        <AnimatePresence mode="wait">
+          {phase === 'idle' && (
+            <IdleState
+              key="idle"
+              query={query}
+              setQuery={setQuery}
+              mode={mode}
+              setMode={setMode}
+              onSubmit={handleStartPlanning}
+              clients={clients}
+              selectedClientId={selectedClientId}
+              setSelectedClientId={setSelectedClientId}
+            />
+          )}
+
+          {phase === 'planning' && (
+            <PlanningState key="planning" />
+          )}
+
+          {phase === 'plan-ready' && plan && (
+            <PlanReadyState
+              key="plan-ready"
+              query={query}
+              plan={plan}
+              mode={mode}
+              onEdit={() => setPhase('idle')}
+              onConfirm={handleStartResearch}
+            />
+          )}
+
+          {phase === 'researching' && (
+            <ResearchingState
+              key="researching"
+              updates={liveUpdates}
+              progress={progress}
+            />
+          )}
+
+          {phase === 'complete' && result && (
+            <CompleteState
+              key="complete"
+              query={query}
+              result={result}
+              onExportGoogleDocs={handleExportGoogleDocs}
+              onNewResearch={handleNewResearch}
+              onSaveToLibrary={handleSaveToLibrary}
+              saving={saving}
+              saved={saved}
+              clients={clients}
+              selectedClientId={selectedClientId}
+              setSelectedClientId={setSelectedClientId}
+              savedAssetId={savedAssetId}
+            />
+          )}
+        </AnimatePresence>
+      </div>
     </div>
   )
 }
 
 // IDLE STATE - Chat Input
-function IdleState({ query, setQuery, mode, setMode, onSubmit }: {
+function IdleState({ query, setQuery, mode, setMode, onSubmit, clients, selectedClientId, setSelectedClientId }: {
   query: string
   setQuery: (q: string) => void
   mode: ResearchMode
   setMode: (m: ResearchMode) => void
   onSubmit: () => void
+  clients: ClientDropdownItem[]
+  selectedClientId: string
+  setSelectedClientId: (id: string) => void
 }) {
   const [showTools, setShowTools] = useState(false)
 
@@ -271,6 +530,25 @@ function IdleState({ query, setQuery, mode, setMode, onSubmit }: {
         </div>
         <h1 className="text-2xl font-semibold mb-2">Deep Research</h1>
         <p className="text-muted-foreground">AI-powered research with live web search</p>
+      </div>
+
+      {/* Client Selector - select before research */}
+      <div className="mb-4">
+        <label className="block text-sm font-medium text-muted-foreground mb-2">
+          Research for client (optional)
+        </label>
+        <select
+          value={selectedClientId}
+          onChange={(e) => setSelectedClientId(e.target.value)}
+          className="w-full p-3 rounded-xl border border-border bg-card text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 transition-colors"
+        >
+          <option value="">General (no client)</option>
+          {clients.map((client) => (
+            <option key={client.id} value={client.id}>
+              {client.name}
+            </option>
+          ))}
+        </select>
       </div>
 
       {/* Chat Input */}
@@ -569,13 +847,33 @@ function ResearchingState({ updates, progress }: {
 }
 
 // COMPLETE STATE
-function CompleteState({ query, result, onExportGoogleDocs, onNewResearch }: {
+function CompleteState({ 
+  query, 
+  result, 
+  onExportGoogleDocs, 
+  onNewResearch,
+  onSaveToLibrary,
+  saving,
+  saved,
+  clients,
+  selectedClientId,
+  setSelectedClientId,
+  savedAssetId,
+}: {
   query: string
   result: ResearchResult
   onExportGoogleDocs: () => void
   onNewResearch: () => void
+  onSaveToLibrary: () => void
+  saving: boolean
+  saved: boolean
+  clients: ClientDropdownItem[]
+  selectedClientId: string
+  setSelectedClientId: (id: string) => void
+  savedAssetId: string | null
 }) {
   const [showFullReport, setShowFullReport] = useState(false)
+  const [reassigning, setReassigning] = useState(false)
 
   return (
     <motion.div
@@ -652,10 +950,79 @@ function CompleteState({ query, result, onExportGoogleDocs, onNewResearch }: {
 
         {/* Actions */}
         <div className="p-6 border-t border-border bg-muted/20">
-          <div className="flex flex-wrap gap-3">
+          <div className="flex flex-wrap items-center gap-3">
+            {/* Client Selector - can change before or after saving */}
+            <select
+              value={selectedClientId}
+              onChange={async (e) => {
+                const newClientId = e.target.value || null
+                const previousClientId = selectedClientId
+                setSelectedClientId(e.target.value)
+                
+                // If research was saved, reassign it (cascades to ai_executions)
+                if (savedAssetId && newClientId !== previousClientId) {
+                  setReassigning(true)
+                  try {
+                    await reassignContentToClient(savedAssetId, newClientId)
+                    toast.success(newClientId 
+                      ? `Research reassigned to ${clients.find(c => c.id === newClientId)?.name || 'client'}`
+                      : 'Research unassigned from client'
+                    )
+                  } catch (error) {
+                    toast.error('Failed to reassign research')
+                    console.error(error)
+                    // Revert selection on error
+                    setSelectedClientId(previousClientId)
+                  } finally {
+                    setReassigning(false)
+                  }
+                }
+              }}
+              disabled={reassigning}
+              className="h-10 px-3 bg-background border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 transition-colors disabled:opacity-50"
+            >
+              <option value="">General (no client)</option>
+              {clients.map(client => (
+                <option key={client.id} value={client.id}>
+                  {client.name}
+                </option>
+              ))}
+            </select>
+            
+            {/* Save to Library Button - no longer requires client */}
+            <button
+              onClick={onSaveToLibrary}
+              disabled={saving || saved}
+              className={cn(
+                "flex items-center gap-2 px-4 py-2.5 rounded-xl font-medium transition-colors",
+                saved
+                  ? "bg-green-500/10 text-green-500 border border-green-500/20"
+                  : "bg-primary text-primary-foreground hover:bg-primary/90"
+              )}
+            >
+              {saved ? (
+                <>
+                  <Check className="w-4 h-4" />
+                  Saved
+                </>
+              ) : saving ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  Saving...
+                </>
+              ) : (
+                <>
+                  <Save className="w-4 h-4" />
+                  Save to Library
+                </>
+              )}
+            </button>
+            
+            <div className="h-6 w-px bg-border mx-1" />
+            
             <button
               onClick={onExportGoogleDocs}
-              className="flex items-center gap-2 px-4 py-2.5 bg-primary text-primary-foreground rounded-xl hover:bg-primary/90 transition-colors font-medium"
+              className="flex items-center gap-2 px-4 py-2.5 border border-border rounded-xl hover:bg-muted transition-colors"
             >
               <FileText className="w-4 h-4" />
               Open in Google Docs

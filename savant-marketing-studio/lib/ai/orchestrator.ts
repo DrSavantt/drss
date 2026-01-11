@@ -68,7 +68,7 @@ export class AIOrchestrator {
         
         // Fallback to Claude Haiku (fast, cheap, reliable)
         try {
-          selection = await this.getModelByName('claude-haiku-4-20250514');
+          selection = await this.getModelByName('claude-3-5-haiku-20241022');
           response = await selection.provider.generateText(task.request, selection.modelName);
           usedFallback = true;
         } catch (fallbackErr) {
@@ -185,25 +185,25 @@ export class AIOrchestrator {
       if (priority === 'cost') {
         // Try Gemini Flash first (free), but Claude Haiku is reliable fallback
         selectedModel = models.find(m => m.model_name === 'gemini-2.0-flash-exp') || 
-                       models.find(m => m.model_name === 'claude-haiku-4-20250514') ||
+                       models.find(m => m.model_name === 'claude-3-5-haiku-20241022') ||
                        models[0];
       } else {
         // Fast but reliable: Claude Haiku
-        selectedModel = models.find(m => m.model_name === 'claude-haiku-4-20250514') ||
+        selectedModel = models.find(m => m.model_name === 'claude-3-5-haiku-20241022') ||
                        models.find(m => m.model_tier === 'fast') || 
                        models[0];
       }
     } else if (complexity === 'medium') {
       if (priority === 'cost') {
         selectedModel = models.find(m => m.model_name === 'gemini-2.5-pro-002') || 
-                       models.find(m => m.model_name === 'claude-sonnet-4-20250514') ||
+                       models.find(m => m.model_name === 'claude-3-5-sonnet-20241022') ||
                        models[0];
       } else {
-        selectedModel = models.find(m => m.model_name === 'claude-sonnet-4-20250514') || models[0];
+        selectedModel = models.find(m => m.model_name === 'claude-3-5-sonnet-20241022') || models[0];
       }
     } else {
       // Complex: Always use best (Claude Opus)
-      selectedModel = models.find(m => m.model_name === 'claude-opus-4-20250514') || models[0];
+      selectedModel = models.find(m => m.model_name === 'claude-3-opus-20240229') || models[0];
     }
 
     const providerName = (selectedModel.ai_providers as unknown as { name: string }).name;

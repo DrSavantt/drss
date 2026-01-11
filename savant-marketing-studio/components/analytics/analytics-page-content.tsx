@@ -579,11 +579,11 @@ function ContentTab({ data, viewMode }: TabContentProps) {
 
 function AITab({ data, viewMode }: TabContentProps) {
   const modelChartData = Object.entries(data.aiByModel || {}).map(([modelId, modelData]) => ({
-    name: modelId.includes('claude-sonnet') ? 'Sonnet 4.5' :
-          modelId.includes('claude-opus') ? 'Opus 4.5' :
-          modelId.includes('claude-haiku') ? 'Haiku 4.5' :
-          modelId.includes('gemini-flash') ? 'Gemini Flash' :
-          modelId.includes('gemini-pro') ? 'Gemini Pro' :
+    name: modelId.includes('sonnet') ? 'Claude 3.5 Sonnet' :
+          modelId.includes('opus') ? 'Claude 3 Opus' :
+          modelId.includes('haiku') ? 'Claude 3.5 Haiku' :
+          modelId.includes('gemini') && modelId.includes('flash') ? 'Gemini Flash' :
+          modelId.includes('gemini') && modelId.includes('pro') ? 'Gemini Pro' :
           modelId,
     value: modelData.count,
     cost: modelData.cost,

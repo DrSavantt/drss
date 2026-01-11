@@ -87,7 +87,7 @@ export async function getDefaultModelId(): Promise<string | null> {
   const { data: model } = await supabase
     .from('ai_models')
     .select('id')
-    .eq('model_name', 'claude-haiku-4-20250514')
+    .eq('model_name', 'claude-3-5-haiku-20241022')
     .single();
   
   return model?.id || null;

@@ -3,20 +3,20 @@
 // Server-side functions (getUserAISpend, etc.) are in app/actions/ai.ts
 export const AI_PRICING = {
   // Anthropic Claude
-  'claude-opus-4-20250514': { 
+  'claude-3-opus-20240229': { 
     input: 0.015,    // $15 per 1M input tokens
     output: 0.075,   // $75 per 1M output tokens
-    label: 'Claude Opus 4.5'
+    label: 'Claude 3 Opus'
   },
-  'claude-sonnet-4-20250514': { 
+  'claude-3-5-sonnet-20241022': { 
     input: 0.003,    // $3 per 1M input tokens
     output: 0.015,   // $15 per 1M output tokens
-    label: 'Claude Sonnet 4.5'
+    label: 'Claude 3.5 Sonnet'
   },
-  'claude-haiku-4-20250514': { 
+  'claude-3-5-haiku-20241022': { 
     input: 0.00025,  // $0.25 per 1M input tokens
     output: 0.00125, // $1.25 per 1M output tokens
-    label: 'Claude Haiku 4.5'
+    label: 'Claude 3.5 Haiku'
   },
   // Google Gemini
   'gemini-2.5-pro-002': { 

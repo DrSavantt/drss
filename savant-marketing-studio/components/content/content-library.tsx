@@ -9,7 +9,8 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Badge } from "@/components/ui/badge"
 import { cn } from "@/lib/utils"
-import { bulkDeleteContent, bulkChangeProject, getAllProjects } from "@/app/actions/content"
+import { bulkDeleteContent, bulkChangeProject, getAllProjects, bulkReassignContentToClient } from "@/app/actions/content"
+import { Users } from "lucide-react"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -56,6 +57,7 @@ export function ContentLibrary() {
   const [selectedItems, setSelectedItems] = useState<string[]>([])
   const [deleting, setDeleting] = useState(false)
   const [moving, setMoving] = useState(false)
+  const [reassigning, setReassigning] = useState(false)
   const [projects, setProjects] = useState<Array<{ id: string; name: string; clientName: string | null }>>([])
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)
   const router = useRouter()
@@ -195,6 +197,43 @@ export function ContentLibrary() {
       toast.error('Failed to move items')
     } finally {
       setMoving(false)
+    }
+  }
+
+  const handleBulkReassign = async (clientId: string | null) => {
+    setReassigning(true)
+    try {
+      const result = await bulkReassignContentToClient(selectedItems, clientId)
+      if (result.error) {
+        toast.error(result.error)
+        return
+      }
+      const clientName = clientId 
+        ? clients.find(c => c.id === clientId)?.name || 'client'
+        : 'no client'
+      toast.success(`Reassigned ${selectedItems.length} item(s) to ${clientName}`)
+      setSelectedItems([])
+      // Refresh to get updated content with new client assignments
+      router.refresh()
+      // Re-fetch content to update UI
+      const contentRes = await fetch('/api/content')
+      const contentData = await contentRes.json()
+      const transformedContent: ContentItem[] = contentData.map((c: any) => ({
+        id: c.id,
+        title: c.title,
+        type: mapContentType(c.asset_type),
+        client: c.client_name || 'Unknown',
+        clientId: c.client_id || '',
+        preview: extractPreview(c),
+        createdAt: new Date(c.created_at),
+        aiGenerated: !!c.metadata?.ai_generated || false,
+      }))
+      setContent(transformedContent)
+    } catch (error) {
+      console.error('Failed to reassign:', error)
+      toast.error('Failed to reassign items')
+    } finally {
+      setReassigning(false)
     }
   }
 
@@ -355,7 +394,7 @@ export function ContentLibrary() {
 
       {/* Bulk Actions */}
       {selectedItems.length > 0 && (
-        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 flex items-center gap-4 rounded-lg border border-border bg-card px-6 py-3 shadow-lg">
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-4 rounded-lg border border-border bg-card px-6 py-3 shadow-lg">
           <span className="text-sm font-medium">{selectedItems.length} selected</span>
           <div className="h-4 w-px bg-border" />
           <Button variant="outline" size="sm" onClick={handleBulkDelete} disabled={deleting}>
@@ -366,7 +405,7 @@ export function ContentLibrary() {
             <DropdownMenuTrigger asChild>
               <Button variant="outline" size="sm" disabled={moving}>
                 <FolderInput className="mr-2 h-4 w-4" />
-                {moving ? 'Moving...' : 'Move to...'}
+                {moving ? 'Moving...' : 'Move to Project...'}
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="start" className="w-64">
@@ -395,6 +434,31 @@ export function ContentLibrary() {
                         {project.clientName}
                       </span>
                     )}
+                  </DropdownMenuItem>
+                ))
+              )}
+            </DropdownMenuContent>
+          </DropdownMenu>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="sm" disabled={reassigning}>
+                <Users className="mr-2 h-4 w-4" />
+                {reassigning ? 'Reassigning...' : 'Change Client...'}
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start" className="w-64">
+              <DropdownMenuLabel>Reassign to client</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              {clients.filter(c => c.id !== 'all').length === 0 ? (
+                <DropdownMenuItem disabled>No clients available</DropdownMenuItem>
+              ) : (
+                clients.filter(c => c.id !== 'all').map((client) => (
+                  <DropdownMenuItem
+                    key={client.id}
+                    onClick={() => handleBulkReassign(client.id)}
+                    disabled={reassigning}
+                  >
+                    <span className="truncate">{client.name}</span>
                   </DropdownMenuItem>
                 ))
               )}

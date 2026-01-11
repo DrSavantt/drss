@@ -581,6 +581,156 @@ export async function bulkChangeProject(contentIds: string[], projectId: string 
   return { success: true, count: contentIds.length }
 }
 
+/**
+ * Reassign content to a different client (or remove client association)
+ * Also updates related ai_executions to maintain accurate AI history per client
+ */
+export async function reassignContentToClient(
+  contentAssetId: string, 
+  newClientId: string | null
+) {
+  const supabase = await createSupabaseClient()
+  
+  if (!supabase) {
+    return { error: 'Database connection not configured' }
+  }
+  
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) {
+    return { error: 'Unauthorized' }
+  }
+  
+  // Get current content to find old client_id for revalidation
+  const { data: currentContent, error: fetchError } = await supabase
+    .from('content_assets')
+    .select('client_id, title')
+    .eq('id', contentAssetId)
+    .single()
+  
+  if (fetchError) {
+    return { error: 'Content not found' }
+  }
+  
+  const oldClientId = currentContent?.client_id
+  
+  // 1. Update content_assets
+  const { error: contentError } = await supabase
+    .from('content_assets')
+    .update({ 
+      client_id: newClientId,
+      project_id: null // Clear project since it belongs to old client
+    })
+    .eq('id', contentAssetId)
+  
+  if (contentError) {
+    console.error('Failed to reassign content:', contentError)
+    return { error: 'Failed to reassign content' }
+  }
+  
+  // 2. Update related ai_executions (cascade the client change)
+  // This ensures AI history follows the content to the new client
+  const { error: executionError } = await supabase
+    .from('ai_executions')
+    .update({ client_id: newClientId })
+    .eq('content_asset_id', contentAssetId)
+  
+  if (executionError) {
+    console.error('Failed to update ai_executions:', executionError)
+    // Don't return error - content was already updated successfully
+  }
+  
+  // Log activity
+  await logActivity({
+    activityType: 'content_reassigned',
+    entityType: 'content',
+    entityId: contentAssetId,
+    entityName: currentContent?.title,
+    clientId: newClientId || undefined,
+    metadata: { 
+      old_client_id: oldClientId,
+      new_client_id: newClientId 
+    }
+  })
+  
+  // Revalidate affected pages
+  revalidatePath('/dashboard/content')
+  revalidatePath('/dashboard/research')
+  if (oldClientId) {
+    revalidatePath(`/dashboard/clients/${oldClientId}`)
+  }
+  if (newClientId) {
+    revalidatePath(`/dashboard/clients/${newClientId}`)
+  }
+  
+  return { success: true }
+}
+
+/**
+ * Bulk reassign multiple content items to a different client
+ */
+export async function bulkReassignContentToClient(
+  contentIds: string[], 
+  newClientId: string | null
+) {
+  const supabase = await createSupabaseClient()
+  
+  if (!supabase) {
+    return { error: 'Database connection not configured' }
+  }
+  
+  if (!contentIds || contentIds.length === 0) {
+    return { error: 'No content IDs provided' }
+  }
+  
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) {
+    return { error: 'Unauthorized' }
+  }
+  
+  // Get old client IDs for revalidation
+  const { data: contents } = await supabase
+    .from('content_assets')
+    .select('client_id')
+    .in('id', contentIds)
+  
+  const oldClientIds = [...new Set(contents?.map(c => c.client_id).filter(Boolean) || [])]
+  
+  // 1. Update content_assets
+  const { error: contentError } = await supabase
+    .from('content_assets')
+    .update({ 
+      client_id: newClientId,
+      project_id: null // Clear project since it belongs to old client
+    })
+    .in('id', contentIds)
+  
+  if (contentError) {
+    return { error: 'Failed to reassign content' }
+  }
+  
+  // 2. Update related ai_executions
+  const { error: executionError } = await supabase
+    .from('ai_executions')
+    .update({ client_id: newClientId })
+    .in('content_asset_id', contentIds)
+  
+  if (executionError) {
+    console.error('Failed to update ai_executions:', executionError)
+  }
+  
+  // Revalidate affected pages
+  revalidatePath('/dashboard/content')
+  revalidatePath('/dashboard/research')
+  for (const clientId of oldClientIds) {
+    revalidatePath(`/dashboard/clients/${clientId}`)
+  }
+  if (newClientId) {
+    revalidatePath(`/dashboard/clients/${newClientId}`)
+  }
+  
+  return { success: true, count: contentIds.length }
+}
+
 export async function getAllProjects() {
   const supabase = await createSupabaseClient()
   

@@ -1,8 +1,8 @@
 'use server';
 
-import { AIOrchestrator, TaskComplexity } from '@/lib/ai/orchestrator';
+import { GoogleGenerativeAI } from '@google/generative-ai';
 import { searchFrameworks } from '@/lib/ai/rag';
-import { performWebResearch, WebSource } from '@/lib/ai/web-research';
+import { performWebResearch, WebSource, ClientContext } from '@/lib/ai/web-research';
 import { createClient } from '@/lib/supabase/server';
 import { revalidatePath } from 'next/cache';
 import { getModelIdFromName, getDefaultModelId } from '@/lib/ai/model-lookup';
@@ -93,19 +93,27 @@ etc.
 
 Be specific and actionable. Focus on what's most important for this topic.`;
 
-  const orchestrator = new AIOrchestrator();
-  const result = await orchestrator.executeTask({
-    type: 'research_planning',
-    complexity: 'simple',
-    request: {
-      messages: [{ role: 'user', content: planPrompt }],
-      maxTokens: 500,
+  // Use Gemini directly for plan generation (no Claude/orchestrator)
+  const apiKey = process.env.GOOGLE_AI_API_KEY;
+  if (!apiKey) {
+    throw new Error('GOOGLE_AI_API_KEY not configured');
+  }
+
+  const genAI = new GoogleGenerativeAI(apiKey);
+  const model = genAI.getGenerativeModel({ model: 'gemini-3-flash-preview' });
+
+  const geminiResult = await model.generateContent({
+    contents: [{ role: 'user', parts: [{ text: planPrompt }] }],
+    generationConfig: {
       temperature: 0.7,
-    },
+      maxOutputTokens: 1024,
+    }
   });
 
+  const planText = geminiResult.response.text();
+
   // Parse the response into plan items
-  const lines = result.content
+  const lines = planText
     .split('\n')
     .map(line => line.trim())
     .filter(line => /^\d+\./.test(line)) // Lines starting with numbers
@@ -172,6 +180,7 @@ export async function performDeepResearch(params: ResearchParams): Promise<Resea
   // PHASE 1: Get client data if specified
   let clientContext: ResearchResult['clientContext'];
   let clientData: { name: string; intake_responses: unknown; brand_data: unknown } | null = null;
+  let clientContextForResearch: ClientContext | undefined;
 
   if (clientId) {
     const { data: client } = await supabase
@@ -182,10 +191,25 @@ export async function performDeepResearch(params: ResearchParams): Promise<Resea
 
     if (client) {
       clientData = client;
+      
+      // Extract context from intake_responses and brand_data for research prompt
+      const intake = (client.intake_responses as Record<string, any>) || {};
+      const brand = (client.brand_data as Record<string, any>) || {};
+      
       clientContext = {
         name: client.name,
         hasIntakeData: !!client.intake_responses,
         hasBrandData: !!client.brand_data,
+      };
+      
+      // Build rich context for research prompt personalization
+      clientContextForResearch = {
+        name: client.name,
+        industry: intake.industry || intake.business_type || brand.industry || undefined,
+        targetAudience: intake.target_audience || intake.ideal_customer || brand.target_audience || undefined,
+        brandVoice: intake.brand_voice || intake.communication_style || brand.voice || undefined,
+        goals: intake.business_goals || intake.objectives || brand.goals || undefined,
+        additionalContext: intake.unique_value_proposition || intake.differentiators || brand.positioning || undefined,
       };
     }
   }
@@ -220,14 +244,27 @@ export async function performDeepResearch(params: ResearchParams): Promise<Resea
 
   if (shouldUseWebSearch) {
     // Use REAL web search via Gemini grounding
+    console.log('[Research] Starting web research with Gemini:', { topic, depth, useWebSearch });
     
     try {
-      const webResult = await performWebResearch(topic, depth);
+      const webResult = await performWebResearch(topic, depth, clientContextForResearch);
       
-      // Enhance web research with client context if available
+      // Enhance web research with client context header if available
       let enhancedContent = webResult.content;
-      if (clientData) {
-        enhancedContent = `# Research for ${clientData.name}\n\n${enhancedContent}`;
+      if (clientData && clientContextForResearch) {
+        const industryLine = clientContextForResearch.industry 
+          ? `**Industry:** ${clientContextForResearch.industry}\n` 
+          : '';
+        const audienceLine = clientContextForResearch.targetAudience 
+          ? `**Target Audience:** ${clientContextForResearch.targetAudience}\n` 
+          : '';
+        
+        enhancedContent = `# Research Report: ${topic}
+## Prepared for: ${clientData.name}
+${industryLine}${audienceLine}
+---
+
+${webResult.content}`;
       }
       
       result = {
@@ -242,102 +279,84 @@ export async function performDeepResearch(params: ResearchParams): Promise<Resea
       groundingSupport = webResult.groundingSupport;
       
       // Set model name based on depth (matches web-research.ts logic)
-      const actualModel = depth === 'quick' ? 'gemini-1.5-flash' : 'gemini-1.5-pro';
+      const actualModel = depth === 'quick' 
+        ? 'gemini-3-flash-preview' 
+        : depth === 'standard'
+          ? 'gemini-2.5-flash'
+          : 'gemini-3-pro-preview';
       modelUsed = `${actualModel} (web-grounded)`;
       
       // Calculate cost based on actual model used
-      // Gemini 1.5 Flash: $0.075/$0.30 per 1M tokens (input/output)
-      // Gemini 1.5 Pro: $1.25/$5.00 per 1M tokens (input/output)
-      const costPer1MInput = depth === 'quick' ? 0.075 : 1.25;
-      const costPer1MOutput = depth === 'quick' ? 0.30 : 5.0;
+      // Gemini 3 Flash Preview: $0.50/$3.00 per 1M tokens (input/output)
+      // Gemini 2.5 Flash: $0.30/$2.50 per 1M tokens (input/output)
+      // Gemini 3 Pro Preview: $2.50/$10.00 per 1M tokens (input/output)
+      const costPer1MInput = depth === 'quick' ? 0.50 : depth === 'standard' ? 0.30 : 2.50;
+      const costPer1MOutput = depth === 'quick' ? 3.00 : depth === 'standard' ? 2.50 : 10.00;
       result.cost = (webResult.inputTokens / 1_000_000 * costPer1MInput) + 
                     (webResult.outputTokens / 1_000_000 * costPer1MOutput);
-    } catch (error) {
-      console.error('Web search failed, falling back to AI-only research:', error);
-      // Fall back to AI-only if web search fails
-      shouldUseWebSearch = false;
+    } catch (webSearchError) {
+      console.error('[Research] Gemini web research failed:', webSearchError);
+      
+      // Return error - do NOT fall back to Claude
+      throw new Error(
+        `Research failed: ${webSearchError instanceof Error ? webSearchError.message : 'Unknown error'}. Please try again.`
+      );
     }
-  }
-  
-  if (!shouldUseWebSearch) {
-    // FALLBACK: Use AI-only research (original implementation)
-    
-    const complexity: TaskComplexity = depth === 'comprehensive' ? 'complex' : depth === 'standard' ? 'medium' : 'simple';
-
-    const systemPrompt = buildResearchSystemPrompt(depth);
-    const userPrompt = buildResearchUserPrompt({
-      topic,
-      clientData,
-      frameworkContext,
-      depth,
-    });
-
-    // Execute AI research via orchestrator
-    const orchestrator = new AIOrchestrator();
-    result = await orchestrator.executeTask({
-      type: 'deep_research',
-      complexity,
-      clientId,
-      request: {
-        messages: [
-          { role: 'user', content: userPrompt }
-        ],
-        maxTokens: depth === 'comprehensive' ? 8192 : depth === 'standard' ? 4096 : 2048,
-        temperature: 0.7,
-        systemPrompt,
-      },
-    });
-    
-    modelUsed = result.modelUsed;
+  } else {
+    // Web search disabled - this should not happen in normal flow
+    throw new Error('Web search is required for deep research. Please enable web search.');
   }
 
   // PHASE 5: Save to content_assets as research_report
+  // Now auto-saves regardless of client (user_id always set)
   let savedAssetId: string | undefined;
 
-  if (clientId) {
-    const { data: savedAsset, error: saveError } = await supabase
-      .from('content_assets')
-      .insert({
-        client_id: clientId,
-        title: `Research: ${topic.substring(0, 50)}${topic.length > 50 ? '...' : ''} - ${new Date().toLocaleDateString()}`,
-        asset_type: 'research_report',
-        content_json: {
-          type: 'doc',
-          content: [
-            {
-              type: 'paragraph',
-              content: [{ type: 'text', text: result.content }]
-            }
-          ]
-        },
-        metadata: {
-          research_topic: topic,
-          research_depth: depth,
-          ai_generated: true,
-          model_used: modelUsed,
-          cost_usd: result.cost,
-          input_tokens: result.inputTokens,
-          output_tokens: result.outputTokens,
-          frameworks_used: frameworksUsed,
-          web_sources: webSources || [],
-          search_queries: searchQueries || [],
-          grounding_support: groundingSupport,
-          used_web_search: shouldUseWebSearch,
-          generated_at: new Date().toISOString(),
-        }
-      })
-      .select('id')
-      .single();
+  const { data: savedAsset, error: saveError } = await supabase
+    .from('content_assets')
+    .insert({
+      client_id: clientId || null,
+      user_id: user.id, // Always set user_id for ownership
+      title: `Research: ${topic.substring(0, 50)}${topic.length > 50 ? '...' : ''} - ${new Date().toLocaleDateString()}`,
+      asset_type: 'research_report',
+      content_json: {
+        type: 'doc',
+        content: [
+          {
+            type: 'paragraph',
+            content: [{ type: 'text', text: result.content }]
+          }
+        ]
+      },
+      metadata: {
+        research_topic: topic,
+        research_depth: depth,
+        ai_generated: true,
+        model_used: modelUsed,
+        cost_usd: result.cost,
+        input_tokens: result.inputTokens,
+        output_tokens: result.outputTokens,
+        frameworks_used: frameworksUsed,
+        web_sources: webSources || [],
+        search_queries: searchQueries || [],
+        grounding_support: groundingSupport,
+        used_web_search: shouldUseWebSearch,
+        generated_at: new Date().toISOString(),
+      }
+    })
+    .select('id')
+    .single();
 
-    if (saveError) {
-      console.error('Failed to auto-save research:', saveError);
-    } else {
-      savedAssetId = savedAsset?.id;
+  if (saveError) {
+    console.error('Failed to auto-save research:', saveError);
+  } else {
+    savedAssetId = savedAsset?.id;
+    if (clientId) {
       revalidatePath(`/dashboard/clients/${clientId}/content`);
     }
   }
 
   // Log to ai_executions for analytics (migrated from ai_generations)
+  // Links to content_asset if one was created, enabling cascade reassignment
   const modelId = await getModelIdFromName(modelUsed) || await getDefaultModelId();
   
   if (modelId) {
@@ -347,6 +366,7 @@ export async function performDeepResearch(params: ResearchParams): Promise<Resea
       model_id: modelId,
       task_type: 'research',
       complexity: depth === 'comprehensive' ? 'complex' : depth === 'standard' ? 'medium' : 'simple',
+      content_asset_id: savedAssetId || null, // Link to created content for cascade reassignment
       input_data: { 
         topic,
         depth,
@@ -382,6 +402,162 @@ export async function performDeepResearch(params: ResearchParams): Promise<Resea
     groundingSupport,
     clientContext,
   };
+}
+
+/**
+ * Save research to content library
+ * This is used by the "Save to Library" button on the research page
+ * Client is now OPTIONAL - research can be saved without a client
+ */
+export async function saveResearchToContent(data: {
+  title: string;
+  content: string;
+  sources?: Array<{ title: string; url: string; snippet?: string }>;
+  searchQueries?: string[];
+  clientId?: string;
+  metadata?: Record<string, unknown>;
+}) {
+  const supabase = await createClient();
+  if (!supabase) throw new Error('Supabase not configured');
+
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error('Not authenticated');
+
+  // Client is optional - can save general research without a client
+  const clientId = data.clientId || null;
+
+  const { data: asset, error } = await supabase
+    .from('content_assets')
+    .insert({
+      client_id: clientId,
+      user_id: user.id, // Always set user_id for ownership
+      title: data.title,
+      asset_type: 'research_report',
+      content_json: {
+        type: 'doc',
+        content: [
+          {
+            type: 'paragraph',
+            content: [{ type: 'text', text: data.content }]
+          }
+        ]
+      },
+      metadata: {
+        ...data.metadata,
+        sources: data.sources,
+        search_queries: data.searchQueries,
+        saved_at: new Date().toISOString(),
+        saved_manually: true,
+        saved_by_user_id: user.id,
+      }
+    })
+    .select()
+    .single();
+
+  if (error) throw error;
+
+  revalidatePath('/dashboard/research');
+  revalidatePath('/dashboard/content');
+  if (clientId) {
+    revalidatePath(`/dashboard/clients/${clientId}/content`);
+  }
+  return asset;
+}
+
+/**
+ * Get research history from content_assets
+ * Returns saved research reports for display in the history panel
+ * Now includes BOTH client-specific research AND general research (no client)
+ */
+export async function getResearchHistory(limit: number = 20) {
+  const supabase = await createClient();
+  if (!supabase) return [];
+
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return [];
+
+  // Get user's client IDs
+  const { data: userClients } = await supabase
+    .from('clients')
+    .select('id')
+    .eq('user_id', user.id);
+
+  const clientIds = userClients?.map(c => c.id) || [];
+
+  // Query for research belonging to user's clients OR directly to user (no client)
+  // Using OR filter to get both client-specific and general research
+  let query = supabase
+    .from('content_assets')
+    .select(`
+      id,
+      title,
+      content_json,
+      metadata,
+      created_at,
+      client_id,
+      user_id,
+      clients(id, name)
+    `)
+    .eq('asset_type', 'research_report')
+    .order('created_at', { ascending: false })
+    .limit(limit);
+
+  // Build OR condition: user's research (user_id) OR client research (client_id in user's clients)
+  if (clientIds.length > 0) {
+    query = query.or(`user_id.eq.${user.id},client_id.in.(${clientIds.join(',')})`);
+  } else {
+    // User has no clients - only show their direct research
+    query = query.eq('user_id', user.id);
+  }
+
+  const { data, error } = await query;
+
+  if (error) {
+    console.error('Failed to fetch research history:', error);
+    return [];
+  }
+
+  return data || [];
+}
+
+/**
+ * Delete research from content library
+ * Verifies ownership through user_id OR client ownership
+ */
+export async function deleteResearchFromContent(id: string) {
+  const supabase = await createClient();
+  if (!supabase) throw new Error('Supabase not configured');
+
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error('Not authenticated');
+
+  // Get user's client IDs for ownership verification
+  const { data: userClients } = await supabase
+    .from('clients')
+    .select('id')
+    .eq('user_id', user.id);
+
+  const clientIds = userClients?.map(c => c.id) || [];
+
+  // Delete if user owns it directly (user_id) OR through client ownership
+  // Build the filter: user_id matches OR client_id is in user's clients
+  let query = supabase
+    .from('content_assets')
+    .delete()
+    .eq('id', id)
+    .eq('asset_type', 'research_report');
+
+  if (clientIds.length > 0) {
+    query = query.or(`user_id.eq.${user.id},client_id.in.(${clientIds.join(',')})`);
+  } else {
+    query = query.eq('user_id', user.id);
+  }
+
+  const { error } = await query;
+
+  if (error) throw error;
+
+  revalidatePath('/dashboard/research');
 }
 
 /**
@@ -481,93 +657,3 @@ export async function getRecentResearch(limit: number = 10) {
     };
   }) || [];
 }
-
-// Helper functions for building prompts
-
-function buildResearchSystemPrompt(depth: 'quick' | 'standard' | 'comprehensive'): string {
-  const basePrompt = `You are an expert marketing research analyst. Your role is to provide comprehensive, actionable research insights that can be immediately applied to marketing campaigns.
-
-Your research should:
-1. Be well-structured with clear sections and headers
-2. Include specific, actionable recommendations
-3. Reference industry best practices and proven strategies
-4. Consider the target audience and market context
-5. Provide examples where relevant`;
-
-  if (depth === 'comprehensive') {
-    return `${basePrompt}
-
-For comprehensive research, also include:
-- Competitive analysis insights
-- Market trend analysis
-- Multiple strategic approaches
-- Detailed implementation recommendations
-- Risk considerations and mitigation strategies
-- Success metrics and KPIs to track`;
-  }
-
-  if (depth === 'quick') {
-    return `${basePrompt}
-
-For quick research, focus on:
-- Key insights only
-- Top 3-5 actionable recommendations
-- Brief, scannable format`;
-  }
-
-  return basePrompt;
-}
-
-function buildResearchUserPrompt(params: {
-  topic: string;
-  clientData: { name: string; intake_responses: unknown; brand_data: unknown } | null;
-  frameworkContext: string;
-  depth: 'quick' | 'standard' | 'comprehensive';
-}): string {
-  const { topic, clientData, frameworkContext, depth } = params;
-
-  let prompt = `Research Topic: ${topic}\n\n`;
-
-  if (clientData) {
-    prompt += `=== CLIENT CONTEXT ===\n`;
-    prompt += `Client: ${clientData.name}\n\n`;
-
-    if (clientData.brand_data) {
-      prompt += `Brand Information:\n${JSON.stringify(clientData.brand_data, null, 2)}\n\n`;
-    }
-
-    if (clientData.intake_responses) {
-      prompt += `Client Background:\n${JSON.stringify(clientData.intake_responses, null, 2)}\n\n`;
-    }
-  }
-
-  if (frameworkContext) {
-    prompt += `=== RELEVANT MARKETING FRAMEWORKS ===\n`;
-    prompt += `Use these proven frameworks to inform your research:\n\n`;
-    prompt += frameworkContext;
-    prompt += `\n\n`;
-  }
-
-  prompt += `=== RESEARCH REQUEST ===\n`;
-  prompt += `Please provide ${depth === 'comprehensive' ? 'a comprehensive' : depth === 'quick' ? 'a quick' : 'an in-depth'} research report on the topic above.\n\n`;
-
-  prompt += `Structure your response with clear markdown headings:\n`;
-  prompt += `- ## Executive Summary\n`;
-  prompt += `- ## Key Findings\n`;
-  prompt += `- ## Strategic Recommendations\n`;
-  
-  if (depth !== 'quick') {
-    prompt += `- ## Implementation Steps\n`;
-    prompt += `- ## Metrics to Track\n`;
-  }
-  
-  if (depth === 'comprehensive') {
-    prompt += `- ## Competitive Considerations\n`;
-    prompt += `- ## Risks and Mitigations\n`;
-  }
-
-  prompt += `\nMake your research actionable and specific to ${clientData ? `${clientData.name}'s` : 'the target'} needs.`;
-
-  return prompt;
-}
-
