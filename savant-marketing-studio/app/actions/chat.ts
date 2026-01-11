@@ -644,11 +644,16 @@ export async function getArchivedConversations(): Promise<Array<{
           .select('*', { count: 'exact', head: true })
           .eq('conversation_id', conv.id);
 
+        // Supabase foreign key joins return single object, but TS may infer array
+        const clientData = Array.isArray(conv.clients) 
+          ? conv.clients[0] 
+          : conv.clients;
+        
         return {
           id: conv.id,
           title: conv.title,
           client_id: conv.client_id,
-          clients: conv.clients as { id: string; name: string } | null,
+          clients: clientData as { id: string; name: string } | null,
           updated_at: conv.updated_at || new Date().toISOString(),
           message_count: count || 0,
         };
