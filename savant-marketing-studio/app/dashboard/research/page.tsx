@@ -68,7 +68,7 @@ interface ResearchHistoryItem {
   created_at: string
   client_id: string | null
   user_id: string | null
-  clients: { id: string; name: string } | null
+  clients: { id: string; name: string }[] | null
 }
 
 interface ClientDropdownItem {
@@ -394,9 +394,9 @@ export default function DeepResearchPage() {
                       <p className="font-medium text-sm truncate pr-8">
                         {item.metadata?.research_topic || item.title.replace('Research: ', '')}
                       </p>
-                      {item.clients?.name && (
+                      {item.clients?.[0]?.name && (
                         <p className="text-xs text-primary/80 mt-1 truncate">
-                          {item.clients.name}
+                          {item.clients[0].name}
                         </p>
                       )}
                       <div className="flex items-center gap-2 mt-2 text-xs text-muted-foreground">
