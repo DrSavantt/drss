@@ -75,9 +75,9 @@ export function ClientContentTab({
             <FileText className="h-12 w-12 text-muted-foreground/50 mb-4" />
             <h3 className="text-base font-medium mb-2">No content yet</h3>
             <p className="text-sm text-muted-foreground mb-6">
-              Create content assets for {clientName} or generate with AI Studio
+              Create content assets for {clientName} or generate with AI Chat
             </p>
-            <Link href="/dashboard/ai/generate">
+            <Link href="/dashboard/ai/chat">
               <Button size="sm">
                 <Sparkles className="mr-2 h-4 w-4" />
                 Generate Content

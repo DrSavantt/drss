@@ -2,8 +2,10 @@
 
 import type React from "react"
 import { useState, useEffect } from "react"
+import { usePathname } from "next/navigation"
 import { TopNav } from "./top-nav"
 import { CommandPalette } from "@/components/command-palette"
+import { cn } from "@/lib/utils"
 
 interface User {
   id: string
@@ -19,8 +21,13 @@ interface AppShellProps {
   children: React.ReactNode
 }
 
+// Routes that need full-bleed layout (no padding, fixed height)
+const fullBleedRoutes = ["/dashboard/ai/chat"]
+
 export function AppShell({ user, children }: AppShellProps) {
   const [commandOpen, setCommandOpen] = useState(false)
+  const pathname = usePathname()
+  const isFullBleed = fullBleedRoutes.includes(pathname)
 
   // Global keyboard shortcut for command palette
   useEffect(() => {
@@ -36,14 +43,25 @@ export function AppShell({ user, children }: AppShellProps) {
   }, [])
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className={cn(
+      "bg-background",
+      isFullBleed ? "h-screen overflow-hidden" : "min-h-screen"
+    )}>
       <TopNav user={user} onSearchClick={() => setCommandOpen(true)} />
       
-      {/* Main Content Area - Centered with max width */}
-      <main className="min-h-[calc(100vh-4rem)]">
-        <div className="max-w-7xl mx-auto p-6">
-          {children}
-        </div>
+      {/* Main Content Area */}
+      <main className={cn(
+        isFullBleed 
+          ? "h-[calc(100vh-4rem)] overflow-hidden" 
+          : "min-h-[calc(100vh-4rem)]"
+      )}>
+        {isFullBleed ? (
+          children
+        ) : (
+          <div className="max-w-7xl mx-auto p-6">
+            {children}
+          </div>
+        )}
       </main>
 
       {/* Command Palette */}

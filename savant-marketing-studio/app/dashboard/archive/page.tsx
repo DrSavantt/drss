@@ -3,15 +3,17 @@ import { getArchivedProjects } from '@/app/actions/projects'
 import { getArchivedContent } from '@/app/actions/content'
 import { getArchivedFrameworks } from '@/app/actions/frameworks'
 import { getArchivedJournalEntries } from '@/app/actions/journal'
+import { getArchivedConversations } from '@/app/actions/chat'
 import { ArchiveList } from '@/components/archive/archive-list'
 
 export default async function ArchivePage() {
-  const [clients, projects, content, frameworks, journalEntries] = await Promise.all([
+  const [clients, projects, content, frameworks, journalEntries, aiChats] = await Promise.all([
     getArchivedClients(),
     getArchivedProjects(),
     getArchivedContent(),
     getArchivedFrameworks(),
     getArchivedJournalEntries(),
+    getArchivedConversations(),
   ])
 
   return (
@@ -29,6 +31,7 @@ export default async function ArchivePage() {
         content={content}
         frameworks={frameworks}
         journalEntries={journalEntries}
+        aiChats={aiChats}
       />
     </div>
   )

@@ -58,19 +58,78 @@ export type Database = {
           },
         ]
       }
+      ai_conversations: {
+        Row: {
+          client_id: string | null
+          created_at: string | null
+          framework_ids: string[] | null
+          id: string
+          quality_rating: number | null
+          status: string
+          system_prompt: string | null
+          title: string
+          total_cost_usd: number | null
+          total_input_tokens: number | null
+          total_output_tokens: number | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          client_id?: string | null
+          created_at?: string | null
+          framework_ids?: string[] | null
+          id?: string
+          quality_rating?: number | null
+          status?: string
+          system_prompt?: string | null
+          title?: string
+          total_cost_usd?: number | null
+          total_input_tokens?: number | null
+          total_output_tokens?: number | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          client_id?: string | null
+          created_at?: string | null
+          framework_ids?: string[] | null
+          id?: string
+          quality_rating?: number | null
+          status?: string
+          system_prompt?: string | null
+          title?: string
+          total_cost_usd?: number | null
+          total_input_tokens?: number | null
+          total_output_tokens?: number | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_conversations_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       ai_executions: {
         Row: {
           client_id: string | null
           complexity: string | null
+          conversation_id: string | null
           created_at: string | null
           duration_ms: number | null
           error_message: string | null
           id: string
           input_data: Json
           input_tokens: number | null
+          message_role: string | null
           model_id: string
           output_data: Json | null
           output_tokens: number | null
+          project_id: string | null
           status: string
           task_type: string
           total_cost_usd: number | null
@@ -79,15 +138,18 @@ export type Database = {
         Insert: {
           client_id?: string | null
           complexity?: string | null
+          conversation_id?: string | null
           created_at?: string | null
           duration_ms?: number | null
           error_message?: string | null
           id?: string
           input_data: Json
           input_tokens?: number | null
+          message_role?: string | null
           model_id: string
           output_data?: Json | null
           output_tokens?: number | null
+          project_id?: string | null
           status: string
           task_type: string
           total_cost_usd?: number | null
@@ -96,15 +158,18 @@ export type Database = {
         Update: {
           client_id?: string | null
           complexity?: string | null
+          conversation_id?: string | null
           created_at?: string | null
           duration_ms?: number | null
           error_message?: string | null
           id?: string
           input_data?: Json
           input_tokens?: number | null
+          message_role?: string | null
           model_id?: string
           output_data?: Json | null
           output_tokens?: number | null
+          project_id?: string | null
           status?: string
           task_type?: string
           total_cost_usd?: number | null
@@ -119,63 +184,24 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "ai_executions_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "ai_conversations"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "ai_executions_model_id_fkey"
             columns: ["model_id"]
             isOneToOne: false
             referencedRelation: "ai_models"
             referencedColumns: ["id"]
           },
-        ]
-      }
-      ai_generations: {
-        Row: {
-          client_id: string | null
-          context_used: Json | null
-          cost_estimate: number | null
-          created_at: string | null
-          generation_type: string
-          id: string
-          model_used: string
-          output_data: Json | null
-          prompt: string
-          tokens_used: number | null
-          user_id: string
-          was_accepted: boolean | null
-        }
-        Insert: {
-          client_id?: string | null
-          context_used?: Json | null
-          cost_estimate?: number | null
-          created_at?: string | null
-          generation_type: string
-          id?: string
-          model_used: string
-          output_data?: Json | null
-          prompt: string
-          tokens_used?: number | null
-          user_id: string
-          was_accepted?: boolean | null
-        }
-        Update: {
-          client_id?: string | null
-          context_used?: Json | null
-          cost_estimate?: number | null
-          created_at?: string | null
-          generation_type?: string
-          id?: string
-          model_used?: string
-          output_data?: Json | null
-          prompt?: string
-          tokens_used?: number | null
-          user_id?: string
-          was_accepted?: boolean | null
-        }
-        Relationships: [
           {
-            foreignKeyName: "ai_generations_client_id_fkey"
-            columns: ["client_id"]
+            foreignKeyName: "ai_executions_project_id_fkey"
+            columns: ["project_id"]
             isOneToOne: false
-            referencedRelation: "clients"
+            referencedRelation: "projects"
             referencedColumns: ["id"]
           },
         ]
@@ -533,80 +559,6 @@ export type Database = {
           },
         ]
       }
-      framework_embeddings: {
-        Row: {
-          chunk_index: number
-          content: string
-          created_at: string | null
-          embedding: string | null
-          framework_id: string
-          id: number
-        }
-        Insert: {
-          chunk_index: number
-          content: string
-          created_at?: string | null
-          embedding?: string | null
-          framework_id: string
-          id?: number
-        }
-        Update: {
-          chunk_index?: number
-          content?: string
-          created_at?: string | null
-          embedding?: string | null
-          framework_id?: string
-          id?: number
-        }
-        Relationships: [
-          {
-            foreignKeyName: "framework_embeddings_framework_id_fkey"
-            columns: ["framework_id"]
-            isOneToOne: false
-            referencedRelation: "frameworks"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      frameworks: {
-        Row: {
-          category: string | null
-          content: string
-          content_json: Json | null
-          created_at: string | null
-          description: string | null
-          id: string
-          is_active: boolean | null
-          title: string
-          updated_at: string | null
-          user_id: string
-        }
-        Insert: {
-          category?: string | null
-          content: string
-          content_json?: Json | null
-          created_at?: string | null
-          description?: string | null
-          id?: string
-          is_active?: boolean | null
-          title: string
-          updated_at?: string | null
-          user_id: string
-        }
-        Update: {
-          category?: string | null
-          content?: string
-          content_json?: Json | null
-          created_at?: string | null
-          description?: string | null
-          id?: string
-          is_active?: boolean | null
-          title?: string
-          updated_at?: string | null
-          user_id?: string
-        }
-        Relationships: []
-      }
       journal_chats: {
         Row: {
           created_at: string | null
@@ -758,10 +710,12 @@ export type Database = {
           category: string | null
           content: string
           created_at: string | null
+          deleted_at: string | null
           description: string | null
           id: string
           is_active: boolean | null
           name: string
+          type: string
           updated_at: string | null
           user_id: string
         }
@@ -769,10 +723,12 @@ export type Database = {
           category?: string | null
           content: string
           created_at?: string | null
+          deleted_at?: string | null
           description?: string | null
           id?: string
           is_active?: boolean | null
           name: string
+          type?: string
           updated_at?: string | null
           user_id: string
         }
@@ -780,10 +736,12 @@ export type Database = {
           category?: string | null
           content?: string
           created_at?: string | null
+          deleted_at?: string | null
           description?: string | null
           id?: string
           is_active?: boolean | null
           name?: string
+          type?: string
           updated_at?: string | null
           user_id?: string
         }
@@ -1080,6 +1038,10 @@ export type Database = {
           }
       remove_client_from_journal_mentions: {
         Args: { p_client_id: string }
+        Returns: undefined
+      }
+      update_conversation_totals: {
+        Args: { conv_id: string }
         Returns: undefined
       }
     }

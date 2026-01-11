@@ -14,7 +14,8 @@ import {
   BookOpen, 
   PenLine,
   Building2,
-  Archive
+  Archive,
+  MessageSquare
 } from 'lucide-react'
 import { formatDistanceToNow } from 'date-fns'
 import {
@@ -34,6 +35,7 @@ import { restoreProject, permanentlyDeleteProject } from '@/app/actions/projects
 import { restoreContentAsset, permanentlyDeleteContentAsset } from '@/app/actions/content'
 import { restoreFramework, permanentlyDeleteFramework } from '@/app/actions/frameworks'
 import { restoreJournalEntry, permanentlyDeleteJournalEntry } from '@/app/actions/journal'
+import { restoreConversation, permanentlyDeleteConversation } from '@/app/actions/chat'
 
 interface ArchivedClient {
   id: string
@@ -73,15 +75,25 @@ interface ArchivedJournalEntry {
   deleted_at: string
 }
 
+interface ArchivedAIChat {
+  id: string
+  title: string
+  client_id: string | null
+  clients: { id: string; name: string } | null
+  updated_at: string
+  message_count: number
+}
+
 interface ArchiveListProps {
   clients: ArchivedClient[]
   projects: ArchivedProject[]
   content: ArchivedContent[]
   frameworks: ArchivedFramework[]
   journalEntries: ArchivedJournalEntry[]
+  aiChats: ArchivedAIChat[]
 }
 
-type EntityType = 'client' | 'project' | 'content' | 'framework' | 'journal'
+type EntityType = 'client' | 'project' | 'content' | 'framework' | 'journal' | 'ai-chat'
 
 interface DeleteConfirmState {
   id: string
@@ -94,13 +106,14 @@ export function ArchiveList({
   projects, 
   content, 
   frameworks, 
-  journalEntries 
+  journalEntries,
+  aiChats 
 }: ArchiveListProps) {
   const router = useRouter()
   const [loading, setLoading] = useState<string | null>(null)
   const [deleteConfirm, setDeleteConfirm] = useState<DeleteConfirmState | null>(null)
 
-  const totalCount = clients.length + projects.length + content.length + frameworks.length + journalEntries.length
+  const totalCount = clients.length + projects.length + content.length + frameworks.length + journalEntries.length + aiChats.length
 
   const handleRestore = async (id: string, type: EntityType) => {
     setLoading(id)
@@ -121,6 +134,9 @@ export function ArchiveList({
           break
         case 'journal':
           result = await restoreJournalEntry(id)
+          break
+        case 'ai-chat':
+          result = await restoreConversation(id)
           break
       }
       
@@ -158,6 +174,9 @@ export function ArchiveList({
         case 'journal':
           result = await permanentlyDeleteJournalEntry(deleteConfirm.id)
           break
+        case 'ai-chat':
+          result = await permanentlyDeleteConversation(deleteConfirm.id)
+          break
       }
       
       if (result && 'error' in result) {
@@ -190,7 +209,7 @@ export function ArchiveList({
   return (
     <>
       <Tabs defaultValue="clients" className="w-full">
-        <TabsList className="w-full grid grid-cols-5 h-auto">
+        <TabsList className="w-full grid grid-cols-6 h-auto">
           <TabsTrigger value="clients" className="flex items-center gap-2 py-2">
             <Users className="h-4 w-4" />
             <span className="hidden sm:inline">Clients</span>
@@ -215,6 +234,11 @@ export function ArchiveList({
             <PenLine className="h-4 w-4" />
             <span className="hidden sm:inline">Journal</span>
             <span className="text-xs text-muted-foreground">({journalEntries.length})</span>
+          </TabsTrigger>
+          <TabsTrigger value="ai-chats" className="flex items-center gap-2 py-2">
+            <MessageSquare className="h-4 w-4" />
+            <span className="hidden sm:inline">AI Chats</span>
+            <span className="text-xs text-muted-foreground">({aiChats.length})</span>
           </TabsTrigger>
         </TabsList>
 
@@ -295,6 +319,15 @@ export function ArchiveList({
             onRestore={handleRestore}
             onDelete={setDeleteConfirm}
             getDisplayName={() => 'Journal Entry'}
+          />
+        </TabsContent>
+
+        <TabsContent value="ai-chats" className="mt-4">
+          <AIChatsEntityList
+            items={aiChats}
+            loading={loading}
+            onRestore={handleRestore}
+            onDelete={setDeleteConfirm}
           />
         </TabsContent>
       </Tabs>
@@ -399,6 +432,79 @@ function EntityList<T extends { id: string; deleted_at: string }>({
                   variant="destructive"
                   size="sm"
                   onClick={() => onDelete({ id: item.id, name: displayName, type })}
+                  disabled={loading === item.id}
+                >
+                  <Trash2 className="mr-2 h-4 w-4" />
+                  Delete Forever
+                </Button>
+              </div>
+            </CardHeader>
+          </Card>
+        )
+      })}
+    </div>
+  )
+}
+
+// Special component for AI Chats since they use updated_at instead of deleted_at
+interface AIChatsEntityListProps {
+  items: ArchivedAIChat[]
+  loading: string | null
+  onRestore: (id: string, type: EntityType) => void
+  onDelete: (state: DeleteConfirmState) => void
+}
+
+function AIChatsEntityList({
+  items,
+  loading,
+  onRestore,
+  onDelete,
+}: AIChatsEntityListProps) {
+  if (items.length === 0) {
+    return <EmptyState type="AI chats" />
+  }
+
+  return (
+    <div className="space-y-3">
+      {items.map((item) => {
+        const title = item.title || 'Untitled Chat'
+        const metadata: string[] = []
+        if (item.clients?.name) metadata.push(`Client: ${item.clients.name}`)
+        if (item.message_count > 0) metadata.push(`${item.message_count} messages`)
+        
+        return (
+          <Card key={item.id}>
+            <CardHeader className="flex flex-row items-center justify-between py-4">
+              <div className="flex items-center gap-3 min-w-0 flex-1">
+                <div className="p-2 bg-muted rounded-lg flex-shrink-0">
+                  <MessageSquare className="h-5 w-5 text-muted-foreground" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <CardTitle className="text-base truncate">{title}</CardTitle>
+                  <p className="text-sm text-muted-foreground">
+                    Archived {formatDistanceToNow(new Date(item.updated_at), { addSuffix: true })}
+                  </p>
+                  {metadata.length > 0 && (
+                    <p className="text-xs text-muted-foreground truncate">
+                      {metadata.join(' • ')}
+                    </p>
+                  )}
+                </div>
+              </div>
+              <div className="flex gap-2 flex-shrink-0 ml-4">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => onRestore(item.id, 'ai-chat')}
+                  disabled={loading === item.id}
+                >
+                  <RotateCcw className="mr-2 h-4 w-4" />
+                  {loading === item.id ? 'Restoring...' : 'Restore'}
+                </Button>
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  onClick={() => onDelete({ id: item.id, name: title, type: 'ai-chat' })}
                   disabled={loading === item.id}
                 >
                   <Trash2 className="mr-2 h-4 w-4" />

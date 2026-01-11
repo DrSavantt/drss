@@ -57,6 +57,8 @@ interface StatsData {
   questionnairesCompleted: number
   totalAICost: number
   avgCostPerGeneration: number
+  aiChats: number
+  activityByType: Record<string, number>
 }
 
 interface AnalyticsData {
@@ -844,8 +846,8 @@ function ActivityTab({ data, viewMode }: TabContentProps) {
           color="blue"
         />
         <StatCard
-          title="Journal Chats"
-          value={0}
+          title="AI Chats"
+          value={data.stats.aiChats || 0}
           icon={<MessageSquare className="w-5 h-5" />}
           color="green"
         />
@@ -866,23 +868,11 @@ function ActivityTab({ data, viewMode }: TabContentProps) {
             color="#8b5cf6"
             valueLabel="Actions"
           />
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={springTransitions.springMedium}
-            className="bg-[var(--glass-bg)] border border-[var(--glass-border)] rounded-xl p-4 md:p-5 backdrop-blur-xl"
-          >
-            <div className="flex items-center gap-2.5 mb-4">
-              <BarChart3 className="w-5 h-5 text-foreground" />
-              <h3 className="text-base font-semibold text-foreground">Activity by Type</h3>
-            </div>
-            <div className="h-[180px] flex items-center justify-center text-silver text-sm">
-              <div className="text-center">
-                <BarChart3 className="w-8 h-8 mx-auto mb-2 opacity-30" />
-                <p>Type breakdown coming soon</p>
-              </div>
-            </div>
-          </motion.div>
+          <BarChartCard
+            title="Activity by Type"
+            icon={<BarChart3 className="w-5 h-5" />}
+            data={data.stats.activityByType || {}}
+          />
         </div>
       )}
     </div>

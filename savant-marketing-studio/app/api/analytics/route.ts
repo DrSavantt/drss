@@ -351,6 +351,40 @@ export async function GET(request: Request) {
   
   // 15. Questionnaires Completed - same as onboardingCompleted
   const questionnairesCompleted = onboardingCompleted || 0
+
+  // 16. AI Chats (active AI conversations)
+  let aiChatsCount = 0
+  try {
+    const { count } = await supabase
+      .from('ai_conversations')
+      .select('*', { count: 'exact', head: true })
+      .eq('user_id', user.id)
+      .eq('status', 'active')
+    aiChatsCount = count || 0
+  } catch {
+    // ai_conversations query failed, use default
+  }
+
+  // 17. Activity by Type breakdown
+  let activityByType: Record<string, number> = {}
+  if (!isFilteringByClient) {
+    try {
+      const { data: activityTypes } = await supabase
+        .from('activity_log')
+        .select('activity_type')
+        .eq('user_id', user.id)
+        .gte('created_at', startDate.toISOString())
+      
+      if (activityTypes) {
+        activityTypes.forEach(item => {
+          const type = item.activity_type || 'other'
+          activityByType[type] = (activityByType[type] || 0) + 1
+        })
+      }
+    } catch {
+      // activity_log query failed, use empty object
+    }
+  }
   
   // ============================================
   // TIME SERIES DATA
@@ -446,6 +480,10 @@ export async function GET(request: Request) {
       avgCostPerGeneration: aiGenerations > 0 
         ? Math.round((totalAICost / aiGenerations) * 10000) / 10000 
         : 0,
+      
+      // Activity metrics
+      aiChats: aiChatsCount,
+      activityByType,
     },
     // Time series charts
     clientGrowth: clientTrend,

@@ -246,6 +246,38 @@ export default async function AnalyticsPage() {
     // Journal queries failed, use defaults
   }
 
+  // Get AI conversations count (for "Journal Chats" metric - AI chat sessions)
+  let aiChatsCount = 0
+  try {
+    const { count } = await supabase
+      .from('ai_conversations')
+      .select('*', { count: 'exact', head: true })
+      .eq('user_id', user.id)
+      .eq('status', 'active')
+    aiChatsCount = count || 0
+  } catch (error) {
+    // ai_conversations query failed, use default
+  }
+
+  // Get activity breakdown by type
+  let activityByType: Record<string, number> = {}
+  try {
+    const { data: activityTypes } = await supabase
+      .from('activity_log')
+      .select('activity_type')
+      .eq('user_id', user.id)
+      .gte('created_at', startDate.toISOString())
+    
+    if (activityTypes) {
+      activityTypes.forEach(item => {
+        const type = item.activity_type || 'other'
+        activityByType[type] = (activityByType[type] || 0) + 1
+      })
+    }
+  } catch (error) {
+    // activity_log query failed, use empty object
+  }
+
   // Process time series data
   const clientTrend = processTimeSeries(clientsData || [], days, true)
   const projectsTrend = processTimeSeries(projectsData || [], days, false)
@@ -282,6 +314,8 @@ export default async function AnalyticsPage() {
       avgCostPerGeneration: aiGenerations > 0 
         ? Math.round((totalAICost / aiGenerations) * 10000) / 10000 
         : 0,
+      aiChats: aiChatsCount,
+      activityByType,
     },
     clientGrowth: clientTrend,
     projectsCompleted: projectsTrend,
