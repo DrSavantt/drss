@@ -164,6 +164,72 @@ export async function updateProject(id: string, formData: FormData) {
   return { success: true }
 }
 
+// Simplified update for dialog use (takes plain object instead of FormData)
+export async function updateProjectData(id: string, data: {
+  name?: string
+  description?: string | null
+  status?: string
+  priority?: string
+  due_date?: string | null
+}) {
+  const supabase = await createSupabaseClient()
+  
+  if (!supabase) {
+    return { error: 'Database connection not configured' }
+  }
+  
+  // Get current project for status comparison and activity logging
+  const { data: currentProject } = await supabase
+    .from('projects')
+    .select('name, status, client_id')
+    .eq('id', id)
+    .single()
+  
+  if (!currentProject) {
+    return { error: 'Project not found' }
+  }
+  
+  const oldStatus = currentProject.status
+  const newStatus = data.status || oldStatus
+  
+  const { error } = await supabase
+    .from('projects')
+    .update({
+      ...data,
+      updated_at: new Date().toISOString()
+    })
+    .eq('id', id)
+  
+  if (error) {
+    console.error('Failed to update project:', error)
+    return { error: 'Failed to update project' }
+  }
+  
+  // Log activity - differentiate between status change and general update
+  await logActivity({
+    activityType: oldStatus !== newStatus ? 'project_status_changed' : 'project_updated',
+    entityType: 'project',
+    entityId: id,
+    entityName: data.name || currentProject.name,
+    clientId: currentProject.client_id,
+    metadata: { 
+      old_status: oldStatus, 
+      new_status: newStatus,
+      client_id: currentProject.client_id 
+    }
+  })
+  
+  // Revalidate all relevant paths for UI refresh
+  revalidatePath(`/dashboard/projects/${id}`)
+  revalidatePath('/dashboard/projects')
+  revalidatePath('/dashboard/projects/board')
+  if (currentProject.client_id) {
+    revalidatePath(`/dashboard/clients/${currentProject.client_id}`)
+  }
+  
+  return { success: true }
+}
+
 export async function updateProjectStatus(
   projectId: string,
   newStatus: string,

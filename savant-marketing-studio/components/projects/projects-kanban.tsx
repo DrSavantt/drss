@@ -1,12 +1,12 @@
 "use client"
 
 import { useState, useEffect, useMemo } from "react"
+import { useRouter } from "next/navigation"
 import { Plus, List, LayoutGrid, Filter } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { KanbanColumn } from "./kanban-column"
 import { NewProjectDialog } from "./new-project-dialog"
-import { ProjectModal } from "@/app/dashboard/projects/board/project-modal"
 import { updateProjectStatus } from "@/app/actions/projects"
 import { cn } from "@/lib/utils"
 
@@ -32,6 +32,7 @@ const columns = [
 ]
 
 export function ProjectsKanban() {
+  const router = useRouter()
   const [projects, setProjects] = useState<Project[]>([])
   const [clients, setClients] = useState<Array<{ id: string; name: string }>>([{ id: "all", name: "All Clients" }])
   const [viewMode, setViewMode] = useState<"board" | "list">("board")
@@ -39,7 +40,6 @@ export function ProjectsKanban() {
   const [dialogOpen, setDialogOpen] = useState(false)
   const [draggedProject, setDraggedProject] = useState<Project | null>(null)
   const [loading, setLoading] = useState(true)
-  const [selectedProject, setSelectedProject] = useState<any | null>(null)
 
   // Fetch projects and clients - OPTIMIZED: Parallel fetches with AbortController
   useEffect(() => {
@@ -143,38 +143,8 @@ export function ProjectsKanban() {
     }
   }
 
-  const handleProjectClick = async (project: Project) => {
-    // Fetch full project details from API
-    try {
-      const res = await fetch(`/api/projects/${project.id}`)
-      const fullProject = await res.json()
-      setSelectedProject(fullProject)
-    } catch (error) {
-      console.error('Failed to fetch project details:', error)
-    }
-  }
-
-  const handleProjectUpdate = (updatedProject: any) => {
-    // Update local state
-    setProjects((prev) => prev.map((p) => {
-      if (p.id === updatedProject.id) {
-        return {
-          ...p,
-          title: updatedProject.name,
-          status: mapStatus(updatedProject.status),
-          priority: updatedProject.priority as "low" | "medium" | "high",
-          dueDate: updatedProject.due_date || '',
-        }
-      }
-      return p
-    }))
-    setSelectedProject(updatedProject)
-  }
-
-  const handleProjectDelete = (projectId: string) => {
-    // Remove from local state
-    setProjects((prev) => prev.filter((p) => p.id !== projectId))
-    setSelectedProject(null)
+  const handleProjectClick = (project: Project) => {
+    router.push(`/dashboard/projects/${project.id}`)
   }
 
   if (loading) {
@@ -270,16 +240,6 @@ export function ProjectsKanban() {
       </div>
 
       <NewProjectDialog open={dialogOpen} onOpenChange={setDialogOpen} />
-
-      {/* Project Detail Modal */}
-      {selectedProject && (
-        <ProjectModal
-          project={selectedProject}
-          onClose={() => setSelectedProject(null)}
-          onUpdate={handleProjectUpdate}
-          onDelete={handleProjectDelete}
-        />
-      )}
     </div>
   )
 }
