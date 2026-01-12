@@ -18,9 +18,9 @@ import {
 } from '@/components/ui/dropdown-menu'
 
 const AI_MODELS = [
-  { id: 'claude-3-5-sonnet-20241022', label: 'Sonnet 3.5', provider: 'Claude', icon: '🧠' },
-  { id: 'claude-3-opus-20240229', label: 'Opus 3', provider: 'Claude', icon: '🧠' },
-  { id: 'claude-3-5-haiku-20241022', label: 'Haiku 3.5', provider: 'Claude', icon: '🧠' },
+  { id: 'claude-sonnet-4-5-20250929', label: 'Claude 4.5 Sonnet', provider: 'Claude', icon: '🧠' },
+  { id: 'claude-opus-4-5-20251101', label: 'Claude 4.5 Opus', provider: 'Claude', icon: '🧠' },
+  { id: 'claude-haiku-4-5-20251001', label: 'Claude 4.5 Haiku', provider: 'Claude', icon: '🧠' },
   { id: 'gemini-2.0-flash-exp', label: 'Gemini Flash', provider: 'Google', icon: '✨' },
   { id: 'gemini-2.5-pro-002', label: 'Gemini Pro', provider: 'Google', icon: '✨' },
 ] as const
@@ -51,7 +51,7 @@ export function AIPromptBar({
   const [autocompleteQuery, setAutocompleteQuery] = useState('')
   const [selectedIndex, setSelectedIndex] = useState(0)
   const [isFocused, setIsFocused] = useState(false)
-  const [selectedModel, setSelectedModel] = useState('claude-3-5-sonnet-20241022')
+  const [selectedModel, setSelectedModel] = useState('claude-sonnet-4-5-20250929')
   const [modelOpen, setModelOpen] = useState(false)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)

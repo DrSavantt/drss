@@ -8,6 +8,9 @@ export interface AIRequest {
   maxTokens?: number;
   temperature?: number;
   systemPrompt?: string;
+  // Extended thinking support
+  useExtendedThinking?: boolean;
+  thinkingBudget?: number; // Token budget for thinking (default 10000)
 }
 
 export interface AIResponse {
@@ -16,6 +19,8 @@ export interface AIResponse {
   outputTokens: number;
   model: string;
   finishReason?: string;
+  // Extended thinking output
+  thinking?: string; // The model's reasoning chain
 }
 
 export abstract class BaseAIProvider {

@@ -14,21 +14,49 @@ export class ClaudeProvider extends BaseAIProvider {
 
   async generateText(request: AIRequest, modelName: string): Promise<AIResponse> {
     try {
+      // Extended thinking requires temperature = 1 and higher max_tokens
+      const temperature = request.useExtendedThinking ? 1 : (request.temperature || 1);
+      const thinkingBudget = request.thinkingBudget || 10000;
+      
+      // When thinking is enabled, max_tokens must be > budget_tokens
+      // Set max_tokens to budget + 8000 for the actual response
+      const maxTokens = request.useExtendedThinking 
+        ? thinkingBudget + 8000  // e.g., 10000 + 8000 = 18000
+        : (request.maxTokens || 4096);
+
       const response = await this.client.messages.create({
         model: modelName,
-        max_tokens: request.maxTokens || 4096,
-        temperature: request.temperature || 1,
+        max_tokens: maxTokens,
+        temperature,
         system: request.systemPrompt,
         messages: request.messages.map(msg => ({
           role: msg.role === 'system' ? 'user' : msg.role,
           content: msg.content,
         })),
+        // Add extended thinking when enabled
+        ...(request.useExtendedThinking && {
+          thinking: {
+            type: 'enabled' as const,
+            budget_tokens: request.thinkingBudget || 10000,
+          },
+        }),
       });
 
-      const textContent = response.content.find(block => block.type === 'text');
-      
+      // Handle response - may have thinking and text blocks
+      let textContent = '';
+      let thinkingContent: string | undefined;
+
+      for (const block of response.content) {
+        if (block.type === 'thinking') {
+          thinkingContent = block.thinking;
+        } else if (block.type === 'text') {
+          textContent = block.text;
+        }
+      }
+
       return {
-        content: textContent?.type === 'text' ? textContent.text : '',
+        content: textContent,
+        thinking: thinkingContent,
         inputTokens: response.usage.input_tokens,
         outputTokens: response.usage.output_tokens,
         model: response.model,

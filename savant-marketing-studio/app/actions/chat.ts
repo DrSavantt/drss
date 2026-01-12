@@ -21,7 +21,8 @@ export interface CreateConversationInput {
 export interface SendMessageInput {
   conversationId: string;
   content: string;
-  modelId?: string; // Model name like 'claude-3-5-sonnet-20241022', defaults to claude sonnet
+  modelId?: string; // Model name like 'claude-sonnet-4-5-20250929', defaults to claude sonnet
+  useExtendedThinking?: boolean;
 }
 
 export interface UpdateConversationInput {
@@ -153,7 +154,7 @@ Your responses should:
 }
 
 /**
- * Get default model ID for chat (Claude Sonnet)
+ * Get default model ID for chat (Claude 4.5 Sonnet)
  */
 async function getDefaultChatModelId(
   supabase: NonNullable<Awaited<ReturnType<typeof createClient>>>
@@ -161,7 +162,7 @@ async function getDefaultChatModelId(
   const { data: model } = await supabase
     .from('ai_models')
     .select('id')
-    .eq('model_name', 'claude-3-5-sonnet-20241022')
+    .eq('model_name', 'claude-sonnet-4-5-20250929')
     .eq('is_active', true)
     .single();
 
@@ -795,7 +796,7 @@ export async function sendMessage(
     messages.push({ role: 'user', content: data.content });
 
     // Determine model to use
-    const modelName = data.modelId || 'claude-3-5-sonnet-20241022';
+    const modelName = data.modelId || 'claude-sonnet-4-5-20250929';
     
     // Get model_id for database
     const modelId = await getModelIdFromName(modelName) || await getDefaultChatModelId(supabase);
@@ -843,6 +844,8 @@ export async function sendMessage(
           maxTokens: 4096,
           temperature: 0.7,
           systemPrompt: conversation.system_prompt || undefined,
+          useExtendedThinking: data.useExtendedThinking,
+          thinkingBudget: data.useExtendedThinking ? 10000 : undefined,
         },
       });
     } catch (aiError) {

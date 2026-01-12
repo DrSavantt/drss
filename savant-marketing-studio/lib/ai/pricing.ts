@@ -1,21 +1,37 @@
-// Cost per 1K tokens (as of Dec 2024)
+// Cost per 1K tokens (as of Jan 2026)
 // NOTE: This file contains ONLY client-safe utilities
 // Server-side functions (getUserAISpend, etc.) are in app/actions/ai.ts
 export const AI_PRICING = {
-  // Anthropic Claude
-  'claude-3-opus-20240229': { 
+  // Anthropic Claude 4.5
+  'claude-opus-4-5-20251101': { 
     input: 0.015,    // $15 per 1M input tokens
     output: 0.075,   // $75 per 1M output tokens
+    label: 'Claude 4.5 Opus'
+  },
+  'claude-sonnet-4-5-20250929': { 
+    input: 0.003,    // $3 per 1M input tokens
+    output: 0.015,   // $15 per 1M output tokens
+    label: 'Claude 4.5 Sonnet'
+  },
+  'claude-haiku-4-5-20251001': { 
+    input: 0.00025,  // $0.25 per 1M input tokens
+    output: 0.00125, // $1.25 per 1M output tokens
+    label: 'Claude 4.5 Haiku'
+  },
+  // Legacy Claude 3.x (for historical cost lookups)
+  'claude-3-opus-20240229': { 
+    input: 0.015,    
+    output: 0.075,   
     label: 'Claude 3 Opus'
   },
   'claude-3-5-sonnet-20241022': { 
-    input: 0.003,    // $3 per 1M input tokens
-    output: 0.015,   // $15 per 1M output tokens
+    input: 0.003,    
+    output: 0.015,   
     label: 'Claude 3.5 Sonnet'
   },
   'claude-3-5-haiku-20241022': { 
-    input: 0.00025,  // $0.25 per 1M input tokens
-    output: 0.00125, // $1.25 per 1M output tokens
+    input: 0.00025,  
+    output: 0.00125, 
     label: 'Claude 3.5 Haiku'
   },
   // Google Gemini

@@ -13,7 +13,7 @@ const modelCache = new Map<string, string>();
 /**
  * Get model_id from model name string
  * Handles various formats:
- * - "claude-3-5-sonnet" → finds best match
+ * - "claude-sonnet-4-5-20250929" → exact match
  * - "gemini-1.5-pro (web-grounded)" → strips annotations
  * - Unknown models → returns null (graceful degradation)
  */
@@ -53,7 +53,7 @@ export async function getModelIdFromName(
       // Try to find a close match
       model = models.find(m => {
         const name = m.model_name.toLowerCase();
-        // Handle variations like "claude-3-5-sonnet" → "claude-sonnet-4-20250514"
+        // Handle variations - match by model family (opus/sonnet/haiku)
         if (cleanName.includes('claude') && name.includes('claude')) {
           if (cleanName.includes('opus') && name.includes('opus')) return true;
           if (cleanName.includes('sonnet') && name.includes('sonnet')) return true;
@@ -78,7 +78,7 @@ export async function getModelIdFromName(
 }
 
 /**
- * Get default model ID (Claude Haiku - reliable fallback)
+ * Get default model ID (Claude 4.5 Haiku - reliable fallback)
  */
 export async function getDefaultModelId(): Promise<string | null> {
   const supabase = await createClient();
@@ -87,7 +87,7 @@ export async function getDefaultModelId(): Promise<string | null> {
   const { data: model } = await supabase
     .from('ai_models')
     .select('id')
-    .eq('model_name', 'claude-3-5-haiku-20241022')
+    .eq('model_name', 'claude-haiku-4-5-20251001')
     .single();
   
   return model?.id || null;

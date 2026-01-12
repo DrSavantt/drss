@@ -77,7 +77,26 @@ export function ChatInterface({
   const handleSendMessage = async (
     content: string,
     mentions: { type: "client" | "content-type" | "writing-framework"; name: string; id: string }[],
+    useExtendedThinking: boolean = false,
   ) => {
+    // Create optimistic user message for immediate display
+    const optimisticId = `temp-${Date.now()}`
+    const optimisticUserMessage: ConversationMessage = {
+      id: optimisticId,
+      conversationId: currentConversationId || '',
+      messageRole: 'user',
+      content: content,
+      inputTokens: null,
+      outputTokens: null,
+      totalCostUsd: null,
+      modelId: selectedModel.model_name,
+      createdAt: new Date().toISOString(),
+    }
+
+    // Add optimistic message to state immediately
+    setMessages(prev => [...prev, optimisticUserMessage])
+
+    // Then start loading state
     setIsGenerating(true)
 
     try {
@@ -100,6 +119,8 @@ export function ChatInterface({
 
         if (!createResult.success || !createResult.data) {
           console.error("Failed to create conversation:", createResult.error)
+          // Remove optimistic message on error
+          setMessages(prev => prev.filter(m => m.id !== optimisticId))
           setIsGenerating(false)
           return
         }
@@ -128,21 +149,26 @@ export function ChatInterface({
         conversationId,
         content,
         modelId: selectedModel.model_name,
+        useExtendedThinking,
       })
 
       if (!sendResult.success) {
         console.error("Failed to send message:", sendResult.error)
+        // Remove optimistic message on error
+        setMessages(prev => prev.filter(m => m.id !== optimisticId))
         setIsGenerating(false)
         return
       }
 
-      // Refresh conversation to get updated messages
+      // Refresh conversation to get updated messages (replaces optimistic with real data)
       const refreshResult = await getConversation(conversationId)
       if (refreshResult.success && refreshResult.data) {
         setMessages(refreshResult.data.messages)
       }
     } catch (error) {
       console.error("Error sending message:", error)
+      // Remove the optimistic message on error
+      setMessages(prev => prev.filter(m => m.id !== optimisticId))
     } finally {
       setIsGenerating(false)
     }

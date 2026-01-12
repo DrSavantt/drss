@@ -5,11 +5,11 @@ import type React from "react"
 import { useState, useRef, useEffect, useCallback } from "react"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
-import { ArrowUp, X } from "lucide-react"
+import { ArrowUp, X, Brain } from "lucide-react"
 import { MentionPopup } from "./mention-popup"
 
 interface ChatInputProps {
-  onSend: (content: string, mentions: { type: "client" | "content-type" | "writing-framework"; name: string; id: string }[]) => void
+  onSend: (content: string, mentions: { type: "client" | "content-type" | "writing-framework"; name: string; id: string }[], useExtendedThinking: boolean) => void
   disabled?: boolean
   clients: Array<{ id: string; name: string }>
   contentTypes: Array<{ id: string; name: string; category: string }>
@@ -20,6 +20,7 @@ export function ChatInput({ onSend, disabled, clients, contentTypes, writingFram
   const [value, setValue] = useState("")
   const [mentions, setMentions] = useState<{ type: "client" | "content-type" | "writing-framework"; name: string; id: string }[]>([])
   const [showMentionPopup, setShowMentionPopup] = useState(false)
+  const [useExtendedThinking, setUseExtendedThinking] = useState(false)
   const [mentionQuery, setMentionQuery] = useState("")
   const [mentionPosition, setMentionPosition] = useState({ top: 0, left: 0 })
   const textareaRef = useRef<HTMLTextAreaElement>(null)
@@ -88,12 +89,13 @@ export function ChatInput({ onSend, disabled, clients, contentTypes, writingFram
 
   const handleSubmit = () => {
     if (!value.trim() && mentions.length === 0) return
-    onSend(value.trim(), mentions)
+    onSend(value.trim(), mentions, useExtendedThinking)
     setValue("")
     setMentions([])
     if (textareaRef.current) {
       textareaRef.current.style.height = "auto"
     }
+    // Keep the thinking toggle state for convenience
   }
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -151,6 +153,21 @@ export function ChatInput({ onSend, disabled, clients, contentTypes, writingFram
           rows={1}
           className="max-h-[200px] min-h-[44px] flex-1 resize-none bg-transparent px-2 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none disabled:opacity-50"
         />
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          onClick={() => setUseExtendedThinking(!useExtendedThinking)}
+          title={useExtendedThinking ? 'Extended thinking enabled' : 'Enable extended thinking'}
+          className={cn(
+            "h-9 w-9 shrink-0 rounded-lg transition-colors",
+            useExtendedThinking 
+              ? "bg-primary/10 text-primary hover:bg-primary/20" 
+              : "text-muted-foreground hover:bg-muted hover:text-foreground"
+          )}
+        >
+          <Brain className="h-4 w-4" />
+        </Button>
         <Button
           onClick={handleSubmit}
           disabled={disabled || (!value.trim() && mentions.length === 0)}

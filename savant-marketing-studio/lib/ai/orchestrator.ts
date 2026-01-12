@@ -66,9 +66,9 @@ export class AIOrchestrator {
       // Check if it's a rate limit error (429) - fallback to Claude Haiku
       if (errorMessage.includes('429') || errorMessage.includes('quota') || errorMessage.includes('rate')) {
         
-        // Fallback to Claude Haiku (fast, cheap, reliable)
+        // Fallback to Claude 4.5 Haiku (fast, cheap, reliable)
         try {
-          selection = await this.getModelByName('claude-3-5-haiku-20241022');
+          selection = await this.getModelByName('claude-haiku-4-5-20251001');
           response = await selection.provider.generateText(task.request, selection.modelName);
           usedFallback = true;
         } catch (fallbackErr) {
@@ -104,6 +104,8 @@ export class AIOrchestrator {
         maxTokens: task.request.maxTokens,
         temperature: task.request.temperature,
         usedFallback,
+        useExtendedThinking: task.request.useExtendedThinking,
+        thinkingBudget: task.request.thinkingBudget,
       },
       output_data: { content: response.content },
       input_tokens: response.inputTokens,
@@ -183,27 +185,27 @@ export class AIOrchestrator {
 
     if (complexity === 'simple') {
       if (priority === 'cost') {
-        // Try Gemini Flash first (free), but Claude Haiku is reliable fallback
+        // Try Gemini Flash first (free), but Claude 4.5 Haiku is reliable fallback
         selectedModel = models.find(m => m.model_name === 'gemini-2.0-flash-exp') || 
-                       models.find(m => m.model_name === 'claude-3-5-haiku-20241022') ||
+                       models.find(m => m.model_name === 'claude-haiku-4-5-20251001') ||
                        models[0];
       } else {
-        // Fast but reliable: Claude Haiku
-        selectedModel = models.find(m => m.model_name === 'claude-3-5-haiku-20241022') ||
+        // Fast but reliable: Claude 4.5 Haiku
+        selectedModel = models.find(m => m.model_name === 'claude-haiku-4-5-20251001') ||
                        models.find(m => m.model_tier === 'fast') || 
                        models[0];
       }
     } else if (complexity === 'medium') {
       if (priority === 'cost') {
         selectedModel = models.find(m => m.model_name === 'gemini-2.5-pro-002') || 
-                       models.find(m => m.model_name === 'claude-3-5-sonnet-20241022') ||
+                       models.find(m => m.model_name === 'claude-sonnet-4-5-20250929') ||
                        models[0];
       } else {
-        selectedModel = models.find(m => m.model_name === 'claude-3-5-sonnet-20241022') || models[0];
+        selectedModel = models.find(m => m.model_name === 'claude-sonnet-4-5-20250929') || models[0];
       }
     } else {
-      // Complex: Always use best (Claude Opus)
-      selectedModel = models.find(m => m.model_name === 'claude-3-opus-20240229') || models[0];
+      // Complex: Always use best (Claude 4.5 Opus)
+      selectedModel = models.find(m => m.model_name === 'claude-opus-4-5-20251101') || models[0];
     }
 
     const providerName = (selectedModel.ai_providers as unknown as { name: string }).name;
