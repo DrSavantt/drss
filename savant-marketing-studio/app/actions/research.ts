@@ -244,8 +244,6 @@ export async function performDeepResearch(params: ResearchParams): Promise<Resea
 
   if (shouldUseWebSearch) {
     // Use REAL web search via Gemini grounding
-    console.log('[Research] Starting web research with Gemini:', { topic, depth, useWebSearch });
-    
     try {
       const webResult = await performWebResearch(topic, depth, clientContextForResearch);
       

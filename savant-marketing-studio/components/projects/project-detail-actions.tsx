@@ -6,10 +6,12 @@ import { Button } from '@/components/ui/button'
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogFooter,
 } from '@/components/ui/dialog'
+import { VisuallyHidden } from '@radix-ui/react-visually-hidden'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -111,8 +113,7 @@ export function ProjectDetailActions({ project }: ProjectDetailActionsProps) {
       toast.success('Project updated')
       setEditOpen(false)
       router.refresh()
-    } catch (error) {
-      console.error('Failed to update project:', error)
+    } catch {
       toast.error('Failed to update project')
     } finally {
       setLoading(false)
@@ -136,8 +137,7 @@ export function ProjectDetailActions({ project }: ProjectDetailActionsProps) {
 
       toast.success('Project archived')
       router.push('/dashboard/projects/board')
-    } catch (error) {
-      console.error('Failed to archive project:', error)
+    } catch {
       toast.error('Failed to archive project')
       setLoading(false)
     }
@@ -167,6 +167,9 @@ export function ProjectDetailActions({ project }: ProjectDetailActionsProps) {
         <DialogContent className="sm:max-w-[500px]">
           <DialogHeader>
             <DialogTitle>Edit Project</DialogTitle>
+            <VisuallyHidden>
+              <DialogDescription>Edit project name, description, status, priority, and due date</DialogDescription>
+            </VisuallyHidden>
           </DialogHeader>
 
           <div className="grid gap-4 py-4">

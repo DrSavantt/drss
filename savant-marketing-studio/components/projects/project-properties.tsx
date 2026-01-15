@@ -6,6 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { cn } from '@/lib/utils'
 import { CalendarIcon, Loader2 } from 'lucide-react'
 import { format } from 'date-fns'
+import { toast } from 'sonner'
 
 interface ProjectPropertiesProps {
   projectId: string
@@ -45,7 +46,7 @@ export function ProjectProperties({ projectId, status, priority, dueDate }: Proj
       const result = await updateProjectData(projectId, { status: newStatus })
       if (result.error) {
         setCurrentStatus(prevStatus)
-        console.error('Failed to update status:', result.error)
+        toast.error('Failed to update status')
       }
     })
   }
@@ -58,7 +59,7 @@ export function ProjectProperties({ projectId, status, priority, dueDate }: Proj
       const result = await updateProjectData(projectId, { priority: newPriority })
       if (result.error) {
         setCurrentPriority(prevPriority)
-        console.error('Failed to update priority:', result.error)
+        toast.error('Failed to update priority')
       }
     })
   }
@@ -74,7 +75,7 @@ export function ProjectProperties({ projectId, status, priority, dueDate }: Proj
       })
       if (result.error) {
         setCurrentDueDate(prevDate)
-        console.error('Failed to update due date:', result.error)
+        toast.error('Failed to update due date')
       }
     })
   }

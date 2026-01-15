@@ -18,6 +18,8 @@ import {
   type ConversationListItem,
   type ConversationMessage,
 } from "@/app/actions/chat"
+import { SaveToLibraryDialog } from "./save-to-library-dialog"
+import { toast } from "sonner"
 
 export interface ChatInterfaceProps {
   clients: Array<{ id: string; name: string }>
@@ -41,6 +43,10 @@ export function ChatInterface({
   const [messages, setMessages] = useState<ConversationMessage[]>([])
   const [isGenerating, setIsGenerating] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
+  
+  // Save dialog state
+  const [saveDialogOpen, setSaveDialogOpen] = useState(false)
+  const [messageToSave, setMessageToSave] = useState<ConversationMessage | null>(null)
 
   const scrollToBottom = useCallback(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
@@ -178,14 +184,40 @@ export function ChatInterface({
     navigator.clipboard.writeText(content)
   }
 
-  const handleSaveToLibrary = async (message: ConversationMessage): Promise<boolean> => {
-    const result = await saveMessageToContent({ executionId: message.id })
-    return result.success
+  // Get current conversation details
+  const currentConversation = currentConversationId 
+    ? conversations.find(c => c.id === currentConversationId) 
+    : null
+
+  // Open save dialog instead of direct save
+  const handleSaveToLibrary = (message: ConversationMessage): Promise<boolean> => {
+    setMessageToSave(message)
+    setSaveDialogOpen(true)
+    return Promise.resolve(true) // Dialog will handle the actual save
+  }
+
+  // Actual save handler called from dialog
+  const handleConfirmSave = async (data: { title: string; projectId: string | null }) => {
+    if (!messageToSave || !currentConversation) return
+
+    const result = await saveMessageToContent({
+      executionId: messageToSave.id,
+      projectId: data.projectId || undefined,
+      title: data.title,
+    })
+
+    if (result.success) {
+      toast.success('Saved to content library')
+      setMessageToSave(null)
+    } else {
+      toast.error(result.error || 'Failed to save content')
+      throw new Error(result.error) // Re-throw so dialog knows it failed
+    }
   }
 
   const handleRegenerateMessage = (messageId: string) => {
-    // In real app, this would regenerate the message
-    console.log("Regenerating message:", messageId)
+    // TODO: Implement message regeneration
+    void messageId; // Placeholder until implemented
   }
 
   return (
@@ -297,6 +329,17 @@ export function ChatInterface({
           </div>
         </div>
       </div>
+
+      {/* Save to Library Dialog */}
+      {messageToSave && currentConversation && (
+        <SaveToLibraryDialog
+          open={saveDialogOpen}
+          onOpenChange={setSaveDialogOpen}
+          onSave={handleConfirmSave}
+          clientId={currentConversation.clientId}
+          defaultTitle={`Chat Response - ${currentConversation.title || 'Untitled'}`}
+        />
+      )}
     </div>
   )
 }

@@ -2,9 +2,10 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { ChevronDown, ChevronUp, FileText, Loader2, Plus } from 'lucide-react'
+import { ChevronDown, ChevronUp, MessageSquare, Loader2, Plus } from 'lucide-react'
 import { getJournalEntriesByProject } from '@/app/actions/journal'
 import { cn } from '@/lib/utils'
+import { toast } from 'sonner'
 
 interface JournalEntry {
   id: string
@@ -28,8 +29,8 @@ export function ProjectCaptures({ projectId, projectName }: ProjectCapturesProps
       try {
         const data = await getJournalEntriesByProject(projectId)
         setEntries(data || [])
-      } catch (error) {
-        console.error('Failed to load captures:', error)
+      } catch {
+        toast.error('Failed to load captures')
       } finally {
         setLoading(false)
       }
@@ -67,7 +68,7 @@ export function ProjectCaptures({ projectId, projectName }: ProjectCapturesProps
   }
 
   return (
-    <div className="rounded-lg border bg-card">
+    <section id="captures-section" className="rounded-lg border bg-card">
       {/* Header - Always visible */}
       <button
         onClick={() => setIsExpanded(!isExpanded)}
@@ -75,7 +76,7 @@ export function ProjectCaptures({ projectId, projectName }: ProjectCapturesProps
       >
         <div className="flex items-center gap-3">
           <div className="flex items-center justify-center h-9 w-9 rounded-lg bg-primary/10">
-            <FileText className="h-5 w-5 text-primary" />
+            <MessageSquare className="h-5 w-5 text-primary" />
           </div>
           <div className="text-left">
             <h3 className="font-semibold">Quick Captures</h3>
@@ -114,7 +115,7 @@ export function ProjectCaptures({ projectId, projectName }: ProjectCapturesProps
             </div>
           ) : entries.length === 0 ? (
             <div className="text-center py-8 border-2 border-dashed border-border rounded-lg">
-              <FileText className="h-10 w-10 text-muted-foreground mx-auto mb-3" />
+              <MessageSquare className="h-10 w-10 text-muted-foreground mx-auto mb-3" />
               <h4 className="font-medium mb-1">No captures yet</h4>
               <p className="text-sm text-muted-foreground mb-4">
                 Create a journal capture mentioning @{projectName}
@@ -161,6 +162,6 @@ export function ProjectCaptures({ projectId, projectName }: ProjectCapturesProps
           )}
         </div>
       </div>
-    </div>
+    </section>
   )
 }

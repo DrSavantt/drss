@@ -88,18 +88,8 @@ export async function performWebResearch(
   // Build research prompt based on depth (with optional client context)
   const researchPrompt = buildResearchPrompt(query, depth, clientContext);
 
-  // DEBUG LOGGING
-  console.log('[WebResearch] Starting research with:', {
-    topic: query,
-    depth,
-    model: modelName,
-    hasApiKey: !!process.env.GOOGLE_AI_API_KEY,
-    apiKeyPrefix: process.env.GOOGLE_AI_API_KEY?.substring(0, 10) + '...'
-  });
-
   try {
-    // THIS IS THE KEY: googleSearch tool enables real web search (formerly googleSearchRetrieval)
-    console.log('[WebResearch] About to call Gemini generateContent...');
+    // googleSearch tool enables real web search (formerly googleSearchRetrieval)
     
     let result;
     try {
@@ -116,7 +106,6 @@ export async function performWebResearch(
           maxOutputTokens: maxTokens,
         }
       });
-      console.log('[WebResearch] Gemini response received successfully');
     } catch (geminiError) {
       console.error('[WebResearch] Gemini API call FAILED:', {
         error: geminiError,

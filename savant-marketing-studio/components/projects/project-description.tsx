@@ -4,6 +4,7 @@ import { useState, useRef, useEffect, useTransition } from 'react'
 import { updateProjectData } from '@/app/actions/projects'
 import { Loader2, Pencil } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { toast } from 'sonner'
 
 interface ProjectDescriptionProps {
   projectId: string
@@ -50,7 +51,7 @@ export function ProjectDescription({ projectId, description }: ProjectDescriptio
       })
       
       if (result.error) {
-        console.error('Failed to save description:', result.error)
+        toast.error('Failed to save description')
         setValue(description || '')
       } else {
         setValue(trimmedValue)

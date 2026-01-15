@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogTitle,
 } from '@/components/ui/dialog'
 import { VisuallyHidden } from '@/components/ui/visually-hidden'
@@ -186,10 +187,11 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="p-0 gap-0 max-w-2xl max-h-[600px] overflow-hidden" aria-describedby={undefined}>
-        {/* Accessible title for screen readers */}
+      <DialogContent className="p-0 gap-0 max-w-2xl max-h-[600px] overflow-hidden">
+        {/* Accessible title and description for screen readers */}
         <VisuallyHidden>
           <DialogTitle>Search Command Palette</DialogTitle>
+          <DialogDescription>Search and navigate to pages, clients, projects, and content</DialogDescription>
         </VisuallyHidden>
         
         {/* Search Input */}

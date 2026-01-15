@@ -148,7 +148,6 @@ export function useQuestionnaireForm(
     // IMPORTANT: Skip if there's no actual content
     // This prevents saving {} or forms with only empty strings
     if (!hasContent(data)) {
-      console.log('[AUTO-SAVE] Skipped - no meaningful content');
       return;
     }
     
