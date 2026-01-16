@@ -171,12 +171,53 @@ async function buildContextFromMentions(
       .in('id', projectIds);
 
     if (projects?.length) {
+      // Collect unique client IDs from projects that weren't explicitly @mentioned
+      const projectClientIds = [...new Set(
+        projects
+          .map(p => p.client_id)
+          .filter((cid): cid is string => cid !== null && !clientIds.includes(cid))
+      )];
+
+      // Fetch those clients' brand data
+      let projectClients: Array<{
+        id: string;
+        name: string;
+        brand_data: unknown;
+        intake_responses: unknown;
+        industry: string | null;
+        website: string | null;
+      }> = [];
+      if (projectClientIds.length) {
+        const { data } = await supabase
+          .from('clients')
+          .select('id, name, brand_data, intake_responses, industry, website')
+          .in('id', projectClientIds);
+        projectClients = data || [];
+      }
+
+      // Create a lookup map for client data
+      const clientLookup = new Map(projectClients.map(c => [c.id, c]));
+
       contextParts.push(`## Referenced Projects\n${projects.map(p => {
         const parts = [`### ${p.name}`];
         if (p.description) parts.push(`Description: ${p.description}`);
         if (p.status) parts.push(`Status: ${p.status}`);
+        
+        // Include client brand context for this project
+        const client = p.client_id ? clientLookup.get(p.client_id) : null;
+        if (client) {
+          parts.push(`\n**Client: ${client.name}**`);
+          if (client.industry) parts.push(`Industry: ${client.industry}`);
+          if (client.brand_data) {
+            parts.push(`Brand Info:\n\`\`\`json\n${JSON.stringify(client.brand_data, null, 2)}\n\`\`\``);
+          }
+          if (client.intake_responses) {
+            parts.push(`Client Questionnaire Responses:\n\`\`\`json\n${JSON.stringify(client.intake_responses, null, 2)}\n\`\`\``);
+          }
+        }
+        
         if (p.metadata) {
-          parts.push(`Metadata:\n\`\`\`json\n${JSON.stringify(p.metadata, null, 2)}\n\`\`\``);
+          parts.push(`Project Metadata:\n\`\`\`json\n${JSON.stringify(p.metadata, null, 2)}\n\`\`\``);
         }
         return parts.join('\n');
       }).join('\n\n')}`);

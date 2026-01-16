@@ -70,6 +70,9 @@ export function ChatInterface({
     id: string
     clientId: string | null
   } | null>(null)
+  
+  // Track if we just created a conversation (to avoid clearing lastMentionedProject)
+  const justCreatedConversation = useRef(false)
 
   const scrollToBottom = useCallback(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
@@ -79,8 +82,13 @@ export function ChatInterface({
     scrollToBottom()
   }, [messages, scrollToBottom])
 
-  // Clear last mentioned project when conversation changes
+  // Clear last mentioned project when switching conversations (but not when creating new)
   useEffect(() => {
+    if (justCreatedConversation.current) {
+      // Don't clear - we just created this conversation from a message with @project
+      justCreatedConversation.current = false
+      return
+    }
     setLastMentionedProject(null)
   }, [currentConversationId])
 
@@ -206,6 +214,8 @@ export function ChatInterface({
         }
 
         conversationId = createResult.data.id
+        // Mark that we're creating a new conversation (don't clear lastMentionedProject)
+        justCreatedConversation.current = true
         setCurrentConversationId(conversationId)
 
         // Add to conversations list
