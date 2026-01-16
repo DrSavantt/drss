@@ -1,195 +1,308 @@
 "use client"
 
-import type React from "react"
-
-import { useState, useRef, useEffect, useCallback } from "react"
+import { useState, useRef, useEffect } from "react"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
-import { ArrowUp, X, Brain } from "lucide-react"
-import { MentionPopup } from "./mention-popup"
+import { ArrowUp, X, Brain, Plus } from "lucide-react"
+import { ContextPickerModal, type ContextItem } from "./context-picker-modal"
+import { InlineMentionPopup, type InlineMentionPopupRef } from "./inline-mention-popup"
 
 interface ChatInputProps {
-  onSend: (content: string, mentions: { type: "client" | "content-type" | "writing-framework"; name: string; id: string }[], useExtendedThinking: boolean) => void
+  onSend: (content: string, context: ContextItem[], useExtendedThinking: boolean) => void
   disabled?: boolean
   clients: Array<{ id: string; name: string }>
-  contentTypes: Array<{ id: string; name: string; category: string }>
-  writingFrameworks: Array<{ id: string; name: string; category: string }>
+  projects: Array<{ id: string; name: string; clientName?: string | null }>
+  contentAssets: Array<{ id: string; title: string; contentType?: string | null; clientName?: string | null }>
+  journalEntries: Array<{
+    id: string
+    title: string | null
+    content: string
+    tags?: string[] | null
+    mentionedClients?: Array<{ id: string; name: string }>
+    mentionedProjects?: Array<{ id: string; name: string }>
+    mentionedContent?: Array<{ id: string; name: string }>
+  }>
+  writingFrameworks: Array<{ id: string; name: string; category?: string }>
 }
 
-export function ChatInput({ onSend, disabled, clients, contentTypes, writingFrameworks }: ChatInputProps) {
+export function ChatInput({
+  onSend,
+  disabled,
+  clients,
+  projects,
+  contentAssets,
+  journalEntries,
+  writingFrameworks,
+}: ChatInputProps) {
   const [value, setValue] = useState("")
-  const [mentions, setMentions] = useState<{ type: "client" | "content-type" | "writing-framework"; name: string; id: string }[]>([])
-  const [showMentionPopup, setShowMentionPopup] = useState(false)
+  const [selectedContext, setSelectedContext] = useState<ContextItem[]>([])
   const [useExtendedThinking, setUseExtendedThinking] = useState(false)
-  const [mentionQuery, setMentionQuery] = useState("")
-  const [mentionPosition, setMentionPosition] = useState({ top: 0, left: 0 })
+  const [showContextModal, setShowContextModal] = useState(false)
+  const [initialSearch, setInitialSearch] = useState("")
   const textareaRef = useRef<HTMLTextAreaElement>(null)
+  
+  // Inline @ mention popup state
+  const [showInlinePopup, setShowInlinePopup] = useState(false)
+  const [inlineQuery, setInlineQuery] = useState("")
+  const [inlinePosition, setInlinePosition] = useState({ top: 0, left: 0 })
+  const [inlineSelectedIndex, setInlineSelectedIndex] = useState(0)
+  const inlinePopupRef = useRef<InlineMentionPopupRef>(null)
 
-  const adjustHeight = useCallback(() => {
-    const textarea = textareaRef.current
-    if (textarea) {
-      textarea.style.height = "auto"
-      textarea.style.height = `${Math.min(textarea.scrollHeight, 200)}px`
-    }
-  }, [])
-
+  // Auto-resize textarea
   useEffect(() => {
-    adjustHeight()
-  }, [value, adjustHeight])
+    if (textareaRef.current) {
+      textareaRef.current.style.height = "auto"
+      textareaRef.current.style.height = `${Math.min(textareaRef.current.scrollHeight, 200)}px`
+    }
+  }, [value])
 
+  // Handle @ key to show inline popup
   const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const newValue = e.target.value
     setValue(newValue)
 
-    // Check for @ mentions
+    // Check for @ trigger for inline popup
     const lastAtIndex = newValue.lastIndexOf("@")
+    
     if (lastAtIndex !== -1) {
       const textAfterAt = newValue.slice(lastAtIndex + 1)
       const hasSpaceAfter = textAfterAt.includes(" ")
-
-      if (!hasSpaceAfter && textAfterAt.length <= 20) {
-        setMentionQuery(textAfterAt)
-        setShowMentionPopup(true)
-
-        // Calculate popup position
+      const hasNewlineAfter = textAfterAt.includes("\n")
+      
+      // Show inline popup if @ exists and no space/newline after it yet
+      // Also limit query length to prevent showing for unrelated @ in middle of text
+      if (!hasSpaceAfter && !hasNewlineAfter && textAfterAt.length <= 30) {
+        setInlineQuery(textAfterAt)
+        setInlineSelectedIndex(0) // Reset selection when query changes
+        setShowInlinePopup(true)
+        
+        // Calculate position near textarea
         if (textareaRef.current) {
           const rect = textareaRef.current.getBoundingClientRect()
-          setMentionPosition({
+          setInlinePosition({
             top: rect.top - 8,
             left: rect.left + 16,
           })
         }
       } else {
-        setShowMentionPopup(false)
+        setShowInlinePopup(false)
       }
     } else {
-      setShowMentionPopup(false)
+      setShowInlinePopup(false)
     }
   }
 
-  const handleMentionSelect = (mention: {
-    type: "client" | "content-type" | "writing-framework"
-    name: string
-    id: string
-  }) => {
-    // Remove the @query from the value
-    const lastAtIndex = value.lastIndexOf("@")
-    const newValue = value.slice(0, lastAtIndex)
-    setValue(newValue)
+  // Handle context selection from modal
+  const handleContextSelect = (items: ContextItem[]) => {
+    setSelectedContext(prev => {
+      // Merge with existing, avoiding duplicates
+      const newItems = items.filter(item => 
+        !prev.some(p => p.id === item.id && p.type === item.type)
+      )
+      return [...prev, ...newItems]
+    })
+  }
 
-    // Add the mention
-    setMentions((prev) => [...prev, mention])
-    setShowMentionPopup(false)
+  // Remove context item
+  const removeContext = (id: string, type: string) => {
+    setSelectedContext(prev => prev.filter(c => !(c.id === id && c.type === type)))
+  }
+
+  // Handle inline @ mention selection
+  const handleInlineSelect = (item: ContextItem) => {
+    // Remove @query from the input value
+    const lastAtIndex = value.lastIndexOf("@")
+    const newValue = lastAtIndex >= 0 ? value.slice(0, lastAtIndex) : value
+    setValue(newValue)
+    
+    // Add the selected item
+    setSelectedContext(prev => {
+      if (prev.some(p => p.id === item.id && p.type === item.type)) {
+        return prev // Already exists
+      }
+      return [...prev, item]
+    })
+    
+    setShowInlinePopup(false)
     textareaRef.current?.focus()
   }
 
-  const removeMention = (id: string) => {
-    setMentions((prev) => prev.filter((m) => m.id !== id))
-  }
-
+  // Submit message
   const handleSubmit = () => {
-    if (!value.trim() && mentions.length === 0) return
-    onSend(value.trim(), mentions, useExtendedThinking)
+    if (!value.trim() && selectedContext.length === 0) return
+    onSend(value.trim(), selectedContext, useExtendedThinking)
     setValue("")
-    setMentions([])
+    setSelectedContext([])
     if (textareaRef.current) {
       textareaRef.current.style.height = "auto"
     }
-    // Keep the thinking toggle state for convenience
   }
 
+  // Handle keyboard
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    // When inline popup is open, intercept navigation keys
+    if (showInlinePopup) {
+      if (e.key === "ArrowDown") {
+        e.preventDefault()
+        setInlineSelectedIndex(prev => prev + 1)
+        return
+      }
+      if (e.key === "ArrowUp") {
+        e.preventDefault()
+        setInlineSelectedIndex(prev => Math.max(0, prev - 1))
+        return
+      }
+      if (e.key === "Enter") {
+        e.preventDefault()
+        // Signal popup to select current item
+        inlinePopupRef.current?.selectCurrent()
+        return
+      }
+      if (e.key === "Escape") {
+        e.preventDefault()
+        setShowInlinePopup(false)
+        return
+      }
+      if (e.key === "Tab") {
+        e.preventDefault()
+        inlinePopupRef.current?.selectCurrent()
+        return
+      }
+    }
+    
+    // Normal submit behavior
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault()
       handleSubmit()
     }
-    if (e.key === "Escape") {
-      setShowMentionPopup(false)
-    }
   }
 
-  const getMentionColor = (type: "client" | "content-type" | "writing-framework") => {
+  // Get pill color
+  const getPillColor = (type: string) => {
     switch (type) {
-      case "client":
-        return "bg-primary/10 text-primary"
-      case "content-type":
-        return "bg-info/10 text-info"
-      case "writing-framework":
-        return "bg-warning/10 text-warning"
+      case "client": return "bg-primary/10 text-primary"
+      case "project": return "bg-secondary/20 text-secondary-foreground"
+      case "content": return "bg-amber-500/10 text-amber-700"
+      case "capture": return "bg-emerald-500/10 text-emerald-600"
+      case "framework": return "bg-orange-500/10 text-orange-600"
+      default: return "bg-muted text-muted-foreground"
     }
   }
 
   return (
-    <div className="relative">
-      {/* Mention Pills */}
-      {mentions.length > 0 && (
-        <div className="mb-2 flex flex-wrap gap-2">
-          {mentions.map((mention) => (
-            <span
-              key={mention.id}
-              className={cn(
-                "inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium",
-                getMentionColor(mention.type),
-              )}
-            >
-              @{mention.name}
-              <button onClick={() => removeMention(mention.id)} className="ml-0.5 rounded-full p-0.5 hover:bg-black/10">
-                <X className="h-3 w-3" />
-              </button>
-            </span>
-          ))}
-        </div>
-      )}
+    <>
+      <div className="relative">
+        {/* Context Pills */}
+        {selectedContext.length > 0 && (
+          <div className="mb-2 flex flex-wrap gap-2">
+            {selectedContext.map((item) => (
+              <span
+                key={`${item.type}-${item.id}`}
+                className={cn(
+                  "inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium",
+                  getPillColor(item.type)
+                )}
+              >
+                @{item.name}
+                <button 
+                  onClick={() => removeContext(item.id, item.type)} 
+                  className="ml-0.5 rounded-full p-0.5 hover:bg-black/10"
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              </span>
+            ))}
+          </div>
+        )}
 
-      {/* Input Area */}
-      <div className="flex items-end gap-2 rounded-xl border border-border bg-card p-2">
-        <textarea
-          ref={textareaRef}
-          value={value}
-          onChange={handleChange}
-          onKeyDown={handleKeyDown}
-          placeholder="Message DRSS AI... (@ to mention)"
-          disabled={disabled}
-          rows={1}
-          className="max-h-[200px] min-h-[44px] flex-1 resize-none bg-transparent px-2 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none disabled:opacity-50"
-        />
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon"
-          onClick={() => setUseExtendedThinking(!useExtendedThinking)}
-          title={useExtendedThinking ? 'Extended thinking enabled' : 'Enable extended thinking'}
-          className={cn(
-            "h-9 w-9 shrink-0 rounded-lg transition-colors",
-            useExtendedThinking 
-              ? "bg-primary/10 text-primary hover:bg-primary/20" 
-              : "text-muted-foreground hover:bg-muted hover:text-foreground"
-          )}
-        >
-          <Brain className="h-4 w-4" />
-        </Button>
-        <Button
-          onClick={handleSubmit}
-          disabled={disabled || (!value.trim() && mentions.length === 0)}
-          size="icon"
-          className="h-9 w-9 shrink-0 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
-        >
-          <ArrowUp className="h-4 w-4" />
-        </Button>
+        {/* Input Area */}
+        <div className="flex items-end gap-2 rounded-xl border border-border bg-card p-2">
+          {/* Add Context Button */}
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="h-9 w-9 shrink-0 text-muted-foreground hover:text-foreground"
+            onClick={() => {
+              setInitialSearch("")
+              setShowContextModal(true)
+            }}
+            title="Add context"
+          >
+            <Plus className="h-4 w-4" />
+          </Button>
+
+          {/* Text Input */}
+          <textarea
+            ref={textareaRef}
+            value={value}
+            onChange={handleChange}
+            onKeyDown={handleKeyDown}
+            placeholder="Message DRSS AI... (@ to add context)"
+            disabled={disabled}
+            rows={1}
+            className="max-h-[200px] min-h-[44px] flex-1 resize-none bg-transparent px-2 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none disabled:opacity-50"
+          />
+
+          {/* Extended Thinking Toggle */}
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            onClick={() => setUseExtendedThinking(!useExtendedThinking)}
+            title={useExtendedThinking ? 'Extended thinking enabled' : 'Enable extended thinking'}
+            className={cn(
+              "h-9 w-9 shrink-0 rounded-lg transition-colors",
+              useExtendedThinking 
+                ? "bg-primary/10 text-primary hover:bg-primary/20" 
+                : "text-muted-foreground hover:bg-muted hover:text-foreground"
+            )}
+          >
+            <Brain className="h-4 w-4" />
+          </Button>
+
+          {/* Send Button */}
+          <Button
+            onClick={handleSubmit}
+            disabled={disabled || (!value.trim() && selectedContext.length === 0)}
+            size="icon"
+            className="h-9 w-9 shrink-0 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
+          >
+            <ArrowUp className="h-4 w-4" />
+          </Button>
+        </div>
       </div>
 
-      {/* Mention Popup */}
-      {showMentionPopup && (
-        <MentionPopup
-          query={mentionQuery}
-          position={mentionPosition}
-          onSelect={handleMentionSelect}
-          onClose={() => setShowMentionPopup(false)}
+      {/* Inline @ Mention Popup */}
+      {showInlinePopup && (
+        <InlineMentionPopup
+          ref={inlinePopupRef}
+          query={inlineQuery}
+          position={inlinePosition}
+          selectedIndex={inlineSelectedIndex}
+          onSelectedIndexChange={setInlineSelectedIndex}
+          onSelect={handleInlineSelect}
+          onClose={() => setShowInlinePopup(false)}
           clients={clients}
-          contentTypes={contentTypes}
+          projects={projects}
+          contentAssets={contentAssets}
+          journalEntries={journalEntries}
           writingFrameworks={writingFrameworks}
         />
       )}
-    </div>
+
+      {/* Context Picker Modal */}
+      <ContextPickerModal
+        open={showContextModal}
+        onOpenChange={setShowContextModal}
+        onSelect={handleContextSelect}
+        initialSearch={initialSearch}
+        clients={clients}
+        projects={projects}
+        contentAssets={contentAssets}
+        journalEntries={journalEntries}
+        writingFrameworks={writingFrameworks}
+      />
+    </>
   )
 }

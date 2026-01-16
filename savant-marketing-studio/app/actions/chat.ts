@@ -23,6 +23,17 @@ export interface SendMessageInput {
   content: string;
   modelId?: string; // Model name like 'claude-sonnet-4-5-20250929', defaults to claude sonnet
   useExtendedThinking?: boolean;
+  mentions?: Array<{
+    type: string;
+    name: string;
+    id: string;
+    description?: string | null;
+    clientId?: string | null;
+    clientName?: string | null;
+    entry?: Json;
+    content?: string | null;
+    contentType?: string | null;
+  }>;
 }
 
 export interface UpdateConversationInput {
@@ -76,6 +87,169 @@ interface ActionResult<T = unknown> {
 // ============================================================================
 // HELPER FUNCTIONS
 // ============================================================================
+
+/**
+ * Extract plain text from TipTap JSON content structure
+ */
+function extractTextFromTipTap(json: unknown): string {
+  if (!json || typeof json !== 'object') return '';
+  
+  const doc = json as { content?: Array<{ type?: string; content?: Array<{ text?: string; type?: string }> }> };
+  if (!doc.content) return '';
+  
+  const extractFromNode = (node: unknown): string => {
+    if (!node || typeof node !== 'object') return '';
+    const n = node as { type?: string; text?: string; content?: unknown[] };
+    
+    // Direct text node
+    if (n.text) return n.text;
+    
+    // Recursively extract from children
+    if (n.content && Array.isArray(n.content)) {
+      return n.content.map(extractFromNode).join(n.type === 'paragraph' ? '\n' : '');
+    }
+    
+    return '';
+  };
+  
+  return doc.content
+    .map(extractFromNode)
+    .filter(Boolean)
+    .join('\n\n')
+    .trim();
+}
+
+/**
+ * Build context text from mentions to inject into the AI prompt
+ * Fetches full data for each mentioned item and formats it for Claude
+ */
+async function buildContextFromMentions(
+  supabase: NonNullable<Awaited<ReturnType<typeof createClient>>>,
+  mentions: NonNullable<SendMessageInput['mentions']>
+): Promise<string | null> {
+  if (!mentions.length) return null;
+
+  const contextParts: string[] = [];
+
+  // Group mentions by type
+  const clientIds = mentions.filter(m => m.type === 'client').map(m => m.id);
+  const projectIds = mentions.filter(m => m.type === 'project').map(m => m.id);
+  const contentIds = mentions.filter(m => m.type === 'content').map(m => m.id);
+  const captureIds = mentions.filter(m => m.type === 'capture').map(m => m.id);
+  const frameworkIds = mentions
+    .filter(m => m.type === 'writing-framework' || m.type === 'framework')
+    .map(m => m.id);
+
+  // Fetch and format clients
+  if (clientIds.length) {
+    const { data: clients } = await supabase
+      .from('clients')
+      .select('id, name, brand_data, intake_responses, industry, website')
+      .in('id', clientIds);
+
+    if (clients?.length) {
+      contextParts.push(`## Referenced Clients\n${clients.map(c => {
+        const parts = [`### ${c.name}`];
+        if (c.industry) parts.push(`Industry: ${c.industry}`);
+        if (c.website) parts.push(`Website: ${c.website}`);
+        if (c.brand_data) {
+          parts.push(`Brand Info:\n\`\`\`json\n${JSON.stringify(c.brand_data, null, 2)}\n\`\`\``);
+        }
+        if (c.intake_responses) {
+          parts.push(`Questionnaire Responses:\n\`\`\`json\n${JSON.stringify(c.intake_responses, null, 2)}\n\`\`\``);
+        }
+        return parts.join('\n');
+      }).join('\n\n')}`);
+    }
+  }
+
+  // Fetch and format projects
+  if (projectIds.length) {
+    const { data: projects } = await supabase
+      .from('projects')
+      .select('id, name, description, status, metadata, client_id')
+      .in('id', projectIds);
+
+    if (projects?.length) {
+      contextParts.push(`## Referenced Projects\n${projects.map(p => {
+        const parts = [`### ${p.name}`];
+        if (p.description) parts.push(`Description: ${p.description}`);
+        if (p.status) parts.push(`Status: ${p.status}`);
+        if (p.metadata) {
+          parts.push(`Metadata:\n\`\`\`json\n${JSON.stringify(p.metadata, null, 2)}\n\`\`\``);
+        }
+        return parts.join('\n');
+      }).join('\n\n')}`);
+    }
+  }
+
+  // Fetch and format content assets
+  if (contentIds.length) {
+    const { data: contents } = await supabase
+      .from('content_assets')
+      .select('id, title, content_json, asset_type, metadata')
+      .in('id', contentIds);
+
+    if (contents?.length) {
+      contextParts.push(`## Referenced Content\n${contents.map(c => {
+        const parts = [`### ${c.title}`];
+        parts.push(`Type: ${c.asset_type}`);
+        if (c.content_json) {
+          const text = extractTextFromTipTap(c.content_json);
+          if (text) parts.push(`Content:\n${text}`);
+        }
+        if (c.metadata) {
+          parts.push(`Metadata:\n\`\`\`json\n${JSON.stringify(c.metadata, null, 2)}\n\`\`\``);
+        }
+        return parts.join('\n');
+      }).join('\n\n')}`);
+    }
+  }
+
+  // Fetch and format captures (journal entries)
+  if (captureIds.length) {
+    const { data: captures } = await supabase
+      .from('journal_entries')
+      .select('id, content, tags')
+      .in('id', captureIds);
+
+    if (captures?.length) {
+      contextParts.push(`## Referenced Captures\n${captures.map(c => {
+        const parts = [`### Capture`];
+        parts.push(c.content);
+        if (c.tags?.length) {
+          parts.push(`Tags: ${c.tags.join(', ')}`);
+        }
+        return parts.join('\n');
+      }).join('\n\n')}`);
+    }
+  }
+
+  // Fetch and format frameworks
+  if (frameworkIds.length) {
+    const { data: frameworks } = await supabase
+      .from('marketing_frameworks')
+      .select('id, name, content, description, category')
+      .in('id', frameworkIds);
+
+    if (frameworks?.length) {
+      contextParts.push(`## Referenced Frameworks\n${frameworks.map(f => {
+        const parts = [`### ${f.name}`];
+        if (f.category) parts.push(`Category: ${f.category}`);
+        if (f.description) parts.push(`Description: ${f.description}`);
+        if (f.content) parts.push(`Framework:\n${f.content}`);
+        return parts.join('\n');
+      }).join('\n\n')}`);
+    }
+  }
+
+  if (contextParts.length === 0) return null;
+
+  return `# CONTEXT FOR THIS MESSAGE
+The user has attached the following context. Use this information to inform your response.
+
+${contextParts.join('\n\n---\n\n')}`;
+}
 
 /**
  * Build system prompt from client context, content type, and writing frameworks
@@ -792,8 +966,17 @@ export async function sendMessage(
       }
     });
 
-    // Add new user message
-    messages.push({ role: 'user', content: data.content });
+    // Build context from mentions if present
+    let userMessageContent = data.content;
+    if (data.mentions?.length) {
+      const contextText = await buildContextFromMentions(supabase, data.mentions);
+      if (contextText) {
+        userMessageContent = `${contextText}\n\n---\n\nUSER REQUEST:\n${data.content}`;
+      }
+    }
+
+    // Add new user message with context
+    messages.push({ role: 'user', content: userMessageContent });
 
     // Determine model to use
     const modelName = data.modelId || 'claude-sonnet-4-5-20250929';
@@ -814,7 +997,7 @@ export async function sendMessage(
         model_id: modelId,
         task_type: 'chat_message',
         message_role: 'user',
-        input_data: { content: data.content } as Json,
+        input_data: { content: data.content, mentions: data.mentions || [] } as Json,
         output_data: null,
         status: 'success',
         input_tokens: null,

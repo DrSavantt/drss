@@ -302,12 +302,7 @@ export async function reorderSections(orderedIds: number[]) {
 }
 
 export async function addSection(section: Omit<SectionConfig, 'id' | 'created_at' | 'updated_at'>) {
-  const supabase = await createClient()
-  
-  if (!supabase) {
-    console.error('Supabase client not available')
-    throw new Error('Supabase client not available')
-  }
+  const supabase = getServiceClient()
   
   const { data, error } = await supabase
     .from('questionnaire_sections')
@@ -325,12 +320,8 @@ export async function addSection(section: Omit<SectionConfig, 'id' | 'created_at
 }
 
 export async function deleteSection(id: number) {
-  const supabase = await createClient()
-  
-  if (!supabase) {
-    console.error('Supabase client not available')
-    throw new Error('Supabase client not available')
-  }
+  console.log('deleteSection called:', id)
+  const supabase = getServiceClient()
   
   // This will cascade delete questions in the section
   const { error } = await supabase
@@ -407,12 +398,7 @@ export async function reorderQuestions(sectionId: number, orderedIds: string[]) 
 }
 
 export async function addQuestion(question: Omit<QuestionConfig, 'created_at' | 'updated_at'>) {
-  const supabase = await createClient()
-  
-  if (!supabase) {
-    console.error('Supabase client not available')
-    throw new Error('Supabase client not available')
-  }
+  const supabase = getServiceClient()
   
   const { error } = await supabase
     .from('questionnaire_questions')
@@ -429,12 +415,7 @@ export async function addQuestion(question: Omit<QuestionConfig, 'created_at' | 
 }
 
 export async function deleteQuestion(id: string) {
-  const supabase = await createClient()
-  
-  if (!supabase) {
-    console.error('Supabase client not available')
-    throw new Error('Supabase client not available')
-  }
+  const supabase = getServiceClient()
   
   const { error } = await supabase
     .from('questionnaire_questions')

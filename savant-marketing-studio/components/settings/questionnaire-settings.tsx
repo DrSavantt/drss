@@ -9,6 +9,10 @@ import {
   updateSection,
   updateQuestion,
   updateHelp,
+  addSection,
+  addQuestion,
+  deleteSection,
+  deleteQuestion,
   reorderSections,
   reorderQuestions,
   type SectionConfig,
@@ -21,6 +25,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Badge } from '@/components/ui/badge'
+import { Checkbox } from '@/components/ui/checkbox'
 import { 
   Dialog,
   DialogContent,
@@ -29,8 +34,25 @@ import {
   DialogTitle,
   DialogFooter,
 } from '@/components/ui/dialog'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { 
   DndContext,
   closestCenter,
@@ -54,11 +76,9 @@ import {
   ChevronRight, 
   Pencil, 
   Clock,
-  CheckCircle2,
-  XCircle,
-  FileText,
   RotateCcw,
-  Info
+  Plus,
+  Trash2
 } from 'lucide-react'
 import { toast } from 'sonner'
 
@@ -92,6 +112,10 @@ export function QuestionnaireSettings({
   const [expandedSections, setExpandedSections] = useState<Set<number>>(new Set())
   const [editingSection, setEditingSection] = useState<SectionConfig | null>(null)
   const [editingQuestion, setEditingQuestion] = useState<QuestionWithHelp | null>(null)
+  const [isAddSectionOpen, setIsAddSectionOpen] = useState(false)
+  const [sectionToDelete, setSectionToDelete] = useState<SectionConfig | null>(null)
+  const [questionToDelete, setQuestionToDelete] = useState<QuestionWithHelp | null>(null)
+  const [addQuestionSection, setAddQuestionSection] = useState<SectionConfig | null>(null)
   const isSavingRef = useRef(false)
 
   const isClientMode = mode === 'client' && !!clientId
@@ -190,61 +214,24 @@ export function QuestionnaireSettings({
     }
   }
   
-  // Check if an item has an override (for visual indication)
-  const hasOverride = (type: 'section' | 'question', id: number | string) => {
-    if (!isClientMode) return false
-    return clientOverrides.some(o => 
-      type === 'section' 
-        ? o.section_id === id 
-        : o.question_id === id
-    )
+  function generateSectionKey(title: string) {
+    const normalized = title
+      .trim()
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '_')
+      .replace(/^_+|_+$/g, '')
+
+    return normalized || `section_${Date.now()}`
   }
-  
-  // Reset a single override to global defaults
-  async function resetOverride(type: 'section' | 'question', id: number | string) {
-    if (!isClientMode) return
-    
-    const override = clientOverrides.find(o => 
-      type === 'section' ? o.section_id === id : o.question_id === id
-    )
-    
-    if (!override) return
-    
-    try {
-      const res = await fetch(`/api/client-questionnaire/${clientId}/override/${override.id}`, {
-        method: 'DELETE'
-      })
-      
-      if (!res.ok) throw new Error('Failed to reset')
-      
-      toast.success('Reset to global defaults')
-      loadData() // Reload to get fresh state
-    } catch (error) {
-      console.error('Failed to reset override:', error)
-      toast.error('Failed to reset override')
-    }
-  }
-  
-  // Reset all overrides for this client
-  async function resetAllOverrides() {
-    if (!isClientMode || clientOverrides.length === 0) return
-    
-    try {
-      // Delete each override
-      await Promise.all(
-        clientOverrides.map(o => 
-          fetch(`/api/client-questionnaire/${clientId}/override/${o.id}`, {
-            method: 'DELETE'
-          })
-        )
-      )
-      
-      toast.success('All customizations reset to global defaults')
-      loadData()
-    } catch (error) {
-      console.error('Failed to reset overrides:', error)
-      toast.error('Failed to reset all overrides')
-    }
+
+  function generateQuestionId(text: string) {
+    const normalized = text
+      .trim()
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '_')
+      .replace(/^_+|_+$/g, '')
+
+    return normalized ? `q_${normalized}` : `q_${Date.now()}`
   }
 
   // Calculate stats
@@ -338,6 +325,118 @@ export function QuestionnaireSettings({
     }
   }
 
+  async function handleAddSection(values: {
+    title: string
+    description: string | null
+    estimated_minutes: number
+  }) {
+    isSavingRef.current = true
+    try {
+      const key = generateSectionKey(values.title)
+      const sort_order = sections.length + 1
+
+      await addSection({
+        key,
+        title: values.title,
+        description: values.description,
+        estimated_minutes: values.estimated_minutes,
+        sort_order,
+        enabled: true,
+      })
+
+      isSavingRef.current = false
+      await loadData()
+      setIsAddSectionOpen(false)
+      toast.success('Section added')
+    } catch (error) {
+      console.error('Failed to add section:', error)
+      toast.error('Failed to add section')
+    } finally {
+      isSavingRef.current = false
+    }
+  }
+
+  async function handleDeleteSection(section: SectionConfig) {
+    isSavingRef.current = true
+    try {
+      console.log('Deleting section via action:', section.id)
+      await deleteSection(section.id)
+      isSavingRef.current = false
+      await loadData()
+      setSectionToDelete(null)
+      toast.success('Section deleted')
+    } catch (error) {
+      console.error('Failed to delete section:', error)
+      toast.error('Failed to delete section')
+    } finally {
+      isSavingRef.current = false
+    }
+  }
+
+  async function handleAddQuestion(values: {
+    section: SectionConfig
+    text: string
+    type: QuestionWithHelp['type']
+    placeholder: string | null
+    required: boolean
+    helpContent: string | null
+  }) {
+    isSavingRef.current = true
+    try {
+      const id = generateQuestionId(values.text)
+      const sectionQuestions = questions.filter(q => q.section_id === values.section.id)
+      const sort_order = sectionQuestions.length + 1
+      const payload = {
+        id,
+        section_id: values.section.id,
+        question_key: id,
+        sort_order,
+        text: values.text,
+        type: values.type,
+        required: values.required,
+        enabled: true,
+        min_length: null,
+        max_length: null,
+        placeholder: values.placeholder,
+        options: null,
+        conditional_on: null,
+        accepted_file_types: null,
+        max_file_size: null,
+        max_files: null,
+        file_description: null,
+        help_content: values.helpContent ? { content: values.helpContent } : null,
+      }
+
+      await addQuestion(payload as any)
+
+      isSavingRef.current = false
+      await loadData()
+      setAddQuestionSection(null)
+      toast.success('Question added')
+    } catch (error) {
+      console.error('Failed to add question:', error)
+      toast.error('Failed to add question')
+    } finally {
+      isSavingRef.current = false
+    }
+  }
+
+  async function handleDeleteQuestion(question: QuestionWithHelp) {
+    isSavingRef.current = true
+    try {
+      await deleteQuestion(question.id)
+      isSavingRef.current = false
+      await loadData()
+      setQuestionToDelete(null)
+      toast.success('Question deleted')
+    } catch (error) {
+      console.error('Failed to delete question:', error)
+      toast.error('Failed to delete question')
+    } finally {
+      isSavingRef.current = false
+    }
+  }
+
   // Handle section reorder
   async function handleSectionDragEnd(event: DragEndEvent) {
     const { active, over } = event
@@ -401,34 +500,6 @@ export function QuestionnaireSettings({
 
   return (
     <div className="space-y-6">
-      {/* Client Mode Banner */}
-      {isClientMode && (
-        <div className="flex items-center gap-3 p-4 rounded-lg border border-blue-500/50 bg-blue-500/10">
-          <Info className="h-5 w-5 text-blue-600 shrink-0" />
-          <div className="flex-1 flex items-center justify-between gap-4">
-            <span className="text-blue-800 dark:text-blue-200">
-              <strong>Client-specific overrides</strong> — Changes here only affect {clientName}&apos;s questionnaire.
-              {clientOverrides.length > 0 && (
-                <span className="ml-2 text-sm opacity-80">
-                  ({clientOverrides.length} customization{clientOverrides.length !== 1 ? 's' : ''} active)
-                </span>
-              )}
-            </span>
-            {clientOverrides.length > 0 && (
-              <Button 
-                variant="outline" 
-                size="sm" 
-                onClick={resetAllOverrides}
-                className="shrink-0 border-blue-500/50 text-blue-700 hover:bg-blue-500/10"
-              >
-                <RotateCcw className="w-4 h-4 mr-2" />
-                Reset All to Global
-              </Button>
-            )}
-          </div>
-        </div>
-      )}
-
       {/* Stats Cards */}
       <div className="grid gap-4 md:grid-cols-3">
         <Card>
@@ -471,6 +542,14 @@ export function QuestionnaireSettings({
           </CardDescription>
         </CardHeader>
         <CardContent>
+          {!isClientMode && (
+            <div className="flex justify-end mb-4">
+              <Button variant="outline" onClick={() => setIsAddSectionOpen(true)}>
+                <Plus className="w-4 h-4 mr-2" />
+                Add Section
+              </Button>
+            </div>
+          )}
           <DndContext
             sensors={sensors}
             collisionDetection={closestCenter}
@@ -489,15 +568,17 @@ export function QuestionnaireSettings({
                     isExpanded={expandedSections.has(section.id)}
                     onToggle={() => handleSectionToggle(section.id, !section.enabled)}
                     onEdit={() => setEditingSection(section)}
+                    onDelete={() => {
+                      console.log('Delete clicked for section:', section.id)
+                      setSectionToDelete(section)
+                    }}
                     onExpand={() => toggleSectionExpansion(section.id)}
                     onQuestionToggle={handleQuestionToggle}
                     onQuestionEdit={setEditingQuestion}
+                    onQuestionDelete={setQuestionToDelete}
                     onQuestionDragEnd={(e) => handleQuestionDragEnd(section.id, e)}
+                    onAddQuestion={() => setAddQuestionSection(section)}
                     isClientMode={isClientMode}
-                    hasOverride={hasOverride('section', section.id)}
-                    onResetOverride={() => resetOverride('section', section.id)}
-                    hasQuestionOverride={(questionId) => hasOverride('question', questionId)}
-                    onResetQuestionOverride={(questionId) => resetOverride('question', questionId)}
                   />
                 ))}
               </div>
@@ -505,6 +586,72 @@ export function QuestionnaireSettings({
           </DndContext>
         </CardContent>
       </Card>
+
+      {!isClientMode && (
+        <AddSectionDialog
+          open={isAddSectionOpen}
+          onClose={() => setIsAddSectionOpen(false)}
+          onSave={handleAddSection}
+        />
+      )}
+
+      <AlertDialog open={!!sectionToDelete} onOpenChange={(open) => !open && setSectionToDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {sectionToDelete && questions.filter(q => q.section_id === sectionToDelete.id).length > 0
+                ? `Delete this section and all ${questions.filter(q => q.section_id === sectionToDelete.id).length} questions inside?`
+                : 'Delete this section?'}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              This cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => {
+                e.preventDefault()
+                if (sectionToDelete) {
+                  handleDeleteSection(sectionToDelete)
+                }
+              }}
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={!!questionToDelete} onOpenChange={(open) => !open && setQuestionToDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete this question?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => {
+                e.preventDefault()
+                if (questionToDelete) {
+                  handleDeleteQuestion(questionToDelete)
+                }
+              }}
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AddQuestionDialog
+        section={addQuestionSection}
+        onClose={() => setAddQuestionSection(null)}
+        onSave={handleAddQuestion}
+      />
 
       {/* Edit Section Dialog */}
       {editingSection && (
@@ -643,30 +790,28 @@ function SectionItem({
   isExpanded,
   onToggle,
   onEdit,
+  onDelete,
   onExpand,
   onQuestionToggle,
   onQuestionEdit,
+  onQuestionDelete,
   onQuestionDragEnd,
+  onAddQuestion,
   isClientMode = false,
-  hasOverride = false,
-  onResetOverride,
-  hasQuestionOverride,
-  onResetQuestionOverride
 }: {
   section: SectionConfig
   questions: QuestionWithHelp[]
   isExpanded: boolean
   onToggle: () => void
   onEdit: () => void
+  onDelete: () => void
   onExpand: () => void
   onQuestionToggle: (id: string, enabled: boolean) => void
   onQuestionEdit: (question: QuestionWithHelp) => void
+  onQuestionDelete: (question: QuestionWithHelp) => void
   onQuestionDragEnd: (event: DragEndEvent) => void
+  onAddQuestion: () => void
   isClientMode?: boolean
-  hasOverride?: boolean
-  onResetOverride?: () => void
-  hasQuestionOverride?: (questionId: string) => boolean
-  onResetQuestionOverride?: (questionId: string) => void
 }) {
   // ✅ HOOKS AT TOP LEVEL - Must be called on every render
   const {
@@ -691,20 +836,18 @@ function SectionItem({
     transition,
   }
 
-  const enabledCount = questions.filter(q => q.enabled).length
-
   return (
     <div
       ref={setNodeRef}
       style={style}
-      className={`rounded-lg border ${isDragging ? 'opacity-50' : ''} ${!section.enabled ? 'opacity-60' : ''} ${hasOverride ? 'border-blue-500/50 bg-blue-500/5' : ''}`}
+      className={`rounded-lg border bg-card ${isDragging ? 'opacity-50' : ''} ${!section.enabled ? 'opacity-60' : ''}`}
     >
-      <div className="flex items-center gap-3 p-4">
+      <div className="flex items-center gap-3 p-4 group">
         {!isClientMode && (
           <button
             {...attributes}
             {...listeners}
-            className="cursor-grab active:cursor-grabbing text-muted-foreground hover:text-foreground"
+            className="cursor-grab active:cursor-grabbing text-muted-foreground hover:text-foreground opacity-0 group-hover:opacity-100 transition-opacity"
           >
             <GripVertical className="w-5 h-5" />
           </button>
@@ -718,18 +861,11 @@ function SectionItem({
         </button>
 
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2">
-            {hasOverride && (
-              <span className="w-2 h-2 rounded-full bg-blue-500" title="Customized for this client" />
-            )}
-            <span className="font-medium">{section.title}</span>
-            <Badge variant="secondary" className="text-xs">
-              <Clock className="w-3 h-3 mr-1" />
-              {section.estimated_minutes}m
-            </Badge>
-            <Badge variant="outline" className="text-xs">
-              {enabledCount}/{questions.length} questions
-            </Badge>
+          <div className="flex items-center gap-3">
+            <span className="font-medium truncate">{section.title}</span>
+            <span className="text-sm text-muted-foreground">
+              {questions.length} question{questions.length !== 1 ? 's' : ''}
+            </span>
           </div>
           {section.description && typeof section.description === 'string' && (
             <p className="text-sm text-muted-foreground truncate">{section.description}</p>
@@ -737,22 +873,15 @@ function SectionItem({
         </div>
 
         <Switch checked={section.enabled} onCheckedChange={onToggle} />
-        
-        {hasOverride && onResetOverride && (
-          <Button 
-            variant="ghost" 
-            size="icon" 
-            onClick={onResetOverride}
-            title="Reset to global default"
-            className="text-blue-600 hover:text-blue-700 hover:bg-blue-100"
-          >
-            <RotateCcw className="w-4 h-4" />
-          </Button>
-        )}
-        
-        <Button variant="ghost" size="icon" onClick={onEdit} title={isClientMode ? "Customize for this client" : "Edit section"}>
+
+        <Button variant="ghost" size="icon" onClick={onEdit} title="Edit section">
           <Pencil className="w-4 h-4" />
         </Button>
+        {!isClientMode && (
+          <Button variant="ghost" size="icon" onClick={onDelete} title="Delete section">
+            <Trash2 className="w-4 h-4" />
+          </Button>
+        )}
       </div>
 
       {isExpanded && (
@@ -773,14 +902,21 @@ function SectionItem({
                     question={question}
                     onToggle={() => onQuestionToggle(question.id, !question.enabled)}
                     onEdit={() => onQuestionEdit(question)}
+                    onDelete={() => onQuestionDelete(question)}
                     isClientMode={isClientMode}
-                    hasOverride={hasQuestionOverride?.(question.id) || false}
-                    onResetOverride={onResetQuestionOverride ? () => onResetQuestionOverride(question.id) : undefined}
                   />
                 ))}
               </div>
             </SortableContext>
           </DndContext>
+          {!isClientMode && (
+            <div className="pt-3">
+              <Button variant="outline" size="sm" onClick={onAddQuestion}>
+                <Plus className="w-4 h-4 mr-2" />
+                Add Question
+              </Button>
+            </div>
+          )}
         </div>
       )}
     </div>
@@ -792,16 +928,14 @@ function QuestionItem({
   question,
   onToggle,
   onEdit,
+  onDelete,
   isClientMode = false,
-  hasOverride = false,
-  onResetOverride
 }: {
   question: QuestionWithHelp
   onToggle: () => void
   onEdit: () => void
+  onDelete: () => void
   isClientMode?: boolean
-  hasOverride?: boolean
-  onResetOverride?: () => void
 }) {
   const {
     attributes,
@@ -821,13 +955,13 @@ function QuestionItem({
     <div
       ref={setNodeRef}
       style={style}
-      className={`flex items-center gap-3 p-3 rounded-md ${isDragging ? 'opacity-50' : ''} ${!question.enabled ? 'opacity-60' : ''} ${hasOverride ? 'bg-blue-500/10 border border-blue-500/30' : 'bg-muted/30'}`}
+      className={`flex items-center gap-3 p-3 rounded-md bg-muted/30 ${isDragging ? 'opacity-50' : ''} ${!question.enabled ? 'opacity-60' : ''} group`}
     >
       {!isClientMode && (
         <button
           {...attributes}
           {...listeners}
-          className="cursor-grab active:cursor-grabbing text-muted-foreground hover:text-foreground"
+          className="cursor-grab active:cursor-grabbing text-muted-foreground hover:text-foreground opacity-0 group-hover:opacity-100 transition-opacity"
         >
           <GripVertical className="w-4 h-4" />
         </button>
@@ -835,35 +969,25 @@ function QuestionItem({
 
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2">
-          {hasOverride && (
-            <span className="w-2 h-2 rounded-full bg-blue-500" title="Customized for this client" />
-          )}
-          <span className="text-sm font-medium">Q{question.sort_order}</span>
-          <Badge variant="outline" className="text-xs">{question.type}</Badge>
-          {question.required && <Badge variant="secondary" className="text-xs">Required</Badge>}
+          <span className="text-sm font-medium truncate">
+            {typeof question.text === 'string' ? question.text : ''}
+          </span>
+          <Badge variant="outline" className="text-xs text-muted-foreground border-muted-foreground/30">
+            {question.type}
+          </Badge>
         </div>
-        <p className="text-sm text-muted-foreground truncate">
-          {typeof question.text === 'string' ? question.text : ''}
-        </p>
       </div>
 
       <Switch checked={question.enabled} onCheckedChange={onToggle} />
-      
-      {hasOverride && onResetOverride && (
-        <Button 
-          variant="ghost" 
-          size="icon" 
-          onClick={onResetOverride}
-          title="Reset to global default"
-          className="text-blue-600 hover:text-blue-700 hover:bg-blue-100"
-        >
-          <RotateCcw className="w-4 h-4" />
-        </Button>
-      )}
-      
-      <Button variant="ghost" size="icon" onClick={onEdit} title={isClientMode ? "Customize for this client" : "Edit question"}>
+
+      <Button variant="ghost" size="icon" onClick={onEdit} title="Edit question">
         <Pencil className="w-4 h-4" />
       </Button>
+      {!isClientMode && (
+        <Button variant="ghost" size="icon" onClick={onDelete} title="Delete question">
+          <Trash2 className="w-4 h-4" />
+        </Button>
+      )}
     </div>
   )
 }
@@ -939,6 +1063,252 @@ function EditSectionDialog({
           <Button onClick={() => onSave({ title, description, estimated_minutes: minutes })}>
             {isClientMode ? 'Save Customization' : 'Save'}
           </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  )
+}
+
+// Add Section Dialog
+function AddSectionDialog({
+  open,
+  onClose,
+  onSave,
+}: {
+  open: boolean
+  onClose: () => void
+  onSave: (values: {
+    title: string
+    description: string | null
+    estimated_minutes: number
+  }) => void
+}) {
+  const [title, setTitle] = useState('')
+  const [description, setDescription] = useState('')
+  const [minutes, setMinutes] = useState(5)
+  const [errors, setErrors] = useState<{ title?: string; minutes?: string }>({})
+
+  useEffect(() => {
+    if (open) {
+      setTitle('')
+      setDescription('')
+      setMinutes(5)
+      setErrors({})
+    }
+  }, [open])
+
+  function validate() {
+    const nextErrors: { title?: string; minutes?: string } = {}
+    const trimmedTitle = title.trim()
+
+    if (trimmedTitle.length < 3) {
+      nextErrors.title = 'Title must be at least 3 characters'
+    }
+
+    if (!Number.isFinite(minutes) || minutes <= 0) {
+      nextErrors.minutes = 'Estimated minutes must be a positive number'
+    }
+
+    setErrors(nextErrors)
+    return Object.keys(nextErrors).length === 0
+  }
+
+  function handleSave() {
+    if (!validate()) return
+
+    onSave({
+      title: title.trim(),
+      description: description.trim() ? description.trim() : null,
+      estimated_minutes: minutes,
+    })
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={onClose}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Add Section</DialogTitle>
+          <DialogDescription>
+            Create a new questionnaire section.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="space-y-4 py-4">
+          <div>
+            <Label htmlFor="new-section-title">Title</Label>
+            <Input
+              id="new-section-title"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+            />
+            {errors.title && (
+              <p className="text-sm text-destructive mt-1">{errors.title}</p>
+            )}
+          </div>
+          <div>
+            <Label htmlFor="new-section-description">Description</Label>
+            <Input
+              id="new-section-description"
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+            />
+          </div>
+          <div>
+            <Label htmlFor="new-section-minutes">Estimated Minutes</Label>
+            <Input
+              id="new-section-minutes"
+              type="number"
+              min={1}
+              value={minutes}
+              onChange={(e) => setMinutes(parseInt(e.target.value, 10) || 0)}
+            />
+            {errors.minutes && (
+              <p className="text-sm text-destructive mt-1">{errors.minutes}</p>
+            )}
+          </div>
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={onClose}>Cancel</Button>
+          <Button onClick={handleSave}>Add Section</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  )
+}
+
+// Add Question Dialog
+function AddQuestionDialog({
+  section,
+  onClose,
+  onSave,
+}: {
+  section: SectionConfig | null
+  onClose: () => void
+  onSave: (values: {
+    section: SectionConfig
+    text: string
+    type: QuestionWithHelp['type']
+    placeholder: string | null
+    required: boolean
+    helpContent: string | null
+  }) => void
+}) {
+  const [text, setText] = useState('')
+  const [type, setType] = useState<QuestionWithHelp['type']>('long-text')
+  const [placeholder, setPlaceholder] = useState('')
+  const [required, setRequired] = useState(false)
+  const [helpContent, setHelpContent] = useState('')
+  const [errors, setErrors] = useState<{ text?: string; type?: string }>({})
+
+  useEffect(() => {
+    if (section) {
+      setText('')
+      setType('long-text')
+      setPlaceholder('')
+      setRequired(false)
+      setHelpContent('')
+      setErrors({})
+    }
+  }, [section?.id])
+
+  if (!section) return null
+
+  function validate() {
+    const nextErrors: { text?: string; type?: string } = {}
+    if (text.trim().length === 0) {
+      nextErrors.text = 'Question text is required'
+    }
+    if (!type) {
+      nextErrors.type = 'Question type is required'
+    }
+    setErrors(nextErrors)
+    return Object.keys(nextErrors).length === 0
+  }
+
+  function handleSave() {
+    if (!validate()) return
+    onSave({
+      section,
+      text: text.trim(),
+      type,
+      placeholder: placeholder.trim() ? placeholder.trim() : null,
+      required,
+      helpContent: helpContent.trim() ? helpContent.trim() : null,
+    })
+  }
+
+  return (
+    <Dialog open={!!section} onOpenChange={(open) => !open && onClose()}>
+      <DialogContent className="max-w-2xl">
+        <DialogHeader>
+          <DialogTitle>Add Question</DialogTitle>
+          <DialogDescription>
+            Add a new question to this section.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="space-y-4 py-4">
+          <div>
+            <Label htmlFor="new-question-section">Section</Label>
+            <Input id="new-question-section" value={section.title} disabled />
+          </div>
+          <div>
+            <Label htmlFor="new-question-text">Question Text</Label>
+            <Textarea
+              id="new-question-text"
+              value={text}
+              onChange={(e) => setText(e.target.value)}
+              rows={3}
+            />
+            {errors.text && (
+              <p className="text-sm text-destructive mt-1">{errors.text}</p>
+            )}
+          </div>
+          <div>
+            <Label>Question Type</Label>
+            <Select value={type} onValueChange={(value) => setType(value as QuestionWithHelp['type'])}>
+              <SelectTrigger>
+                <SelectValue placeholder="Select a type" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="long-text">long-text</SelectItem>
+                <SelectItem value="short-text">short-text</SelectItem>
+                <SelectItem value="multiple-choice">multiple-choice</SelectItem>
+                <SelectItem value="checkbox">checkbox</SelectItem>
+                <SelectItem value="file-upload">file-upload</SelectItem>
+              </SelectContent>
+            </Select>
+            {errors.type && (
+              <p className="text-sm text-destructive mt-1">{errors.type}</p>
+            )}
+          </div>
+          <div>
+            <Label htmlFor="new-question-placeholder">Placeholder</Label>
+            <Input
+              id="new-question-placeholder"
+              value={placeholder}
+              onChange={(e) => setPlaceholder(e.target.value)}
+            />
+          </div>
+          <div className="flex items-center gap-2">
+            <Checkbox
+              id="new-question-required"
+              checked={required}
+              onCheckedChange={(checked) => setRequired(checked === true)}
+            />
+            <Label htmlFor="new-question-required">Required</Label>
+          </div>
+          <div>
+            <Label htmlFor="new-question-help">Help Content</Label>
+            <Textarea
+              id="new-question-help"
+              value={helpContent}
+              onChange={(e) => setHelpContent(e.target.value)}
+              rows={3}
+            />
+          </div>
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={onClose}>Cancel</Button>
+          <Button onClick={handleSave}>Add Question</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

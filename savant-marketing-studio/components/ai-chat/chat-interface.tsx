@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from "framer-motion"
 import { cn } from "@/lib/utils"
 import { ChatSidebar } from "./chat-sidebar"
 import { ChatInput } from "./chat-input"
+import type { ContextItem } from "./context-picker-modal"
 import { MessageThread } from "./message-thread"
 import { Button } from "@/components/ui/button"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
@@ -21,20 +22,36 @@ import {
 import { SaveToLibraryDialog } from "./save-to-library-dialog"
 import { toast } from "sonner"
 
+// JournalEntrySummary type (needed for props)
+export type JournalEntrySummary = {
+  id: string
+  title: string | null
+  content: string
+  tags: string[] | null
+  created_at: string
+  mentionedClients?: Array<{ id: string; name: string }>
+  mentionedProjects?: Array<{ id: string; name: string }>
+  mentionedContent?: Array<{ id: string; name: string }>
+}
+
 export interface ChatInterfaceProps {
   clients: Array<{ id: string; name: string }>
-  contentTypes: Array<{ id: string; name: string; category: string }>
   writingFrameworks: Array<{ id: string; name: string; category: string }>
+  projects: Array<{ id: string; name: string; description: string | null; clientId: string | null; clientName: string | null }>
+  contentAssets: Array<{ id: string; title: string; content: string | null; contentType: string | null; clientId: string | null; clientName: string | null }>
   models: Array<{ id: string; model_name: string; display_name: string }>
   initialConversations: ConversationListItem[]
+  journalEntries: JournalEntrySummary[]
 }
 
 export function ChatInterface({
   clients,
-  contentTypes,
   writingFrameworks,
+  projects,
+  contentAssets,
   models,
   initialConversations,
+  journalEntries,
 }: ChatInterfaceProps) {
   const [sidebarOpen, setSidebarOpen] = useState(true)
   const [selectedModel, setSelectedModel] = useState(models[0] || { id: "", model_name: "", display_name: "No model" })
@@ -82,9 +99,19 @@ export function ChatInterface({
 
   const handleSendMessage = async (
     content: string,
-    mentions: { type: "client" | "content-type" | "writing-framework"; name: string; id: string }[],
+    context: ContextItem[],
     useExtendedThinking: boolean = false,
   ) => {
+    // Convert ContextItem[] to mentions format for backward compatibility with sendMessage action
+    const mentions = context.map(item => ({
+      type: item.type === "capture" ? "capture" as const : 
+            item.type === "framework" ? "writing-framework" as const :
+            item.type === "content" ? "content" as const :
+            item.type as "client" | "project",
+      name: item.name,
+      id: item.id,
+    }))
+
     // Create optimistic user message for immediate display
     const optimisticId = `temp-${Date.now()}`
     const optimisticUserMessage: ConversationMessage = {
@@ -111,12 +138,33 @@ export function ChatInterface({
       // If no current conversation, create one
       if (!conversationId) {
         const clientMention = mentions.find((m) => m.type === "client")
-        const contentTypeMention = mentions.find((m) => m.type === "content-type")
+        const contentMention = mentions.find((m) => m.type === "content")
+        const projectMention = mentions.find((m) => m.type === "project")
         const writingFrameworkMentions = mentions.filter((m) => m.type === "writing-framework")
+        const resolvedClientId = clientMention?.id || undefined
+        const resolvedClientName = clientMention?.name || null
+
+        // For content and project, we need to look up client from props
+        let lookupClientId = resolvedClientId
+        let lookupClientName = resolvedClientName
+        
+        if (!lookupClientId && contentMention) {
+          const asset = contentAssets.find(a => a.id === contentMention.id)
+          if (asset?.clientId) {
+            lookupClientId = asset.clientId
+            lookupClientName = asset.clientName || null
+          }
+        }
+        if (!lookupClientId && projectMention) {
+          const project = projects.find(p => p.id === projectMention.id)
+          if (project?.clientId) {
+            lookupClientId = project.clientId
+            lookupClientName = project.clientName || null
+          }
+        }
 
         const createResult = await createConversation({
-          clientId: clientMention?.id,
-          contentTypeId: contentTypeMention?.id,
+          clientId: lookupClientId,
           writingFrameworkIds: writingFrameworkMentions.length > 0 
             ? writingFrameworkMentions.map((m) => m.id) 
             : undefined,
@@ -139,7 +187,7 @@ export function ChatInterface({
           id: conversationId,
           title: createResult.data.title,
           clientId: createResult.data.client_id,
-          clientName: clientMention?.name || null,
+          clientName: lookupClientName,
           messageCount: 0,
           totalCost: 0,
           qualityRating: null,
@@ -156,6 +204,7 @@ export function ChatInterface({
         content,
         modelId: selectedModel.model_name,
         useExtendedThinking,
+        mentions,
       })
 
       if (!sendResult.success) {
@@ -293,9 +342,8 @@ export function ChatInterface({
                 </div>
                 <h2 className="mb-2 text-xl font-semibold text-foreground">Start a conversation</h2>
                 <p className="max-w-sm text-muted-foreground">
-                  Use <span className="font-mono text-primary">@client</span>,{" "}
-                  <span className="font-mono text-primary">@content-type</span>, or{" "}
-                  <span className="font-mono text-primary">@framework</span> to add context
+                  Type <span className="font-mono text-primary">@</span> or click the{" "}
+                  <span className="font-mono text-primary">+</span> button to add clients, projects, content, captures, or frameworks as context.
                 </p>
               </div>
             </div>
@@ -322,7 +370,9 @@ export function ChatInterface({
                 onSend={handleSendMessage}
                 disabled={isGenerating}
                 clients={clients}
-                contentTypes={contentTypes}
+                projects={projects}
+                contentAssets={contentAssets}
+                journalEntries={journalEntries}
                 writingFrameworks={writingFrameworks}
               />
             </div>

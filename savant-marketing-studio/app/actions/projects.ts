@@ -4,19 +4,24 @@ import { createClient as createSupabaseClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 import { logActivity } from '@/lib/activity-log'
 
-export async function getProjects(clientId: string) {
+export async function getProjects(clientId?: string) {
   const supabase = await createSupabaseClient()
   
   if (!supabase) {
     return []
   }
   
-  const { data: projects, error } = await supabase
+  let query = supabase
     .from('projects')
-    .select('*')
-    .eq('client_id', clientId)
+    .select('id, name, description, client_id, clients(name)')
     .is('deleted_at', null)
-    .order('created_at', { ascending: false })
+    .order('name', { ascending: true })
+
+  if (clientId) {
+    query = query.eq('client_id', clientId)
+  }
+
+  const { data: projects, error } = await query
   
   if (error) {
     return []
