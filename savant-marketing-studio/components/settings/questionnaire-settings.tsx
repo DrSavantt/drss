@@ -1226,6 +1226,7 @@ function AddQuestionDialog({
 
   function handleSave() {
     if (!validate()) return
+    if (!section) return  // Guard against null section
     onSave({
       section,
       text: text.trim(),
