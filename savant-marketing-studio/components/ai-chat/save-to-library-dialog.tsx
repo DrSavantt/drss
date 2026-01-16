@@ -28,6 +28,7 @@ interface SaveToLibraryDialogProps {
   onOpenChange: (open: boolean) => void
   onSave: (data: { title: string; projectId: string | null }) => Promise<void>
   clientId: string | null
+  defaultProjectId?: string | null
   defaultTitle: string
 }
 
@@ -36,10 +37,11 @@ export function SaveToLibraryDialog({
   onOpenChange,
   onSave,
   clientId,
+  defaultProjectId,
   defaultTitle,
 }: SaveToLibraryDialogProps) {
   const [title, setTitle] = useState(defaultTitle)
-  const [projectId, setProjectId] = useState<string | null>(null)
+  const [projectId, setProjectId] = useState<string | null>(defaultProjectId || null)
   const [projects, setProjects] = useState<Array<{ id: string; name: string }>>([])
   const [isLoading, setIsLoading] = useState(false)
   const [isFetching, setIsFetching] = useState(true)
@@ -69,13 +71,13 @@ export function SaveToLibraryDialog({
     fetchProjects()
   }, [open, clientId])
 
-  // Reset form when dialog opens
+  // Reset form when dialog opens - use defaultProjectId if provided
   useEffect(() => {
     if (open) {
       setTitle(defaultTitle)
-      setProjectId(null)
+      setProjectId(defaultProjectId || null)
     }
-  }, [open, defaultTitle])
+  }, [open, defaultTitle, defaultProjectId])
 
   const handleSave = async () => {
     setIsLoading(true)

@@ -64,6 +64,12 @@ export function ChatInterface({
   // Save dialog state
   const [saveDialogOpen, setSaveDialogOpen] = useState(false)
   const [messageToSave, setMessageToSave] = useState<ConversationMessage | null>(null)
+  
+  // Track last mentioned project for auto-fill on save
+  const [lastMentionedProject, setLastMentionedProject] = useState<{
+    id: string
+    clientId: string | null
+  } | null>(null)
 
   const scrollToBottom = useCallback(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
@@ -72,6 +78,11 @@ export function ChatInterface({
   useEffect(() => {
     scrollToBottom()
   }, [messages, scrollToBottom])
+
+  // Clear last mentioned project when conversation changes
+  useEffect(() => {
+    setLastMentionedProject(null)
+  }, [currentConversationId])
 
   const handleNewChat = () => {
     setCurrentConversationId(null)
@@ -102,6 +113,21 @@ export function ChatInterface({
     context: ContextItem[],
     useExtendedThinking: boolean = false,
   ) => {
+    // Extract project mention for auto-fill on save dialog
+    const projectMention = context.find(c => c.type === 'project')
+    if (projectMention) {
+      const project = projects.find(p => p.id === projectMention.id)
+      if (project) {
+        setLastMentionedProject({
+          id: project.id,
+          clientId: project.clientId
+        })
+      }
+    } else {
+      // Clear if no project mentioned - each message is independent
+      setLastMentionedProject(null)
+    }
+    
     // Convert ContextItem[] to mentions format for backward compatibility with sendMessage action
     const mentions = context.map(item => ({
       type: item.type === "capture" ? "capture" as const : 
@@ -386,7 +412,8 @@ export function ChatInterface({
           open={saveDialogOpen}
           onOpenChange={setSaveDialogOpen}
           onSave={handleConfirmSave}
-          clientId={currentConversation.clientId}
+          clientId={lastMentionedProject?.clientId || currentConversation.clientId}
+          defaultProjectId={lastMentionedProject?.id || null}
           defaultTitle={`Chat Response - ${currentConversation.title || 'Untitled'}`}
         />
       )}
