@@ -3,7 +3,8 @@ import { NextResponse } from 'next/server'
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url)
-  const days = parseInt(searchParams.get('days') || '30')
+  const daysParam = searchParams.get('days')
+  const days = daysParam ? parseInt(daysParam) : null // null = all time
   const clientId = searchParams.get('clientId') // 'all' or UUID
   
   const supabase = await createClient()
@@ -11,8 +12,14 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: 'Database connection failed' }, { status: 500 })
   }
   
-  const startDate = new Date()
-  startDate.setDate(startDate.getDate() - days)
+  // For date filtering - null days means all time (no filter)
+  const startDate = days ? new Date() : null
+  if (startDate && days) {
+    startDate.setDate(startDate.getDate() - days)
+  }
+  
+  // For "all time", use 365 days as the display window for charts
+  const chartDays = days || 365
   
   // Get user's clients for filtering (exclude soft-deleted)
   const { data: { user } } = await supabase.auth.getUser()
@@ -252,7 +259,7 @@ export async function GET(request: Request) {
   let aiGenerations = 0
   let totalTokens = 0
   let totalAICost = 0
-  let aiByModel: Record<string, { count: number; cost: number; tokens: number }> = {}
+  let aiByModel: Record<string, { count: number; cost: number; tokens: number; modelName: string }> = {}
   let aiByClient: Record<string, { count: number; cost: number; tokens: number; clientName: string }> = {}
   let aiTrend: Array<{ date: string; value: number }> = []
   
@@ -263,7 +270,10 @@ export async function GET(request: Request) {
       .select('model_id, input_tokens, output_tokens, total_cost_usd, client_id, created_at, task_type')
       .eq('user_id', user.id)
       .eq('status', 'success')
-      .gte('created_at', startDate.toISOString())
+    
+    if (startDate) {
+      aiQuery = aiQuery.gte('created_at', startDate.toISOString())
+    }
     
     if (isFilteringByClient) {
       aiQuery = aiQuery.eq('client_id', clientId)
@@ -285,7 +295,7 @@ export async function GET(request: Request) {
         
         // By model breakdown
         if (!aiByModel[modelId]) {
-          aiByModel[modelId] = { count: 0, cost: 0, tokens: 0 }
+          aiByModel[modelId] = { count: 0, cost: 0, tokens: 0, modelName: '' }
         }
         aiByModel[modelId].count++
         aiByModel[modelId].cost += cost
@@ -302,8 +312,23 @@ export async function GET(request: Request) {
         }
       })
       
-      // AI Usage Trend (daily generations)
-      aiTrend = processTimeSeries(aiExecutions, days, false)
+      // AI Usage Trend (daily generations) - use chartDays for display
+      aiTrend = processTimeSeries(aiExecutions, chartDays, false)
+      
+      // Get model display names for aiByModel
+      const modelIds = Object.keys(aiByModel).filter(id => id !== 'unknown')
+      if (modelIds.length > 0) {
+        const { data: modelsData } = await supabase
+          .from('ai_models')
+          .select('id, display_name')
+          .in('id', modelIds)
+        
+        modelsData?.forEach(model => {
+          if (aiByModel[model.id]) {
+            aiByModel[model.id].modelName = model.display_name
+          }
+        })
+      }
       
       // Get client names for aiByClient
       if (Object.keys(aiByClient).length > 0) {
@@ -320,11 +345,131 @@ export async function GET(request: Request) {
       }
     } else {
       // No AI executions, generate empty trend
-      aiTrend = generateFlatLine(days, 0)
+      aiTrend = generateFlatLine(chartDays, 0)
     }
   } catch {
     // AI metrics unavailable - use empty trend
-    aiTrend = generateFlatLine(days, 0)
+    aiTrend = generateFlatLine(chartDays, 0)
+  }
+  
+  // ============================================
+  // AI USAGE BY PROJECT
+  // ============================================
+  
+  let aiUsageByProject: Array<{
+    projectId: string
+    projectName: string
+    totalCost: number
+    totalTokens: number
+    count: number
+  }> = []
+  
+  try {
+    // Fetch AI executions with project info
+    let projectAiQuery = supabase
+      .from('ai_executions')
+      .select('project_id, total_cost_usd, input_tokens, output_tokens')
+      .eq('user_id', user.id)
+      .eq('status', 'success')
+      .not('project_id', 'is', null)
+    
+    if (startDate) {
+      projectAiQuery = projectAiQuery.gte('created_at', startDate.toISOString())
+    }
+    
+    if (isFilteringByClient) {
+      projectAiQuery = projectAiQuery.eq('client_id', clientId)
+    }
+    
+    const { data: aiByProjectData } = await projectAiQuery
+    
+    if (aiByProjectData && aiByProjectData.length > 0) {
+      // Aggregate by project
+      const projectUsageMap = new Map<string, { 
+        projectId: string
+        projectName: string
+        totalCost: number
+        totalTokens: number
+        count: number 
+      }>()
+      
+      aiByProjectData.forEach(exec => {
+        const projectId = exec.project_id!
+        
+        if (!projectUsageMap.has(projectId)) {
+          projectUsageMap.set(projectId, {
+            projectId,
+            projectName: '', // Will be filled later
+            totalCost: 0,
+            totalTokens: 0,
+            count: 0
+          })
+        }
+        
+        const entry = projectUsageMap.get(projectId)!
+        entry.totalCost += exec.total_cost_usd || 0
+        entry.totalTokens += (exec.input_tokens || 0) + (exec.output_tokens || 0)
+        entry.count += 1
+      })
+      
+      // Get project names
+      const projectIds = Array.from(projectUsageMap.keys())
+      if (projectIds.length > 0) {
+        const { data: projectsData } = await supabase
+          .from('projects')
+          .select('id, name')
+          .in('id', projectIds)
+        
+        projectsData?.forEach(project => {
+          const entry = projectUsageMap.get(project.id)
+          if (entry) {
+            entry.projectName = project.name
+          }
+        })
+      }
+      
+      // Convert to array, sort by cost, take top 10
+      aiUsageByProject = Array.from(projectUsageMap.values())
+        .map(entry => ({
+          ...entry,
+          projectName: entry.projectName || 'Unknown Project'
+        }))
+        .sort((a, b) => b.totalCost - a.totalCost)
+        .slice(0, 10)
+    }
+  } catch {
+    // AI by project unavailable
+  }
+  
+  // ============================================
+  // AI LINKED VS UNLINKED USAGE
+  // ============================================
+  const aiLinkedVsUnlinked = {
+    linked: { count: 0, cost: 0, tokens: 0 },
+    unlinked: { count: 0, cost: 0, tokens: 0 }
+  }
+  
+  try {
+    let linkedQuery = supabase
+      .from('ai_executions')
+      .select('client_id, total_cost_usd, input_tokens, output_tokens')
+      .eq('user_id', user.id)
+      .eq('status', 'success')
+    
+    if (startDate) {
+      linkedQuery = linkedQuery.gte('created_at', startDate.toISOString())
+    }
+    
+    const { data: linkedData } = await linkedQuery
+    
+    linkedData?.forEach(exec => {
+      const category = exec.client_id ? 'linked' : 'unlinked'
+      aiLinkedVsUnlinked[category].count += 1
+      aiLinkedVsUnlinked[category].cost += exec.total_cost_usd || 0
+      aiLinkedVsUnlinked[category].tokens += (exec.input_tokens || 0) + (exec.output_tokens || 0)
+    })
+  } catch {
+    // Linked vs unlinked unavailable
   }
   
   // 14. Journal Entries This Week - only when not filtering by client
@@ -369,11 +514,16 @@ export async function GET(request: Request) {
   let activityByType: Record<string, number> = {}
   if (!isFilteringByClient) {
     try {
-      const { data: activityTypes } = await supabase
+      let activityQuery = supabase
         .from('activity_log')
         .select('activity_type')
         .eq('user_id', user.id)
-        .gte('created_at', startDate.toISOString())
+      
+      if (startDate) {
+        activityQuery = activityQuery.gte('created_at', startDate.toISOString())
+      }
+      
+      const { data: activityTypes } = await activityQuery
       
       if (activityTypes) {
         activityTypes.forEach(item => {
@@ -393,56 +543,76 @@ export async function GET(request: Request) {
   // CLIENT GROWTH TREND (exclude soft-deleted) - only when not filtering
   let clientTrend: Array<{ date: string; value: number }> = []
   if (!isFilteringByClient) {
-    const { data: clientsData } = await supabase
+    let clientQuery = supabase
       .from('clients')
       .select('created_at')
       .eq('user_id', user.id)
       .is('deleted_at', null)
-      .gte('created_at', startDate.toISOString())
       .order('created_at', { ascending: true })
     
-    clientTrend = processTimeSeries(clientsData || [], days, true) // cumulative
+    if (startDate) {
+      clientQuery = clientQuery.gte('created_at', startDate.toISOString())
+    }
+    
+    const { data: clientsData } = await clientQuery
+    
+    clientTrend = processTimeSeries(clientsData || [], chartDays, true) // cumulative
   } else {
     // For single client, show a flat line at 1
-    clientTrend = generateFlatLine(days, 1)
+    clientTrend = generateFlatLine(chartDays, 1)
   }
   
   // PROJECTS COMPLETED TREND (exclude soft-deleted)
-  const { data: projectsData } = await supabase
+  let projectsQuery = supabase
     .from('projects')
     .select('updated_at, status')
     .in('client_id', clientIds)
     .is('deleted_at', null)
     .eq('status', 'done')
-    .gte('updated_at', startDate.toISOString())
     .order('updated_at', { ascending: true })
   
-  const projectsTrend = processTimeSeries(projectsData || [], days, false)
+  if (startDate) {
+    projectsQuery = projectsQuery.gte('updated_at', startDate.toISOString())
+  }
+  
+  const { data: projectsData } = await projectsQuery
+  
+  const projectsTrend = processTimeSeries(projectsData || [], chartDays, false)
   
   // CONTENT CREATED TREND (exclude soft-deleted)
-  const { data: contentData } = await supabase
+  let contentQuery = supabase
     .from('content_assets')
     .select('created_at')
     .in('client_id', clientIds)
     .is('deleted_at', null)
-    .gte('created_at', startDate.toISOString())
     .order('created_at', { ascending: true })
   
-  const contentTrend = processTimeSeries(contentData || [], days, false)
+  if (startDate) {
+    contentQuery = contentQuery.gte('created_at', startDate.toISOString())
+  }
+  
+  const { data: contentData } = await contentQuery
+  
+  const contentTrend = processTimeSeries(contentData || [], chartDays, false)
   
   // DAILY ACTIVITY TREND - only when not filtering by client
   let activityTrend: Array<{ date: string; value: number }> = []
   if (!isFilteringByClient) {
-    const { data: activityData } = await supabase
+    let activityLogQuery = supabase
       .from('activity_log')
       .select('created_at')
       .eq('user_id', user.id)
-      .gte('created_at', startDate.toISOString())
       .order('created_at', { ascending: true })
     
-    activityTrend = processTimeSeries(activityData || [], days, false)
+    if (startDate) {
+      activityLogQuery = activityLogQuery.gte('created_at', startDate.toISOString())
+    }
+    
+    const { data: activityData } = await activityLogQuery
+    
+    activityTrend = processTimeSeries(activityData || [], chartDays, false)
   } else {
-    activityTrend = generateFlatLine(days, 0)
+    activityTrend = generateFlatLine(chartDays, 0)
   }
   
   return NextResponse.json({
@@ -494,7 +664,9 @@ export async function GET(request: Request) {
     
     // AI breakdowns
     aiByModel,
-    aiByClient
+    aiByClient,
+    aiUsageByProject,
+    aiLinkedVsUnlinked
   })
 }
 

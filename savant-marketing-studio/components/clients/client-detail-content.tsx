@@ -24,6 +24,7 @@ import { ClientProjectsTab } from './tabs/client-projects-tab'
 import { ClientContentTab } from './tabs/client-content-tab'
 import { ClientQuestionnaireTab } from './tabs/client-questionnaire-tab'
 import { ClientAIHistoryTab } from './tabs/client-ai-history-tab'
+import { ClientAIChatsTab } from './tabs/client-ai-chats-tab'
 
 // ============================================================================
 // CLIENT DETAIL CONTENT
@@ -103,6 +104,17 @@ interface AIExecution {
   created_at: string
 }
 
+interface AIConversation {
+  id: string
+  title: string
+  status: string
+  created_at: string | null
+  updated_at: string | null
+  total_input_tokens: number | null
+  total_output_tokens: number | null
+  total_cost_usd: number | null
+}
+
 interface ClientDetailContentProps {
   client: Client
   projects: Array<{
@@ -125,6 +137,7 @@ interface ClientDetailContentProps {
   questionnaireConfig: QuestionnaireConfig
   questionnaireResponseData: Record<string, unknown> | null
   aiExecutions: AIExecution[]
+  aiConversations: AIConversation[]
 }
 
 export function ClientDetailContent({
@@ -134,7 +147,8 @@ export function ClientDetailContent({
   activity,
   questionnaireConfig,
   questionnaireResponseData,
-  aiExecutions
+  aiExecutions,
+  aiConversations
 }: ClientDetailContentProps) {
   const [activeTab, setActiveTab] = useState('overview')
   
@@ -233,6 +247,9 @@ export function ClientDetailContent({
               <span className="ml-1.5 text-green-500">✓</span>
             )}
           </TabsTrigger>
+          <TabsTrigger value="chats">
+            AI Chats ({aiConversations.length})
+          </TabsTrigger>
           <TabsTrigger value="ai">AI History</TabsTrigger>
         </TabsList>
 
@@ -282,6 +299,14 @@ export function ClientDetailContent({
             questionnaireStatus={client.questionnaire_status}
             questionnaireCompletedAt={client.questionnaire_completed_at}
             questionnaireToken={client.questionnaire_token}
+          />
+        </TabsContent>
+
+        {/* AI Chats Tab - NO LOADING, data already here! */}
+        <TabsContent value="chats" className="mt-6">
+          <ClientAIChatsTab
+            conversations={aiConversations}
+            clientId={client.id}
           />
         </TabsContent>
 

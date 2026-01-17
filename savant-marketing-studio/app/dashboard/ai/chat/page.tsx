@@ -6,6 +6,10 @@ import { ChatInterface } from '@/components/ai-chat/chat-interface'
 
 export const dynamic = 'force-dynamic'
 
+interface PageProps {
+  searchParams: Promise<{ conversation?: string }>
+}
+
 function mapContentType(assetType: string | null): string | null {
   if (!assetType) return null
   const typeMap: Record<string, string> = {
@@ -50,7 +54,10 @@ function extractContentText(content: { content_json?: unknown; title?: string | 
   return content.title || null
 }
 
-export default async function AIChatPage() {
+export default async function AIChatPage({ searchParams }: PageProps) {
+  const params = await searchParams
+  const initialConversationId = params.conversation || null
+  
   const supabase = await createClient()
   
   if (!supabase) {
@@ -180,6 +187,7 @@ export default async function AIChatPage() {
       journalEntries={journalEntries}
       models={modelsResult.data || []}
       initialConversations={conversationsResult.success ? conversationsResult.data || [] : []}
+      initialConversationId={initialConversationId}
     />
   )
 }

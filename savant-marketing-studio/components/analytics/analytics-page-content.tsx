@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { springTransitions } from '@/lib/animations'
 import { 
@@ -10,9 +10,17 @@ import {
 import { 
   Users, CheckCircle2, FileText, Activity, TrendingUp, 
   Folder, AlertCircle, Archive, Zap, BookOpen, Percent,
-  LayoutGrid, BarChart3, DollarSign, MessageSquare, Hash, Clock
+  LayoutGrid, BarChart3, DollarSign, MessageSquare, Hash, Clock,
+  Calendar, Loader2
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 
 // ============================================
 // TYPES
@@ -59,8 +67,19 @@ interface AnalyticsData {
   contentCreated: TimeSeriesData
   dailyActivity: TimeSeriesData
   aiUsageTrend: TimeSeriesData
-  aiByModel: Record<string, { count: number; cost: number; tokens: number }>
+  aiByModel: Record<string, { count: number; cost: number; tokens: number; modelName?: string }>
   aiByClient: Record<string, { count: number; cost: number; tokens: number; clientName: string }>
+  aiUsageByProject?: Array<{
+    projectId: string
+    projectName: string
+    totalCost: number
+    totalTokens: number
+    count: number
+  }>
+  aiLinkedVsUnlinked?: {
+    linked: { count: number; cost: number; tokens: number }
+    unlinked: { count: number; cost: number; tokens: number }
+  }
 }
 
 interface Client {
@@ -579,12 +598,15 @@ function ContentTab({ data, viewMode }: TabContentProps) {
 
 function AITab({ data, viewMode }: TabContentProps) {
   const modelChartData = Object.entries(data.aiByModel || {}).map(([modelId, modelData]) => ({
-    name: modelId.includes('sonnet') ? 'Claude 3.5 Sonnet' :
-          modelId.includes('opus') ? 'Claude 3 Opus' :
-          modelId.includes('haiku') ? 'Claude 3.5 Haiku' :
+    // Use modelName from API if available, otherwise try to infer, then fallback to ID
+    name: modelData.modelName || 
+          (modelId.includes('sonnet') ? 'Claude Sonnet' :
+          modelId.includes('opus') ? 'Claude Opus' :
+          modelId.includes('haiku') ? 'Claude Haiku' :
           modelId.includes('gemini') && modelId.includes('flash') ? 'Gemini Flash' :
           modelId.includes('gemini') && modelId.includes('pro') ? 'Gemini Pro' :
-          modelId,
+          modelId === 'unknown' ? 'Unknown Model' :
+          modelId.length > 20 ? `${modelId.slice(0, 8)}...` : modelId),
     value: modelData.count,
     cost: modelData.cost,
     tokens: modelData.tokens
@@ -745,6 +767,64 @@ function AITab({ data, viewMode }: TabContentProps) {
             )}
           </motion.div>
 
+          {/* AI Usage by Project */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={springTransitions.springMedium}
+            className="bg-[var(--glass-bg)] border border-[var(--glass-border)] rounded-xl p-4 md:p-5 backdrop-blur-xl"
+          >
+            <div className="flex items-center gap-2.5 mb-4">
+              <Folder className="w-5 h-5 text-foreground" />
+              <h3 className="text-base font-semibold text-foreground">Usage by Project</h3>
+            </div>
+            {(data.aiUsageByProject || []).length > 0 ? (
+              <ResponsiveContainer width="100%" height={180}>
+                <BarChart data={data.aiUsageByProject} layout="vertical" margin={{ left: 10 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
+                  <XAxis 
+                    type="number" 
+                    stroke="#71717a" 
+                    fontSize={11}
+                    tickFormatter={(v) => `$${v.toFixed(2)}`}
+                  />
+                  <YAxis 
+                    type="category" 
+                    dataKey="projectName" 
+                    stroke="#71717a" 
+                    fontSize={11}
+                    width={80}
+                    tickFormatter={(name) => name.length > 12 ? `${name.slice(0, 12)}...` : name}
+                  />
+                  <Tooltip 
+                    content={({ active, payload }) => {
+                      if (active && payload && payload.length) {
+                        const chartPayload = payload[0].payload
+                        return (
+                          <div className="bg-popover border border-border rounded-lg p-3 shadow-lg">
+                            <p className="font-semibold text-foreground">{chartPayload.projectName}</p>
+                            <p className="text-sm text-muted-foreground">Generations: {chartPayload.count}</p>
+                            <p className="text-sm text-muted-foreground">Cost: {formatCurrency(chartPayload.totalCost)}</p>
+                            <p className="text-sm text-muted-foreground">Tokens: {formatTokens(chartPayload.totalTokens)}</p>
+                          </div>
+                        )
+                      }
+                      return null
+                    }}
+                  />
+                  <Bar dataKey="totalCost" fill="#10b981" radius={[0, 4, 4, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="h-[180px] flex items-center justify-center text-silver text-sm">
+                <div className="text-center">
+                  <Folder className="w-8 h-8 mx-auto mb-2 opacity-30" />
+                  <p>No project-linked AI usage yet</p>
+                </div>
+              </div>
+            )}
+          </motion.div>
+
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -801,6 +881,102 @@ function AITab({ data, viewMode }: TabContentProps) {
                 <div className="text-center">
                   <DollarSign className="w-8 h-8 mx-auto mb-2 opacity-30" />
                   <p>No cost data yet</p>
+                </div>
+              </div>
+            )}
+          </motion.div>
+
+          {/* Linked vs Unlinked Usage */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={springTransitions.springMedium}
+            className="bg-[var(--glass-bg)] border border-[var(--glass-border)] rounded-xl p-4 md:p-5 backdrop-blur-xl lg:col-span-2"
+          >
+            <div className="flex items-center gap-2.5 mb-4">
+              <Users className="w-5 h-5 text-foreground" />
+              <h3 className="text-base font-semibold text-foreground">Client-Linked vs General Usage</h3>
+            </div>
+            {((data.aiLinkedVsUnlinked?.linked.count || 0) + (data.aiLinkedVsUnlinked?.unlinked.count || 0)) > 0 ? (
+              <div className="flex flex-col md:flex-row items-center gap-6 md:gap-8">
+                <ResponsiveContainer width="100%" height={200} className="md:max-w-[50%]">
+                  <PieChart>
+                    <Pie
+                      data={[
+                        { 
+                          name: 'Client-Linked', 
+                          value: data.aiLinkedVsUnlinked?.linked.cost || 0,
+                          count: data.aiLinkedVsUnlinked?.linked.count || 0,
+                          tokens: data.aiLinkedVsUnlinked?.linked.tokens || 0
+                        },
+                        { 
+                          name: 'General/Unlinked', 
+                          value: data.aiLinkedVsUnlinked?.unlinked.cost || 0,
+                          count: data.aiLinkedVsUnlinked?.unlinked.count || 0,
+                          tokens: data.aiLinkedVsUnlinked?.unlinked.tokens || 0
+                        },
+                      ]}
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={40}
+                      outerRadius={70}
+                      paddingAngle={2}
+                      dataKey="value"
+                    >
+                      <Cell fill="#3b82f6" />
+                      <Cell fill="#71717a" />
+                    </Pie>
+                    <Tooltip 
+                      content={({ active, payload }) => {
+                        if (active && payload && payload.length) {
+                          const chartPayload = payload[0].payload
+                          return (
+                            <div className="bg-popover border border-border rounded-lg p-3 shadow-lg">
+                              <p className="font-semibold text-foreground">{chartPayload.name}</p>
+                              <p className="text-sm text-muted-foreground">Cost: {formatCurrency(chartPayload.value)}</p>
+                              <p className="text-sm text-muted-foreground">Generations: {chartPayload.count}</p>
+                              <p className="text-sm text-muted-foreground">Tokens: {formatTokens(chartPayload.tokens)}</p>
+                            </div>
+                          )
+                        }
+                        return null
+                      }}
+                    />
+                  </PieChart>
+                </ResponsiveContainer>
+                
+                <div className="flex flex-col gap-4">
+                  <div className="flex items-center gap-3">
+                    <div className="w-4 h-4 rounded-full bg-blue-500 flex-shrink-0" />
+                    <div>
+                      <p className="text-sm font-medium text-foreground">Client-Linked</p>
+                      <p className="text-xs text-silver">
+                        {data.aiLinkedVsUnlinked?.linked.count || 0} generations • {formatCurrency(data.aiLinkedVsUnlinked?.linked.cost || 0)}
+                      </p>
+                      <p className="text-xs text-silver">
+                        {formatTokens(data.aiLinkedVsUnlinked?.linked.tokens || 0)} tokens
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <div className="w-4 h-4 rounded-full bg-zinc-500 flex-shrink-0" />
+                    <div>
+                      <p className="text-sm font-medium text-foreground">General/Unlinked</p>
+                      <p className="text-xs text-silver">
+                        {data.aiLinkedVsUnlinked?.unlinked.count || 0} generations • {formatCurrency(data.aiLinkedVsUnlinked?.unlinked.cost || 0)}
+                      </p>
+                      <p className="text-xs text-silver">
+                        {formatTokens(data.aiLinkedVsUnlinked?.unlinked.tokens || 0)} tokens
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="h-[200px] flex items-center justify-center text-silver text-sm">
+                <div className="text-center">
+                  <Users className="w-8 h-8 mx-auto mb-2 opacity-30" />
+                  <p>No AI usage data yet</p>
                 </div>
               </div>
             )}
@@ -872,9 +1048,44 @@ function ActivityTab({ data, viewMode }: TabContentProps) {
 export function AnalyticsPageContent({ initialData, initialClients }: AnalyticsPageContentProps) {
   const [activeTab, setActiveTab] = useState<TabId>('overview')
   const [viewMode, setViewMode] = useState<ViewMode>('cards')
+  const [selectedPeriod, setSelectedPeriod] = useState<'7' | '30' | 'all'>('30')
+  const [isLoading, setIsLoading] = useState(false)
+  const [analyticsData, setAnalyticsData] = useState<AnalyticsData | null>(initialData)
+
+  // Fetch analytics data for selected period
+  const fetchAnalytics = async (period: string) => {
+    setIsLoading(true)
+    try {
+      const params = new URLSearchParams()
+      if (period !== 'all') {
+        params.set('days', period)
+      }
+      // 'all' means no days param = fetch all time
+      
+      const response = await fetch(`/api/analytics?${params.toString()}`)
+      if (response.ok) {
+        const data = await response.json()
+        setAnalyticsData(data)
+      }
+    } catch (error) {
+      console.error('Failed to fetch analytics:', error)
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  // Refetch when period changes (skip initial 30 days since we have that from SSR)
+  useEffect(() => {
+    if (selectedPeriod !== '30') {
+      fetchAnalytics(selectedPeriod)
+    } else if (!analyticsData && initialData) {
+      // Reset to initial data when switching back to 30 days
+      setAnalyticsData(initialData)
+    }
+  }, [selectedPeriod])
 
   // If no data, show empty state
-  if (!initialData) {
+  if (!analyticsData) {
     return (
       <div className="min-h-screen p-4 md:p-8 flex items-center justify-center">
         <div className="text-center">
@@ -886,11 +1097,11 @@ export function AnalyticsPageContent({ initialData, initialClients }: AnalyticsP
 
   // Ensure new fields have defaults for backwards compatibility
   const data = {
-    ...initialData,
+    ...analyticsData,
     stats: {
-      ...initialData.stats,
-      aiChats: initialData.stats.aiChats ?? 0,
-      activityByType: initialData.stats.activityByType ?? {},
+      ...analyticsData.stats,
+      aiChats: analyticsData.stats.aiChats ?? 0,
+      activityByType: analyticsData.stats.activityByType ?? {},
     }
   }
 
@@ -904,8 +1115,23 @@ export function AnalyticsPageContent({ initialData, initialClients }: AnalyticsP
 
       {/* Controls Row */}
       <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
-        <div className="w-[180px]" />
-        <div className="w-[180px]" />
+        {/* Period Selector */}
+        <div className="flex items-center gap-2">
+          <Calendar className="h-4 w-4 text-muted-foreground" />
+          <Select 
+            value={selectedPeriod} 
+            onValueChange={(value: '7' | '30' | 'all') => setSelectedPeriod(value)}
+          >
+            <SelectTrigger className="w-[140px] bg-[var(--glass-bg)] border-[var(--glass-border)]">
+              <SelectValue placeholder="Select period" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="7">Last 7 days</SelectItem>
+              <SelectItem value="30">Last 30 days</SelectItem>
+              <SelectItem value="all">All time</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
         
         {/* View Toggle */}
         <div className="flex gap-1 bg-[var(--glass-bg)] border border-[var(--glass-border)] rounded-lg p-1">
@@ -964,22 +1190,35 @@ export function AnalyticsPageContent({ initialData, initialClients }: AnalyticsP
       </div>
 
       {/* Tab Content - switches instantly, data already loaded! */}
-      <AnimatePresence mode="wait">
-        <motion.div
-          key={activeTab}
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: -10 }}
-          transition={{ duration: 0.2 }}
-        >
-          {activeTab === 'overview' && <OverviewTab data={data} viewMode={viewMode} />}
-          {activeTab === 'clients' && <ClientsTab data={data} viewMode={viewMode} />}
-          {activeTab === 'projects' && <ProjectsTab data={data} viewMode={viewMode} />}
-          {activeTab === 'content' && <ContentTab data={data} viewMode={viewMode} />}
-          {activeTab === 'ai' && <AITab data={data} viewMode={viewMode} />}
-          {activeTab === 'activity' && <ActivityTab data={data} viewMode={viewMode} />}
-        </motion.div>
-      </AnimatePresence>
+      <div className="relative">
+        {/* Loading Overlay */}
+        {isLoading && (
+          <div className="absolute inset-0 bg-background/50 backdrop-blur-sm flex items-center justify-center z-10 rounded-xl">
+            <div className="flex items-center gap-2 text-muted-foreground">
+              <Loader2 className="h-5 w-5 animate-spin" />
+              <span className="text-sm">Loading...</span>
+            </div>
+          </div>
+        )}
+        
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={activeTab}
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            transition={{ duration: 0.2 }}
+            className={cn(isLoading && "opacity-50 pointer-events-none")}
+          >
+            {activeTab === 'overview' && <OverviewTab data={data} viewMode={viewMode} />}
+            {activeTab === 'clients' && <ClientsTab data={data} viewMode={viewMode} />}
+            {activeTab === 'projects' && <ProjectsTab data={data} viewMode={viewMode} />}
+            {activeTab === 'content' && <ContentTab data={data} viewMode={viewMode} />}
+            {activeTab === 'ai' && <AITab data={data} viewMode={viewMode} />}
+            {activeTab === 'activity' && <ActivityTab data={data} viewMode={viewMode} />}
+          </motion.div>
+        </AnimatePresence>
+      </div>
     </div>
   )
 }

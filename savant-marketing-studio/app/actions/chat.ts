@@ -16,6 +16,7 @@ export interface CreateConversationInput {
   contentTypeId?: string;           // Single content type (e.g., Facebook Ad, Email, Landing Page)
   writingFrameworkIds?: string[];   // Multiple writing frameworks (e.g., AIDA, PAS, BAB)
   title?: string;
+  systemPrompt?: string;            // For rollover summaries - bypasses buildSystemPrompt()
 }
 
 export interface SendMessageInput {
@@ -39,6 +40,7 @@ export interface SendMessageInput {
 export interface UpdateConversationInput {
   title?: string;
   qualityRating?: number;
+  clientId?: string | null;  // Allow linking/unlinking to client after creation
 }
 
 export interface SaveToContentInput {
@@ -72,6 +74,8 @@ export interface ConversationListItem {
   clientName: string | null;
   messageCount: number;
   totalCost: number;
+  totalInputTokens: number;
+  totalOutputTokens: number;
   qualityRating: number | null;
   status: string;
   createdAt: string;
@@ -417,13 +421,18 @@ export async function createConversation(
       throw new Error('Not authenticated');
     }
 
-    // Build system prompt with client, content type, and writing framework context
-    const systemPrompt = await buildSystemPrompt(
-      supabase,
-      data.clientId,
-      data.contentTypeId,
-      data.writingFrameworkIds
-    );
+    // Use provided systemPrompt (for rollovers) OR build one from client/framework context
+    let systemPrompt: string;
+    if (data.systemPrompt) {
+      systemPrompt = data.systemPrompt;
+    } else {
+      systemPrompt = await buildSystemPrompt(
+        supabase,
+        data.clientId,
+        data.contentTypeId,
+        data.writingFrameworkIds
+      );
+    }
 
     // Generate default title if not provided
     let title = data.title;
@@ -587,6 +596,8 @@ export async function listConversations(
         title,
         client_id,
         total_cost_usd,
+        total_input_tokens,
+        total_output_tokens,
         quality_rating,
         status,
         created_at,
@@ -655,6 +666,8 @@ export async function listConversations(
       clientName: conv.client_id ? clientMap.get(conv.client_id) || null : null,
       messageCount: countMap.get(conv.id) || 0,
       totalCost: conv.total_cost_usd || 0,
+      totalInputTokens: conv.total_input_tokens || 0,
+      totalOutputTokens: conv.total_output_tokens || 0,
       qualityRating: conv.quality_rating,
       status: conv.status,
       createdAt: conv.created_at || '',
@@ -705,6 +718,11 @@ export async function updateConversation(
         return { success: false, error: 'Quality rating must be between 1 and 10' };
       }
       updateData.quality_rating = data.qualityRating;
+    }
+
+    // Handle client_id updates (link or unlink conversation to/from client)
+    if (data.clientId !== undefined) {
+      updateData.client_id = data.clientId;
     }
 
     const { data: conversation, error: updateError } = await supabase
@@ -771,6 +789,117 @@ export async function archiveConversation(
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Failed to archive conversation',
+    };
+  }
+}
+
+/**
+ * Summarize a conversation for context rollover
+ * Creates a comprehensive summary that can be used as system_prompt for a new conversation
+ */
+export async function summarizeConversation(
+  conversationId: string
+): Promise<ActionResult<{ summary: string }>> {
+  try {
+    const supabase = await createClient();
+    if (!supabase) {
+      return { success: false, error: 'Database connection failed' };
+    }
+
+    // Get current user
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    if (authError || !user) {
+      throw new Error('Not authenticated');
+    }
+
+    // Get conversation details
+    const { data: conversation, error: convError } = await supabase
+      .from('ai_conversations')
+      .select('id, title, client_id, system_prompt')
+      .eq('id', conversationId)
+      .single();
+
+    if (convError || !conversation) {
+      return { success: false, error: 'Conversation not found' };
+    }
+
+    // Get all messages for this conversation
+    const { data: executions, error: execError } = await supabase
+      .from('ai_executions')
+      .select('message_role, input_data, output_data')
+      .eq('conversation_id', conversationId)
+      .order('created_at', { ascending: true });
+
+    if (execError) {
+      return { success: false, error: 'Failed to fetch messages' };
+    }
+
+    // Build conversation transcript
+    const transcript = (executions || []).map(exec => {
+      if (exec.message_role === 'user') {
+        const content = (exec.input_data as { content?: string })?.content || '';
+        return `User: ${content}`;
+      } else if (exec.message_role === 'assistant') {
+        const content = (exec.output_data as { content?: string })?.content || '';
+        return `Assistant: ${content}`;
+      }
+      return '';
+    }).filter(Boolean).join('\n\n');
+
+    if (!transcript) {
+      return { success: false, error: 'No messages to summarize' };
+    }
+
+    // Call Claude to generate summary
+    const orchestrator = new AIOrchestrator();
+    const summaryResponse = await orchestrator.executeTask({
+      type: 'chat_message',
+      complexity: 'medium',
+      forceModel: 'claude-sonnet-4-5-20250929',
+      request: {
+        messages: [{
+          role: 'user',
+          content: `Please provide a comprehensive summary of the following conversation. Focus on:
+1. Key topics discussed
+2. Important decisions made
+3. Any action items or follow-ups mentioned
+4. Relevant context that should be remembered for future conversations
+
+Conversation transcript:
+${transcript}
+
+Provide the summary in a format that can be used as context for continuing this conversation later.`
+        }],
+        maxTokens: 2000,
+        temperature: 0.3,
+        systemPrompt: 'You are a helpful assistant that creates concise but comprehensive conversation summaries. Focus on capturing the essential context needed to continue the conversation effectively.',
+      },
+    });
+
+    if (!summaryResponse.content) {
+      return { success: false, error: 'Failed to generate summary' };
+    }
+
+    // Format summary as system prompt for new conversation
+    const formattedSummary = `## Previous Conversation Summary
+
+This conversation continues from an earlier chat titled "${conversation.title}".
+
+${summaryResponse.content}
+
+---
+
+Please continue assisting based on this context. The user may reference topics from the previous conversation.`;
+
+    return {
+      success: true,
+      data: { summary: formattedSummary },
+    };
+  } catch (error) {
+    console.error('summarizeConversation error:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to summarize conversation',
     };
   }
 }

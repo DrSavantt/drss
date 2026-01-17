@@ -67,6 +67,7 @@ async function ClientDetailLoader({ id }: { id: string }) {
     { data: sections },
     { data: questions },
     { data: aiExecutions },
+    { data: aiConversations },
     { count: projectCount },
     { count: contentCount }
   ] = await Promise.all([
@@ -121,6 +122,14 @@ async function ClientDetailLoader({ id }: { id: string }) {
       .eq('client_id', id)
       .order('created_at', { ascending: false })
       .limit(20),
+    
+    // AI conversations (chat threads) linked to this client
+    supabase
+      .from('ai_conversations')
+      .select('id, title, status, created_at, updated_at, total_input_tokens, total_output_tokens, total_cost_usd')
+      .eq('client_id', id)
+      .eq('status', 'active')
+      .order('updated_at', { ascending: false }),
     
     // Project count
     supabase
@@ -209,6 +218,7 @@ async function ClientDetailLoader({ id }: { id: string }) {
       questionnaireConfig={questionnaireConfig}
       questionnaireResponseData={responseData}
       aiExecutions={aiExecutions || []}
+      aiConversations={aiConversations || []}
     />
   )
 }

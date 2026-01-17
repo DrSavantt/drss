@@ -9,13 +9,18 @@ import type { ContextItem } from "./context-picker-modal"
 import { MessageThread } from "./message-thread"
 import { Button } from "@/components/ui/button"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
-import { PanelLeft, ChevronDown, MessageSquare } from "lucide-react"
+import { PanelLeft, ChevronDown, MessageSquare, AlertTriangle, Users } from "lucide-react"
+import { TokenCounter } from "./token-counter"
 import {
   createConversation,
   getConversation,
   sendMessage,
   archiveConversation,
+  deleteConversation,
   saveMessageToContent,
+  summarizeConversation,
+  listConversations,
+  updateConversation,
   type ConversationListItem,
   type ConversationMessage,
 } from "@/app/actions/chat"
@@ -42,6 +47,7 @@ export interface ChatInterfaceProps {
   models: Array<{ id: string; model_name: string; display_name: string }>
   initialConversations: ConversationListItem[]
   journalEntries: JournalEntrySummary[]
+  initialConversationId?: string | null  // URL param to auto-select a conversation
 }
 
 export function ChatInterface({
@@ -52,14 +58,24 @@ export function ChatInterface({
   models,
   initialConversations,
   journalEntries,
+  initialConversationId = null,
 }: ChatInterfaceProps) {
   const [sidebarOpen, setSidebarOpen] = useState(true)
   const [selectedModel, setSelectedModel] = useState(models[0] || { id: "", model_name: "", display_name: "No model" })
   const [conversations, setConversations] = useState<ConversationListItem[]>(initialConversations)
-  const [currentConversationId, setCurrentConversationId] = useState<string | null>(null)
+  const [currentConversationId, setCurrentConversationId] = useState<string | null>(initialConversationId)
   const [messages, setMessages] = useState<ConversationMessage[]>([])
   const [isGenerating, setIsGenerating] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
+  
+  // Token tracking state for live counter
+  const [conversationTokens, setConversationTokens] = useState<{
+    input: number
+    output: number
+  }>({ input: 0, output: 0 })
+  
+  // Summarization state for context rollover
+  const [isSummarizing, setIsSummarizing] = useState(false)
   
   // Save dialog state
   const [saveDialogOpen, setSaveDialogOpen] = useState(false)
@@ -73,6 +89,12 @@ export function ChatInterface({
   
   // Track if we just created a conversation (to avoid clearing lastMentionedProject)
   const justCreatedConversation = useRef(false)
+  
+  // State for "link to client" suggestion when @client is mentioned in unassigned chat
+  const [pendingClientLink, setPendingClientLink] = useState<{
+    clientId: string
+    clientName: string
+  } | null>(null)
 
   const scrollToBottom = useCallback(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
@@ -82,7 +104,15 @@ export function ChatInterface({
     scrollToBottom()
   }, [messages, scrollToBottom])
 
-  // Clear last mentioned project when switching conversations (but not when creating new)
+  // Load initial conversation if provided via URL param
+  useEffect(() => {
+    if (initialConversationId && messages.length === 0) {
+      handleSelectConversation(initialConversationId)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialConversationId])
+
+  // Clear state when switching conversations (but not when creating new)
   useEffect(() => {
     if (justCreatedConversation.current) {
       // Don't clear - we just created this conversation from a message with @project
@@ -90,11 +120,14 @@ export function ChatInterface({
       return
     }
     setLastMentionedProject(null)
+    setPendingClientLink(null)  // Clear any pending link suggestion
   }, [currentConversationId])
 
   const handleNewChat = () => {
     setCurrentConversationId(null)
     setMessages([])
+    // Reset token counter for new conversation
+    setConversationTokens({ input: 0, output: 0 })
   }
 
   const handleSelectConversation = async (id: string) => {
@@ -103,6 +136,11 @@ export function ChatInterface({
     const result = await getConversation(id)
     if (result.success && result.data) {
       setMessages(result.data.messages)
+      // Update token counter with conversation totals
+      setConversationTokens({
+        input: result.data.conversation.total_input_tokens || 0,
+        output: result.data.conversation.total_output_tokens || 0,
+      })
     }
   }
 
@@ -113,6 +151,52 @@ export function ChatInterface({
       if (currentConversationId === id) {
         handleNewChat()
       }
+      toast.success("Conversation archived")
+    } else {
+      toast.error("Failed to archive conversation")
+    }
+  }
+
+  const handleRenameConversation = async (id: string, newTitle: string) => {
+    const result = await updateConversation(id, { title: newTitle })
+    if (result.success) {
+      setConversations((prev) =>
+        prev.map((c) => (c.id === id ? { ...c, title: newTitle } : c))
+      )
+      toast.success("Conversation renamed")
+    } else {
+      toast.error("Failed to rename conversation")
+    }
+  }
+
+  const handleDeleteConversation = async (id: string) => {
+    const result = await deleteConversation(id)
+    if (result.success) {
+      setConversations((prev) => prev.filter((c) => c.id !== id))
+      if (currentConversationId === id) {
+        setCurrentConversationId(null)
+        setMessages([])
+        setConversationTokens({ input: 0, output: 0 })
+      }
+      toast.success("Conversation deleted")
+    } else {
+      toast.error("Failed to delete conversation")
+    }
+  }
+
+  const handleLinkClientToConversation = async (conversationId: string, clientId: string | null) => {
+    const result = await updateConversation(conversationId, { clientId })
+    if (result.success) {
+      // Find client name from clients list
+      const clientName = clientId ? clients.find((c) => c.id === clientId)?.name || null : null
+      setConversations((prev) =>
+        prev.map((c) =>
+          c.id === conversationId ? { ...c, clientId, clientName } : c
+        )
+      )
+      toast.success(clientId ? "Client linked" : "Client unlinked")
+    } else {
+      toast.error("Failed to update conversation")
     }
   }
 
@@ -226,6 +310,8 @@ export function ChatInterface({
           clientName: lookupClientName,
           messageCount: 0,
           totalCost: 0,
+          totalInputTokens: 0,
+          totalOutputTokens: 0,
           qualityRating: null,
           status: "active",
           createdAt: createResult.data.created_at || new Date().toISOString(),
@@ -255,6 +341,30 @@ export function ChatInterface({
       const refreshResult = await getConversation(conversationId)
       if (refreshResult.success && refreshResult.data) {
         setMessages(refreshResult.data.messages)
+        // Update token counter with new totals (trigger auto-updates these in DB)
+        setConversationTokens({
+          input: refreshResult.data.conversation.total_input_tokens || 0,
+          output: refreshResult.data.conversation.total_output_tokens || 0,
+        })
+      }
+      
+      // Check if we should suggest linking to a mentioned client
+      // Only if message sent successfully AND we have context mentions
+      if (context.length > 0) {
+        const clientMention = context.find(c => c.type === 'client')
+        if (clientMention) {
+          // Get current conversation's client (use refreshed data or fall back to state)
+          const currentConv = conversations.find(c => c.id === conversationId)
+          const currentClientId = currentConv?.clientId || null
+          
+          // If mentioned client is different from conversation's client, suggest linking
+          if (clientMention.id !== currentClientId) {
+            setPendingClientLink({
+              clientId: clientMention.id,
+              clientName: clientMention.name,
+            })
+          }
+        }
       }
     } catch (error) {
       console.error("Error sending message:", error)
@@ -305,6 +415,85 @@ export function ChatInterface({
     void messageId; // Placeholder until implemented
   }
 
+  // Handle "Summarize & Continue" - creates summary, archives old chat, starts new one
+  const handleSummarizeAndContinue = async () => {
+    if (!currentConversationId || isSummarizing) return
+    
+    setIsSummarizing(true)
+    
+    try {
+      // Get current conversation details
+      const currentConv = conversations.find(c => c.id === currentConversationId)
+      
+      // Step 1: Summarize current conversation
+      const summaryResult = await summarizeConversation(currentConversationId)
+      if (!summaryResult.success || !summaryResult.data?.summary) {
+        toast.error(summaryResult.error || 'Failed to summarize conversation')
+        return
+      }
+      
+      // Step 2: Create new conversation with summary as system prompt
+      const newConvResult = await createConversation({
+        clientId: currentConv?.clientId || undefined,
+        title: `Continued: ${currentConv?.title || 'Chat'}`,
+        systemPrompt: summaryResult.data.summary,
+      })
+      
+      if (!newConvResult.success || !newConvResult.data) {
+        toast.error('Failed to create new conversation')
+        return
+      }
+      
+      // Step 3: Archive the old conversation
+      await archiveConversation(currentConversationId)
+      
+      // Step 4: Switch to new conversation
+      setCurrentConversationId(newConvResult.data.id)
+      setMessages([])
+      setConversationTokens({ input: 0, output: 0 })
+      
+      // Step 5: Refresh conversation list
+      const listResult = await listConversations({ status: 'active' })
+      if (listResult.success && listResult.data) {
+        setConversations(listResult.data)
+      }
+      
+      toast.success('Conversation summarized and continued in new chat')
+    } catch (error) {
+      console.error('Error in summarize and continue:', error)
+      toast.error('An error occurred while summarizing')
+    } finally {
+      setIsSummarizing(false)
+    }
+  }
+
+  // Handle linking conversation to a mentioned client
+  const handleLinkToClient = async () => {
+    if (!currentConversationId || !pendingClientLink) return
+    
+    const result = await updateConversation(currentConversationId, {
+      clientId: pendingClientLink.clientId,
+    })
+    
+    if (result.success) {
+      // Update conversation in local state with new client info
+      setConversations(prev => prev.map(conv => 
+        conv.id === currentConversationId
+          ? { ...conv, clientId: pendingClientLink.clientId, clientName: pendingClientLink.clientName }
+          : conv
+      ))
+      toast.success(`Chat linked to ${pendingClientLink.clientName}`)
+    } else {
+      toast.error('Failed to link chat')
+    }
+    
+    setPendingClientLink(null)
+  }
+
+  const handleDismissLink = () => {
+    setPendingClientLink(null)
+  }
+
   return (
     <div className="flex h-[calc(100vh-4rem)] bg-background">
       {/* Sidebar */}
@@ -320,9 +509,13 @@ export function ChatInterface({
             <ChatSidebar
               conversations={conversations}
               currentConversationId={currentConversationId || undefined}
+              clients={clients}
               onNewChat={handleNewChat}
               onSelectConversation={handleSelectConversation}
               onArchiveConversation={handleArchiveConversation}
+              onRenameConversation={handleRenameConversation}
+              onDeleteConversation={handleDeleteConversation}
+              onLinkClient={handleLinkClientToConversation}
               onClose={() => setSidebarOpen(false)}
             />
           </motion.div>
@@ -364,8 +557,85 @@ export function ChatInterface({
               ))}
             </DropdownMenuContent>
           </DropdownMenu>
-          <div className="w-10" /> {/* Spacer for balance */}
+          <TokenCounter 
+            inputTokens={conversationTokens.input}
+            outputTokens={conversationTokens.output}
+          />
         </header>
+
+        {/* Token Limit Warning Banner with Summarize & Continue */}
+        {(() => {
+          const total = conversationTokens.input + conversationTokens.output
+          const percentage = (total / 200000) * 100
+          
+          // Critical: ≥95% - Red banner with urgent action
+          if (percentage >= 95) {
+            return (
+              <div className="px-4 py-2 bg-destructive/10 border-b border-destructive/20 text-destructive text-sm flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2">
+                  <AlertTriangle className="h-4 w-4 flex-shrink-0" />
+                  <span>Near context limit — summarize to continue</span>
+                </div>
+                <Button
+                  size="sm"
+                  variant="destructive"
+                  onClick={handleSummarizeAndContinue}
+                  disabled={isSummarizing || !currentConversationId}
+                  className="flex-shrink-0"
+                >
+                  {isSummarizing ? 'Summarizing...' : 'Summarize & Continue'}
+                </Button>
+              </div>
+            )
+          }
+          // Warning: ≥70% - Yellow banner with suggestion
+          if (percentage >= 70) {
+            return (
+              <div className="px-4 py-2 bg-yellow-500/10 border-b border-yellow-500/20 text-yellow-600 dark:text-yellow-500 text-sm flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2">
+                  <AlertTriangle className="h-4 w-4 flex-shrink-0" />
+                  <span>Context usage at {Math.round(percentage)}% — consider summarizing</span>
+                </div>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={handleSummarizeAndContinue}
+                  disabled={isSummarizing || !currentConversationId}
+                  className="flex-shrink-0 border-yellow-500/50 text-yellow-600 hover:bg-yellow-500/10 dark:text-yellow-500"
+                >
+                  {isSummarizing ? 'Summarizing...' : 'Summarize & Continue'}
+                </Button>
+              </div>
+            )
+          }
+          return null
+        })()}
+
+        {/* Link to Client Suggestion Banner */}
+        {pendingClientLink && (
+          <div className="px-4 py-2 bg-primary/10 border-b border-primary/20 text-sm flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2">
+              <Users className="h-4 w-4 text-primary flex-shrink-0" />
+              <span>Link this chat to <strong>{pendingClientLink.clientName}</strong>?</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={handleDismissLink}
+                className="text-muted-foreground"
+              >
+                Dismiss
+              </Button>
+              <Button
+                size="sm"
+                onClick={handleLinkToClient}
+              >
+                Link
+              </Button>
+            </div>
+          </div>
+        )}
 
         {/* Chat Content */}
         <div className="flex flex-1 flex-col overflow-hidden">
