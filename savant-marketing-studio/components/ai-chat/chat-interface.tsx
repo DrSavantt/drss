@@ -498,7 +498,7 @@ export function ChatInterface({
   }
 
   return (
-    <div className="flex h-[calc(100vh-4rem)] bg-background">
+    <div className="flex h-[calc(100vh-4rem)] pb-16 md:pb-0 bg-background">
       {/* Mobile: Sheet for sidebar */}
       <Sheet open={mobileSheetOpen} onOpenChange={setMobileSheetOpen}>
         <SheetContent side="left" className="w-[300px] p-0 md:hidden">
