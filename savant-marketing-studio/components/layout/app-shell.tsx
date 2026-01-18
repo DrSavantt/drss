@@ -4,6 +4,7 @@ import type React from "react"
 import { useState, useEffect } from "react"
 import { usePathname } from "next/navigation"
 import { TopNav } from "./top-nav"
+import { BottomNav } from "./bottom-nav"
 import { CommandPalette } from "@/components/command-palette"
 import { cn } from "@/lib/utils"
 
@@ -45,15 +46,15 @@ export function AppShell({ user, children }: AppShellProps) {
   return (
     <div className={cn(
       "bg-background",
-      isFullBleed ? "h-screen overflow-hidden" : "min-h-screen"
+      isFullBleed ? "h-screen-dvh overflow-hidden" : "min-h-screen-dvh"
     )}>
       <TopNav user={user} onSearchClick={() => setCommandOpen(true)} />
       
       {/* Main Content Area */}
       <main className={cn(
         isFullBleed 
-          ? "h-[calc(100vh-4rem)] overflow-hidden" 
-          : "min-h-[calc(100vh-4rem)]"
+          ? "h-[calc(100dvh-4rem)] overflow-hidden" 
+          : "min-h-[calc(100dvh-4rem)]"
       )}>
         {isFullBleed ? (
           children
@@ -63,6 +64,9 @@ export function AppShell({ user, children }: AppShellProps) {
           </div>
         )}
       </main>
+
+      {/* Bottom Navigation - Mobile only */}
+      <BottomNav />
 
       {/* Command Palette */}
       <CommandPalette open={commandOpen} onOpenChange={setCommandOpen} />
