@@ -54,8 +54,8 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
-        {/* PWA Icons - Replace SVG placeholders with PNG for production */}
-        <link rel="apple-touch-icon" href="/apple-touch-icon.svg" />
+        {/* PWA Icons */}
+        {/* Note: apple-touch-icon requires PNG format, SVG not supported by iOS */}
         <link rel="icon" type="image/svg+xml" sizes="32x32" href="/icons/icon-32.svg" />
         <link rel="icon" type="image/svg+xml" sizes="16x16" href="/icons/icon-16.svg" />
         
