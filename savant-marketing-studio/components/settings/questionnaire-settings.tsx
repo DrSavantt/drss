@@ -58,6 +58,7 @@ import {
   closestCenter,
   KeyboardSensor,
   PointerSensor,
+  TouchSensor,
   useSensor,
   useSensors,
   DragEndEvent
@@ -120,8 +121,19 @@ export function QuestionnaireSettings({
 
   const isClientMode = mode === 'client' && !!clientId
 
+  // Configure sensors with touch support for mobile
   const sensors = useSensors(
-    useSensor(PointerSensor),
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8, // 8px movement required to start drag
+      },
+    }),
+    useSensor(TouchSensor, {
+      activationConstraint: {
+        delay: 200, // 200ms hold to start drag (prevents scroll conflict)
+        tolerance: 5, // 5px movement allowed during delay
+      },
+    }),
     useSensor(KeyboardSensor, {
       coordinateGetter: sortableKeyboardCoordinates,
     })
@@ -824,8 +836,19 @@ function SectionItem({
   } = useSortable({ id: section.id })
 
   // ✅ Create sensors at top level, always called in same order
+  // Includes TouchSensor for mobile touch support
   const questionSensors = useSensors(
-    useSensor(PointerSensor),
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8,
+      },
+    }),
+    useSensor(TouchSensor, {
+      activationConstraint: {
+        delay: 200,
+        tolerance: 5,
+      },
+    }),
     useSensor(KeyboardSensor, {
       coordinateGetter: sortableKeyboardCoordinates,
     })
@@ -847,7 +870,10 @@ function SectionItem({
           <button
             {...attributes}
             {...listeners}
-            className="cursor-grab active:cursor-grabbing text-muted-foreground hover:text-foreground opacity-0 group-hover:opacity-100 transition-opacity"
+            className="touch-action-none cursor-grab active:cursor-grabbing text-muted-foreground hover:text-foreground 
+                       opacity-40 hover:opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity
+                       min-h-[44px] min-w-[44px] flex items-center justify-center -m-2
+                       focus:outline-none focus:ring-2 focus:ring-primary/50 rounded"
           >
             <GripVertical className="w-5 h-5" />
           </button>
@@ -855,7 +881,7 @@ function SectionItem({
 
         <button
           onClick={onExpand}
-          className="text-muted-foreground hover:text-foreground"
+          className="text-muted-foreground hover:text-foreground min-h-[44px] min-w-[44px] flex items-center justify-center -m-2 rounded hover:bg-accent/50 transition-colors"
         >
           {isExpanded ? <ChevronDown className="w-5 h-5" /> : <ChevronRight className="w-5 h-5" />}
         </button>
@@ -874,11 +900,11 @@ function SectionItem({
 
         <Switch checked={section.enabled} onCheckedChange={onToggle} />
 
-        <Button variant="ghost" size="icon" onClick={onEdit} title="Edit section">
+        <Button variant="ghost" size="icon" onClick={onEdit} title="Edit section" className="min-h-[44px] min-w-[44px]">
           <Pencil className="w-4 h-4" />
         </Button>
         {!isClientMode && (
-          <Button variant="ghost" size="icon" onClick={onDelete} title="Delete section">
+          <Button variant="ghost" size="icon" onClick={onDelete} title="Delete section" className="min-h-[44px] min-w-[44px]">
             <Trash2 className="w-4 h-4" />
           </Button>
         )}
@@ -961,7 +987,10 @@ function QuestionItem({
         <button
           {...attributes}
           {...listeners}
-          className="cursor-grab active:cursor-grabbing text-muted-foreground hover:text-foreground opacity-0 group-hover:opacity-100 transition-opacity"
+          className="touch-action-none cursor-grab active:cursor-grabbing text-muted-foreground hover:text-foreground 
+                     opacity-40 hover:opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity
+                     min-h-[44px] min-w-[44px] flex items-center justify-center -m-2
+                     focus:outline-none focus:ring-2 focus:ring-primary/50 rounded"
         >
           <GripVertical className="w-4 h-4" />
         </button>
@@ -980,11 +1009,11 @@ function QuestionItem({
 
       <Switch checked={question.enabled} onCheckedChange={onToggle} />
 
-      <Button variant="ghost" size="icon" onClick={onEdit} title="Edit question">
+      <Button variant="ghost" size="icon" onClick={onEdit} title="Edit question" className="min-h-[44px] min-w-[44px]">
         <Pencil className="w-4 h-4" />
       </Button>
       {!isClientMode && (
-        <Button variant="ghost" size="icon" onClick={onDelete} title="Delete question">
+        <Button variant="ghost" size="icon" onClick={onDelete} title="Delete question" className="min-h-[44px] min-w-[44px]">
           <Trash2 className="w-4 h-4" />
         </Button>
       )}

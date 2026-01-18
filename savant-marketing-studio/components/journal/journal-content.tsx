@@ -4,10 +4,11 @@ import type React from "react"
 import { useState, useEffect, useRef, useCallback } from "react"
 import Link from "next/link"
 import { format } from 'date-fns'
-import { Plus, Hash, AtSign, Send, Users, FolderKanban, FileText, Trash2, X, Pin, PinOff, Check, ArrowRight } from "lucide-react"
+import { Plus, Hash, AtSign, Send, Users, FolderKanban, FileText, Trash2, X, Pin, PinOff, Check, ArrowRight, Menu } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle } from "@/components/ui/sheet"
 import { cn } from "@/lib/utils"
 import { escapeHtml } from "@/lib/utils/sanitize-html"
 import { 
@@ -128,6 +129,9 @@ export function JournalContent({
   const [convertDialogOpen, setConvertDialogOpen] = useState(false)
   const [entriesToConvert, setEntriesToConvert] = useState<string[]>([])
   const [convertEntryContent, setConvertEntryContent] = useState<string>('')
+  
+  // Mobile sidebar state
+  const [sidebarOpen, setSidebarOpen] = useState(false)
   
   // Track mounted state
   const isMountedRef = useRef(true)
@@ -588,81 +592,113 @@ export function JournalContent({
         <p className="text-muted-foreground">Capture ideas, notes, and quick thoughts</p>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-[280px_1fr]">
-        {/* Sidebar */}
-        <div className="space-y-6">
-          {/* Chats */}
-          <Card className="border-border bg-card">
-            <CardHeader className="pb-2">
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-sm font-medium">Chats</CardTitle>
-                <Button 
-                  variant="ghost" 
-                  size="icon" 
-                  className="h-6 w-6"
-                  onClick={() => setShowCreateChatDialog(true)}
-                >
-                  <Plus className="h-4 w-4" />
-                </Button>
-              </div>
-            </CardHeader>
-            <CardContent className="p-0">
-              <nav className="space-y-1 px-3 pb-3">
-                {chats.map((chat) => (
-                  <button
-                    key={chat.id}
-                    onClick={() => setActiveChat(chat)}
-                    className={cn(
-                      "flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm transition-colors",
-                      activeChat.id === chat.id
-                        ? "bg-primary/10 text-primary"
-                        : "text-muted-foreground hover:bg-muted hover:text-foreground",
-                    )}
+      {/* Sidebar Content - reused for both mobile Sheet and desktop */}
+      {(() => {
+        const SidebarContent = () => (
+          <div className="space-y-6">
+            {/* Chats */}
+            <Card className="border-border bg-card">
+              <CardHeader className="pb-2">
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-sm font-medium">Chats</CardTitle>
+                  <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    className="h-6 w-6"
+                    onClick={() => setShowCreateChatDialog(true)}
                   >
-                    <span
+                    <Plus className="h-4 w-4" />
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent className="p-0">
+                <nav className="space-y-1 px-3 pb-3">
+                  {chats.map((chat) => (
+                    <button
+                      key={chat.id}
+                      onClick={() => {
+                        setActiveChat(chat)
+                        setSidebarOpen(false) // Close sidebar on mobile after selection
+                      }}
                       className={cn(
-                        "h-2 w-2 rounded-full",
-                        activeChat.id === chat.id ? "bg-primary" : "bg-muted-foreground/50",
+                        "flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm transition-colors",
+                        activeChat.id === chat.id
+                          ? "bg-primary/10 text-primary"
+                          : "text-muted-foreground hover:bg-muted hover:text-foreground",
                       )}
-                    />
-                    {chat.name}
-                    <span className="ml-auto text-xs text-muted-foreground">{chat.entries.length}</span>
-                  </button>
-                ))}
-              </nav>
-            </CardContent>
-          </Card>
+                    >
+                      <span
+                        className={cn(
+                          "h-2 w-2 rounded-full",
+                          activeChat.id === chat.id ? "bg-primary" : "bg-muted-foreground/50",
+                        )}
+                      />
+                      {chat.name}
+                      <span className="ml-auto text-xs text-muted-foreground">{chat.entries.length}</span>
+                    </button>
+                  ))}
+                </nav>
+              </CardContent>
+            </Card>
 
-          {/* Tags */}
-          <Card className="border-border bg-card">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium">Tags</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="flex flex-wrap gap-2">
-                {allTags.map((tag) => (
-                  <button
-                    key={tag}
-                    className="flex items-center gap-1 rounded-full bg-muted px-2.5 py-1 text-xs text-muted-foreground transition-colors hover:bg-primary/10 hover:text-primary"
-                  >
-                    <Hash className="h-3 w-3" />
-                    {tag}
-                  </button>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+            {/* Tags */}
+            <Card className="border-border bg-card">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium">Tags</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="flex flex-wrap gap-2">
+                  {allTags.map((tag) => (
+                    <button
+                      key={tag}
+                      className="flex items-center gap-1 rounded-full bg-muted px-2.5 py-1 text-xs text-muted-foreground transition-colors hover:bg-primary/10 hover:text-primary"
+                    >
+                      <Hash className="h-3 w-3" />
+                      {tag}
+                    </button>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        )
 
-        {/* Main Content */}
-        <Card className="border-border bg-card">
-          <CardHeader>
-            <CardTitle>{activeChat.name}</CardTitle>
-            <p className="text-sm text-muted-foreground">Created Dec 20 • {activeChat.entries.length} entries</p>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            {/* Entries */}
-            <div className="space-y-4 max-h-[500px] overflow-y-auto">
+        return (
+          <div className="flex gap-6">
+            {/* Mobile: Sheet trigger button */}
+            <div className="lg:hidden">
+              <Sheet open={sidebarOpen} onOpenChange={setSidebarOpen}>
+                <SheetTrigger asChild>
+                  <Button variant="outline" size="icon" className="h-10 w-10 shrink-0">
+                    <Menu className="h-5 w-5" />
+                    <span className="sr-only">Open sidebar</span>
+                  </Button>
+                </SheetTrigger>
+                <SheetContent side="left" className="w-[280px] p-0">
+                  <SheetHeader className="p-4 border-b">
+                    <SheetTitle>Journal</SheetTitle>
+                  </SheetHeader>
+                  <div className="p-4 overflow-y-auto">
+                    <SidebarContent />
+                  </div>
+                </SheetContent>
+              </Sheet>
+            </div>
+
+            {/* Desktop: Always visible sidebar */}
+            <aside className="hidden lg:block w-[280px] shrink-0">
+              <SidebarContent />
+            </aside>
+
+            {/* Main Content - takes full width on mobile */}
+            <Card className="border-border bg-card flex-1 min-w-0">
+              <CardHeader>
+                <CardTitle>{activeChat.name}</CardTitle>
+                <p className="text-sm text-muted-foreground">Created Dec 20 • {activeChat.entries.length} entries</p>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                {/* Entries */}
+                <div className="space-y-4 max-h-[500px] overflow-y-auto">
               {activeChat.entries
                 .sort((a, b) => {
                   if (a.is_pinned && !b.is_pinned) return -1
@@ -874,10 +910,12 @@ export function JournalContent({
                   <Send className="h-4 w-4" />
                 </Button>
               </div>
-            </form>
-          </CardContent>
-        </Card>
-      </div>
+                </form>
+              </CardContent>
+            </Card>
+          </div>
+        )
+      })()}
 
       {/* Create Chat Dialog */}
       <Dialog open={showCreateChatDialog} onOpenChange={setShowCreateChatDialog}>

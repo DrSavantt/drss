@@ -104,7 +104,7 @@ const AlertDialogAction = React.forwardRef<
   <AlertDialogPrimitive.Action
     ref={ref}
     className={cn(
-      'inline-flex h-10 items-center justify-center rounded-md bg-red-primary px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-red-primary/90 focus:outline-none focus:ring-2 focus:ring-red-primary focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50',
+      'inline-flex min-h-[44px] items-center justify-center rounded-md bg-red-primary px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-red-primary/90 focus:outline-none focus:ring-2 focus:ring-red-primary focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50',
       className
     )}
     {...props}
@@ -119,7 +119,7 @@ const AlertDialogCancel = React.forwardRef<
   <AlertDialogPrimitive.Cancel
     ref={ref}
     className={cn(
-      'mt-2 inline-flex h-10 items-center justify-center rounded-md border border-input bg-background px-4 py-2 text-sm font-semibold transition-colors hover:bg-accent hover:text-accent-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 sm:mt-0',
+      'mt-2 inline-flex min-h-[44px] items-center justify-center rounded-md border border-input bg-background px-4 py-2 text-sm font-semibold transition-colors hover:bg-accent hover:text-accent-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 sm:mt-0',
       className
     )}
     {...props}

@@ -5,7 +5,8 @@ import Link from "next/link"
 import { ArrowLeft, Building2, Globe, Mail, MoreHorizontal, Pencil, Calendar, Plus, File } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Tabs, TabsContent, TabsTrigger } from "@/components/ui/tabs"
+import { ScrollableTabsList } from '@/components/ui/scrollable-tabs'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -187,13 +188,13 @@ export function ClientDetail({ clientId }: ClientDetailProps) {
 
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="bg-muted/50">
+        <ScrollableTabsList className="bg-muted/50">
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="projects">Projects</TabsTrigger>
           <TabsTrigger value="content">Content</TabsTrigger>
           <TabsTrigger value="questionnaire">Questionnaire</TabsTrigger>
           <TabsTrigger value="ai">AI History</TabsTrigger>
-        </TabsList>
+        </ScrollableTabsList>
 
         <TabsContent value="overview" className="mt-6 space-y-6">
           {/* Stats */}

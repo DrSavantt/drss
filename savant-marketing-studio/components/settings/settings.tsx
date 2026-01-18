@@ -8,7 +8,8 @@ import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Switch } from "@/components/ui/switch"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Tabs, TabsContent, TabsTrigger } from "@/components/ui/tabs"
+import { ScrollableTabsList } from '@/components/ui/scrollable-tabs'
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Skeleton } from "@/components/ui/skeleton"
 import { updateUserProfile } from "@/app/actions/settings"
@@ -251,13 +252,13 @@ export function Settings() {
       </div>
 
       <Tabs defaultValue="general" className="space-y-6">
-        <TabsList className="bg-muted/50">
+        <ScrollableTabsList className="bg-muted/50">
           <TabsTrigger value="general">General</TabsTrigger>
           <TabsTrigger value="ai">AI Configuration</TabsTrigger>
           <TabsTrigger value="appearance">Appearance</TabsTrigger>
           <TabsTrigger value="questionnaire">Questionnaire</TabsTrigger>
           <TabsTrigger value="data">Data</TabsTrigger>
-        </TabsList>
+        </ScrollableTabsList>
 
         {/* General */}
         <TabsContent value="general">

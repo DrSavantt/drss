@@ -90,8 +90,10 @@ export const TopNav = memo(function TopNav({ user, onSearchClick }: TopNavProps)
 
   return (
     <header className="sticky top-0 z-30 flex h-16 items-center gap-4 border-b border-border bg-background px-4">
-      {/* Hamburger Menu */}
-      <MobileNav onSearchClick={onSearchClick} />
+      {/* Hamburger Menu - Hidden on mobile (bottom nav handles navigation), visible on desktop */}
+      <div className="hidden md:block">
+        <MobileNav onSearchClick={onSearchClick} />
+      </div>
       
       {/* Logo/Brand */}
       <Link href="/dashboard" className="flex items-center gap-2">

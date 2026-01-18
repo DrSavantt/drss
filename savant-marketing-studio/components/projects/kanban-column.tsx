@@ -1,20 +1,16 @@
 "use client"
 
-import { memo, useCallback } from "react"
-import type React from "react"
+import { memo } from "react"
 
 import type { Project } from "./projects-kanban"
 import { ProjectCard } from "./project-card"
 import { cn } from "@/lib/utils"
+import { useDroppable } from '@dnd-kit/core'
 
 interface KanbanColumnProps {
   title: string
   status: Project["status"]
   projects: Project[]
-  onDragStart: (project: Project) => void
-  onDragEnd: () => void
-  onDrop: (status: Project["status"]) => void
-  isDragging: boolean
   onProjectClick?: (project: Project) => void
 }
 
@@ -22,32 +18,20 @@ export const KanbanColumn = memo(function KanbanColumn({
   title,
   status,
   projects,
-  onDragStart,
-  onDragEnd,
-  onDrop,
-  isDragging,
   onProjectClick,
 }: KanbanColumnProps) {
-  // PERFORMANCE OPTIMIZATION: Memoize event handlers
-  // Previously: New function created on every render
-  // Now: Function reference stable unless dependencies change
-  const handleDragOver = useCallback((e: React.DragEvent) => {
-    e.preventDefault()
-  }, [])
-
-  const handleDrop = useCallback((e: React.DragEvent) => {
-    e.preventDefault()
-    onDrop(status)
-  }, [onDrop, status])
+  // dnd-kit droppable - the column accepts dragged cards
+  const { isOver, setNodeRef } = useDroppable({
+    id: status, // Use status as the droppable ID
+  })
 
   return (
     <div
+      ref={setNodeRef}
       className={cn(
-        "flex w-72 shrink-0 flex-col rounded-xl border border-border bg-card/50",
-        isDragging && "ring-2 ring-primary/20",
+        "flex w-72 shrink-0 flex-col rounded-xl border border-border bg-card/50 transition-all",
+        isOver && "ring-2 ring-primary/50 bg-primary/5",
       )}
-      onDragOver={handleDragOver}
-      onDrop={handleDrop}
     >
       {/* Column Header */}
       <div className="flex items-center justify-between border-b border-border px-4 py-3">
@@ -63,8 +47,6 @@ export const KanbanColumn = memo(function KanbanColumn({
           <ProjectCard 
             key={project.id} 
             project={project} 
-            onDragStart={onDragStart} 
-            onDragEnd={onDragEnd}
             onClick={onProjectClick}
           />
         ))}

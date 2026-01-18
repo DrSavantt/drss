@@ -9,6 +9,19 @@ import { KanbanColumn } from "./kanban-column"
 import { NewProjectDialog } from "./new-project-dialog"
 import { updateProjectStatus } from "@/app/actions/projects"
 import { cn } from "@/lib/utils"
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  TouchSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+  DragStartEvent,
+  DragOverlay,
+} from '@dnd-kit/core'
+import { ProjectCard } from "./project-card"
 
 // ============================================================================
 // EXACT v0 CODE - Only data fetching added, UI unchanged
@@ -38,8 +51,24 @@ export function ProjectsKanban() {
   const [viewMode, setViewMode] = useState<"board" | "list">("board")
   const [clientFilter, setClientFilter] = useState("all")
   const [dialogOpen, setDialogOpen] = useState(false)
-  const [draggedProject, setDraggedProject] = useState<Project | null>(null)
+  const [activeProject, setActiveProject] = useState<Project | null>(null)
   const [loading, setLoading] = useState(true)
+
+  // Configure sensors with touch support for mobile
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8, // 8px movement required to start drag
+      },
+    }),
+    useSensor(TouchSensor, {
+      activationConstraint: {
+        delay: 200, // 200ms hold to start drag (prevents scroll conflict)
+        tolerance: 5, // 5px movement allowed during delay
+      },
+    }),
+    useSensor(KeyboardSensor)
+  )
 
   // Fetch projects and clients - OPTIMIZED: Parallel fetches with AbortController
   useEffect(() => {
@@ -117,29 +146,40 @@ export function ProjectsKanban() {
     }))
   }, [filteredProjects])
 
-  const handleDragStart = (project: Project) => {
-    setDraggedProject(project)
+  // dnd-kit drag handlers
+  const handleDragStart = (event: DragStartEvent) => {
+    const { active } = event
+    const project = filteredProjects.find(p => p.id === active.id)
+    if (project) {
+      setActiveProject(project)
+    }
   }
 
-  const handleDragEnd = () => {
-    setDraggedProject(null)
-  }
-
-  const handleDrop = async (status: Project["status"]) => {
-    if (!draggedProject) return
+  const handleDragEnd = async (event: DragEndEvent) => {
+    const { active, over } = event
+    setActiveProject(null)
+    
+    if (!over) return
+    
+    // The over.id is the column status (backlog, in-progress, review, done)
+    const newStatus = over.id as Project["status"]
+    const projectId = active.id as string
+    const project = projects.find(p => p.id === projectId)
+    
+    if (!project || project.status === newStatus) return
 
     // Optimistic update
-    setProjects((prev) => prev.map((p) => (p.id === draggedProject.id ? { ...p, status } : p)))
-    setDraggedProject(null)
+    const oldStatus = project.status
+    setProjects((prev) => prev.map((p) => (p.id === projectId ? { ...p, status: newStatus } : p)))
 
     // Update in database
     try {
-      const dbStatus = mapStatusToDb(status)
-      await updateProjectStatus(draggedProject.id, dbStatus, 0) // Position 0 for now (sorting not implemented)
+      const dbStatus = mapStatusToDb(newStatus)
+      await updateProjectStatus(projectId, dbStatus, 0) // Position 0 for now (sorting not implemented)
     } catch (error) {
       console.error('Failed to update project status:', error)
       // Revert on error
-      setProjects((prev) => prev.map((p) => (p.id === draggedProject.id ? { ...p, status: draggedProject.status } : p)))
+      setProjects((prev) => prev.map((p) => (p.id === projectId ? { ...p, status: oldStatus } : p)))
     }
   }
 
@@ -222,22 +262,38 @@ export function ProjectsKanban() {
         </div>
       </div>
 
-      {/* Kanban Board */}
-      <div className="flex gap-4 overflow-x-auto pb-4">
-        {columnProjects.map((column) => (
-          <KanbanColumn
-            key={column.id}
-            title={column.title}
-            status={column.id as Project["status"]}
-            projects={column.projects}
-            onDragStart={handleDragStart}
-            onDragEnd={handleDragEnd}
-            onDrop={handleDrop}
-            isDragging={!!draggedProject}
-            onProjectClick={handleProjectClick}
-          />
-        ))}
-      </div>
+      {/* Kanban Board with dnd-kit for touch support */}
+      <DndContext
+        sensors={sensors}
+        collisionDetection={closestCenter}
+        onDragStart={handleDragStart}
+        onDragEnd={handleDragEnd}
+      >
+        <div className="flex gap-4 overflow-x-auto pb-4">
+          {columnProjects.map((column) => (
+            <KanbanColumn
+              key={column.id}
+              title={column.title}
+              status={column.id as Project["status"]}
+              projects={column.projects}
+              onProjectClick={handleProjectClick}
+            />
+          ))}
+        </div>
+        
+        {/* Drag overlay shows the card being dragged */}
+        <DragOverlay>
+          {activeProject ? (
+            <div className="opacity-80">
+              <ProjectCard
+                project={activeProject}
+                onClick={() => {}}
+                isDragOverlay
+              />
+            </div>
+          ) : null}
+        </DragOverlay>
+      </DndContext>
 
       <NewProjectDialog open={dialogOpen} onOpenChange={setDialogOpen} />
     </div>
