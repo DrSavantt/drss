@@ -28,6 +28,24 @@ module.exports = {
           'to': { backgroundPosition: '-200% 0' },
         },
       },
+      // Safe area utilities for iOS notch and home indicator
+      padding: {
+        'safe-top': 'env(safe-area-inset-top)',
+        'safe-bottom': 'env(safe-area-inset-bottom)',
+        'safe-left': 'env(safe-area-inset-left)',
+        'safe-right': 'env(safe-area-inset-right)',
+      },
+      margin: {
+        'safe-top': 'env(safe-area-inset-top)',
+        'safe-bottom': 'env(safe-area-inset-bottom)',
+      },
+      // Dynamic viewport height (accounts for mobile address bar)
+      height: {
+        'screen-dvh': '100dvh',
+      },
+      minHeight: {
+        'screen-dvh': '100dvh',
+      },
       colors: {
         // Base semantic colors
         background: 'hsl(var(--background))',
@@ -146,5 +164,28 @@ module.exports = {
   plugins: [
     require("tailwindcss-animate"), 
     require("@tailwindcss/typography"),
+    // Touch action utility for drag handles
+    function({ addUtilities }) {
+      addUtilities({
+        '.touch-action-none': {
+          'touch-action': 'none',
+        },
+        '.touch-action-manipulation': {
+          'touch-action': 'manipulation',
+        },
+      })
+    },
+    // Scrollbar hide utility for horizontal scroll tabs
+    function({ addUtilities }) {
+      addUtilities({
+        '.scrollbar-hide': {
+          '-ms-overflow-style': 'none',
+          'scrollbar-width': 'none',
+          '&::-webkit-scrollbar': {
+            display: 'none',
+          },
+        },
+      })
+    },
   ],
 }

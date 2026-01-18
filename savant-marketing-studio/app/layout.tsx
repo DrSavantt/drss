@@ -20,6 +20,13 @@ const geistMono = Geist_Mono({
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
+  viewportFit: "cover", // CRITICAL: extends content to edges, enables safe-area-inset
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#ffffff" },
+    { media: "(prefers-color-scheme: dark)", color: "#0A0A0A" },
+  ],
 };
 
 export const metadata: Metadata = {
