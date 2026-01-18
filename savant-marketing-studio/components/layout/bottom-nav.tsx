@@ -23,7 +23,8 @@ import {
   SheetContent, 
   SheetHeader, 
   SheetTitle, 
-  SheetTrigger 
+  SheetTrigger,
+  SheetDescription
 } from '@/components/ui/sheet'
 import { cn } from '@/lib/utils'
 import { logout } from '@/app/actions/auth'
@@ -118,6 +119,7 @@ export function BottomNav() {
             <SheetContent side="bottom" className="pb-safe-bottom rounded-t-2xl">
               <SheetHeader className="pb-2">
                 <SheetTitle className="text-left">Menu</SheetTitle>
+                <SheetDescription className="sr-only">Additional navigation options</SheetDescription>
               </SheetHeader>
               
               <nav className="grid gap-1 py-2">

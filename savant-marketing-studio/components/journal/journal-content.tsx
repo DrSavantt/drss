@@ -8,7 +8,7 @@ import { Plus, Hash, AtSign, Send, Users, FolderKanban, FileText, Trash2, X, Pin
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle } from "@/components/ui/sheet"
+import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet"
 import { cn } from "@/lib/utils"
 import { escapeHtml } from "@/lib/utils/sanitize-html"
 import { 
@@ -677,6 +677,7 @@ export function JournalContent({
                 <SheetContent side="left" className="w-[280px] p-0">
                   <SheetHeader className="p-4 border-b">
                     <SheetTitle>Journal</SheetTitle>
+                    <SheetDescription className="sr-only">Journal entries and chats sidebar</SheetDescription>
                   </SheetHeader>
                   <div className="p-4 overflow-y-auto">
                     <SidebarContent />

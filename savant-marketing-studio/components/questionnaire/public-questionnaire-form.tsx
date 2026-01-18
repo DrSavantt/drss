@@ -455,7 +455,7 @@ export function PublicQuestionnaireForm({
         </AnimatePresence>
 
         {/* Footer navigation */}
-        <div className="fixed bottom-0 left-0 right-0 bg-background/95 backdrop-blur-xl border-t border-border py-4 px-4">
+        <div className="fixed bottom-0 left-0 right-0 bg-background/95 backdrop-blur-xl border-t border-border py-4 px-4 pb-safe-bottom">
           <div className="max-w-4xl mx-auto flex items-center justify-between">
             <Button
               variant="outline"

@@ -9,7 +9,8 @@ import {
   SheetContent, 
   SheetTrigger, 
   SheetHeader, 
-  SheetTitle 
+  SheetTitle,
+  SheetDescription
 } from '@/components/ui/sheet'
 import { 
   Menu, 
@@ -81,6 +82,7 @@ export function MobileNav({ onSearchClick }: MobileNavProps = {}) {
             </div>
             DRSS Studio
           </SheetTitle>
+          <SheetDescription className="sr-only">Main navigation menu</SheetDescription>
         </SheetHeader>
         <nav className="flex flex-col h-[calc(100%-73px)]">
           {/* Search Button */}

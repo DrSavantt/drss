@@ -30,8 +30,20 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
-  title: "DRSS Marketing Studio",
-  description: "Internal marketing agency management",
+  title: "Savant Marketing Studio",
+  description: "Marketing agency operating system",
+  manifest: "/manifest.json",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "black-translucent",
+    title: "Savant",
+  },
+  formatDetection: {
+    telephone: false,
+  },
+  other: {
+    "mobile-web-app-capable": "yes",
+  },
 };
 
 export default function RootLayout({
@@ -42,6 +54,11 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
+        {/* PWA Icons - Replace SVG placeholders with PNG for production */}
+        <link rel="apple-touch-icon" href="/apple-touch-icon.svg" />
+        <link rel="icon" type="image/svg+xml" sizes="32x32" href="/icons/icon-32.svg" />
+        <link rel="icon" type="image/svg+xml" sizes="16x16" href="/icons/icon-16.svg" />
+        
         {/* Preconnect to Supabase for faster first API call */}
         <link 
           rel="preconnect" 

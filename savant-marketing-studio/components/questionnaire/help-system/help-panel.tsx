@@ -1,6 +1,6 @@
 'use client';
 
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet';
 
 interface HelpPanelProps {
   isOpen: boolean;
@@ -17,6 +17,7 @@ export default function HelpPanel({ isOpen, onClose, children }: HelpPanelProps)
       >
         <SheetHeader className="p-6 border-b border-border shrink-0">
           <SheetTitle className="text-xl font-bold">Help Guide</SheetTitle>
+          <SheetDescription className="sr-only">Helpful information and tips for completing the questionnaire</SheetDescription>
         </SheetHeader>
         <div className="flex-1 overflow-y-auto p-6">
           {children}

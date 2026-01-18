@@ -371,7 +371,6 @@ export function QuestionnaireSettings({
   async function handleDeleteSection(section: SectionConfig) {
     isSavingRef.current = true
     try {
-      console.log('Deleting section via action:', section.id)
       await deleteSection(section.id)
       isSavingRef.current = false
       await loadData()
@@ -581,7 +580,6 @@ export function QuestionnaireSettings({
                     onToggle={() => handleSectionToggle(section.id, !section.enabled)}
                     onEdit={() => setEditingSection(section)}
                     onDelete={() => {
-                      console.log('Delete clicked for section:', section.id)
                       setSectionToDelete(section)
                     }}
                     onExpand={() => toggleSectionExpansion(section.id)}

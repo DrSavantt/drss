@@ -60,7 +60,7 @@ export function RichFooter({
     : null;
 
   return (
-    <footer className="fixed bottom-0 left-0 right-0 z-50">
+    <footer className="fixed bottom-0 left-0 right-0 z-50 pb-safe-bottom">
       {/* Gradient fade effect */}
       <div className="absolute inset-x-0 -top-8 h-8 bg-gradient-to-t from-background to-transparent pointer-events-none" />
 

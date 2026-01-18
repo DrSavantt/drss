@@ -9,7 +9,7 @@ import type { ContextItem } from "./context-picker-modal"
 import { MessageThread } from "./message-thread"
 import { Button } from "@/components/ui/button"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet"
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet"
 import { PanelLeft, ChevronDown, MessageSquare, AlertTriangle, Users, Menu } from "lucide-react"
 import { TokenCounter } from "./token-counter"
 import {
@@ -504,6 +504,7 @@ export function ChatInterface({
         <SheetContent side="left" className="w-[300px] p-0 md:hidden">
           <SheetHeader className="sr-only">
             <SheetTitle>Conversations</SheetTitle>
+            <SheetDescription>Select or manage AI chat conversations</SheetDescription>
           </SheetHeader>
           <ChatSidebar
             conversations={conversations}
