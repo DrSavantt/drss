@@ -422,7 +422,7 @@ export function DashboardContent({
                           <Button 
                             size="sm" 
                             variant={isOverdue ? "destructive" : "ghost"} 
-                            className="opacity-0 group-hover:opacity-100"
+                            className="opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity"
                           >
                             <ChevronRight className="h-4 w-4" />
                           </Button>
@@ -716,7 +716,7 @@ export function DashboardContent({
                             </span>
                           </div>
                         </div>
-                        <ChevronRight className="h-4 w-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0" />
+                        <ChevronRight className="h-4 w-4 text-muted-foreground opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity flex-shrink-0" />
                       </motion.div>
                     </Link>
                   ))}

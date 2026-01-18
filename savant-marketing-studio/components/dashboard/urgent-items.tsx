@@ -223,7 +223,7 @@ export function UrgentItems({ projects, className }: UrgentItemsProps) {
                   size="sm" 
                   variant={daysInfo.isOverdue ? "destructive" : "default"}
                   className={cn(
-                    "opacity-0 group-hover:opacity-100 transition-opacity",
+                    "opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity",
                     !daysInfo.isOverdue && daysInfo.urgency === 'high' && "bg-orange-500 hover:bg-orange-600"
                   )}
                 >

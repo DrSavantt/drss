@@ -142,8 +142,8 @@ export function ProjectDescription({ projectId, description }: ProjectDescriptio
               </p>
             )}
             
-            {/* Edit icon on hover */}
-            <Pencil className="absolute top-2 right-2 h-3.5 w-3.5 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+            {/* Edit icon - visible on mobile, hover on desktop */}
+            <Pencil className="absolute top-2 right-2 h-3.5 w-3.5 text-muted-foreground opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity" />
           </div>
         )}
       </div>

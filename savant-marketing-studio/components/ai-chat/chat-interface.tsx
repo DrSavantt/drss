@@ -9,7 +9,8 @@ import type { ContextItem } from "./context-picker-modal"
 import { MessageThread } from "./message-thread"
 import { Button } from "@/components/ui/button"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
-import { PanelLeft, ChevronDown, MessageSquare, AlertTriangle, Users } from "lucide-react"
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet"
+import { PanelLeft, ChevronDown, MessageSquare, AlertTriangle, Users, Menu } from "lucide-react"
 import { TokenCounter } from "./token-counter"
 import {
   createConversation,
@@ -60,7 +61,8 @@ export function ChatInterface({
   journalEntries,
   initialConversationId = null,
 }: ChatInterfaceProps) {
-  const [sidebarOpen, setSidebarOpen] = useState(true)
+  const [sidebarOpen, setSidebarOpen] = useState(true) // Desktop sidebar
+  const [mobileSheetOpen, setMobileSheetOpen] = useState(false) // Mobile sheet
   const [selectedModel, setSelectedModel] = useState(models[0] || { id: "", model_name: "", display_name: "No model" })
   const [conversations, setConversations] = useState<ConversationListItem[]>(initialConversations)
   const [currentConversationId, setCurrentConversationId] = useState<string | null>(initialConversationId)
@@ -132,6 +134,7 @@ export function ChatInterface({
 
   const handleSelectConversation = async (id: string) => {
     setCurrentConversationId(id)
+    setMobileSheetOpen(false) // Close mobile sheet when selecting a conversation
     
     const result = await getConversation(id)
     if (result.success && result.data) {
@@ -496,43 +499,80 @@ export function ChatInterface({
 
   return (
     <div className="flex h-[calc(100vh-4rem)] bg-background">
-      {/* Sidebar */}
-      <AnimatePresence mode="wait">
-        {sidebarOpen && (
-          <motion.div
-            initial={{ width: 0, opacity: 0 }}
-            animate={{ width: 280, opacity: 1 }}
-            exit={{ width: 0, opacity: 0 }}
-            transition={{ duration: 0.2, ease: "easeInOut" }}
-            className="h-full overflow-hidden border-r border-border"
-          >
-            <ChatSidebar
-              conversations={conversations}
-              currentConversationId={currentConversationId || undefined}
-              clients={clients}
-              onNewChat={handleNewChat}
-              onSelectConversation={handleSelectConversation}
-              onArchiveConversation={handleArchiveConversation}
-              onRenameConversation={handleRenameConversation}
-              onDeleteConversation={handleDeleteConversation}
-              onLinkClient={handleLinkClientToConversation}
-              onClose={() => setSidebarOpen(false)}
-            />
-          </motion.div>
-        )}
-      </AnimatePresence>
+      {/* Mobile: Sheet for sidebar */}
+      <Sheet open={mobileSheetOpen} onOpenChange={setMobileSheetOpen}>
+        <SheetContent side="left" className="w-[300px] p-0 md:hidden">
+          <SheetHeader className="sr-only">
+            <SheetTitle>Conversations</SheetTitle>
+          </SheetHeader>
+          <ChatSidebar
+            conversations={conversations}
+            currentConversationId={currentConversationId || undefined}
+            clients={clients}
+            onNewChat={() => {
+              handleNewChat()
+              setMobileSheetOpen(false)
+            }}
+            onSelectConversation={handleSelectConversation}
+            onArchiveConversation={handleArchiveConversation}
+            onRenameConversation={handleRenameConversation}
+            onDeleteConversation={handleDeleteConversation}
+            onLinkClient={handleLinkClientToConversation}
+            onClose={() => setMobileSheetOpen(false)}
+          />
+        </SheetContent>
+      </Sheet>
+
+      {/* Desktop: Regular Sidebar - hidden on mobile, uses wrapper for responsive hiding */}
+      <aside className="hidden md:flex h-full flex-shrink-0">
+        <AnimatePresence mode="wait">
+          {sidebarOpen && (
+            <motion.div
+              initial={false}
+              animate={{ width: 280, opacity: 1 }}
+              exit={{ width: 0, opacity: 0 }}
+              transition={{ duration: 0.2, ease: "easeInOut" }}
+              className="h-full overflow-hidden border-r border-border"
+              style={{ width: 280 }}
+            >
+              <ChatSidebar
+                conversations={conversations}
+                currentConversationId={currentConversationId || undefined}
+                clients={clients}
+                onNewChat={handleNewChat}
+                onSelectConversation={handleSelectConversation}
+                onArchiveConversation={handleArchiveConversation}
+                onRenameConversation={handleRenameConversation}
+                onDeleteConversation={handleDeleteConversation}
+                onLinkClient={handleLinkClientToConversation}
+                onClose={() => setSidebarOpen(false)}
+              />
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </aside>
 
       {/* Main Chat Area */}
-      <div className="flex flex-1 flex-col">
+      <div className="flex flex-1 flex-col min-w-0">
         {/* Header */}
         <header className="flex h-14 items-center justify-between border-b border-border px-4">
           <div className="flex items-center gap-2">
+            {/* Mobile: Menu button to open sheet */}
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setMobileSheetOpen(true)}
+              className="md:hidden min-h-[44px] min-w-[44px] text-muted-foreground hover:text-foreground"
+            >
+              <Menu className="h-5 w-5" />
+            </Button>
+            {/* Desktop: Show panel toggle when sidebar is closed */}
             {!sidebarOpen && (
               <Button
                 variant="ghost"
                 size="icon"
                 onClick={() => setSidebarOpen(true)}
-                className="text-muted-foreground hover:text-foreground"
+                className="hidden md:flex text-muted-foreground hover:text-foreground"
               >
                 <PanelLeft className="h-5 w-5" />
               </Button>
@@ -669,8 +709,8 @@ export function ChatInterface({
             </div>
           )}
 
-          {/* Chat Input */}
-          <div className="border-t border-border bg-background p-4">
+          {/* Chat Input - sticky bottom with safe area for iOS */}
+          <div className="sticky bottom-0 border-t border-border bg-background p-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
             <div className="mx-auto max-w-3xl">
               <ChatInput
                 onSend={handleSendMessage}

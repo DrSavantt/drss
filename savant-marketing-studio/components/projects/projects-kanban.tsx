@@ -6,6 +6,7 @@ import { Plus, List, LayoutGrid, Filter } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { KanbanColumn } from "./kanban-column"
+import { MobileKanban } from "./mobile-kanban"
 import { NewProjectDialog } from "./new-project-dialog"
 import { updateProjectStatus } from "@/app/actions/projects"
 import { cn } from "@/lib/utils"
@@ -187,6 +188,26 @@ export function ProjectsKanban() {
     router.push(`/dashboard/projects/${project.id}`)
   }
 
+  // Shared status change handler for both mobile and desktop views
+  const handleStatusChange = async (projectId: string, newStatus: Project["status"]) => {
+    const project = projects.find(p => p.id === projectId)
+    if (!project || project.status === newStatus) return
+
+    // Optimistic update
+    const oldStatus = project.status
+    setProjects((prev) => prev.map((p) => (p.id === projectId ? { ...p, status: newStatus } : p)))
+
+    // Update in database
+    try {
+      const dbStatus = mapStatusToDb(newStatus)
+      await updateProjectStatus(projectId, dbStatus, 0)
+    } catch (error) {
+      console.error('Failed to update project status:', error)
+      // Revert on error
+      setProjects((prev) => prev.map((p) => (p.id === projectId ? { ...p, status: oldStatus } : p)))
+    }
+  }
+
   if (loading) {
     return (
       <div className="space-y-6">
@@ -262,38 +283,49 @@ export function ProjectsKanban() {
         </div>
       </div>
 
-      {/* Kanban Board with dnd-kit for touch support */}
-      <DndContext
-        sensors={sensors}
-        collisionDetection={closestCenter}
-        onDragStart={handleDragStart}
-        onDragEnd={handleDragEnd}
-      >
-        <div className="flex gap-4 overflow-x-auto pb-4">
-          {columnProjects.map((column) => (
-            <KanbanColumn
-              key={column.id}
-              title={column.title}
-              status={column.id as Project["status"]}
-              projects={column.projects}
-              onProjectClick={handleProjectClick}
-            />
-          ))}
-        </div>
-        
-        {/* Drag overlay shows the card being dragged */}
-        <DragOverlay>
-          {activeProject ? (
-            <div className="opacity-80">
-              <ProjectCard
-                project={activeProject}
-                onClick={() => {}}
-                isDragOverlay
+      {/* Mobile: Tabbed single-column view */}
+      <div className="md:hidden">
+        <MobileKanban
+          projects={filteredProjects}
+          onStatusChange={handleStatusChange}
+          onProjectClick={handleProjectClick}
+        />
+      </div>
+
+      {/* Desktop: Full 4-column kanban board with dnd-kit */}
+      <div className="hidden md:block">
+        <DndContext
+          sensors={sensors}
+          collisionDetection={closestCenter}
+          onDragStart={handleDragStart}
+          onDragEnd={handleDragEnd}
+        >
+          <div className="flex gap-4 overflow-x-auto pb-4">
+            {columnProjects.map((column) => (
+              <KanbanColumn
+                key={column.id}
+                title={column.title}
+                status={column.id as Project["status"]}
+                projects={column.projects}
+                onProjectClick={handleProjectClick}
               />
-            </div>
-          ) : null}
-        </DragOverlay>
-      </DndContext>
+            ))}
+          </div>
+          
+          {/* Drag overlay shows the card being dragged */}
+          <DragOverlay>
+            {activeProject ? (
+              <div className="opacity-80">
+                <ProjectCard
+                  project={activeProject}
+                  onClick={() => {}}
+                  isDragOverlay
+                />
+              </div>
+            ) : null}
+          </DragOverlay>
+        </DndContext>
+      </div>
 
       <NewProjectDialog open={dialogOpen} onOpenChange={setDialogOpen} />
     </div>

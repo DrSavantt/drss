@@ -88,7 +88,7 @@ function MessageBubble({
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.2 }}
-      className={cn("flex", isUser ? "justify-end" : "justify-start")}
+      className={cn("flex group", isUser ? "justify-end" : "justify-start")}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
     >
@@ -101,28 +101,34 @@ function MessageBubble({
         {/* Message Content */}
         <div className="whitespace-pre-wrap break-words text-sm">{content}</div>
 
-        {/* Actions for AI messages */}
+        {/* Actions for AI messages - always visible on mobile, hover on desktop */}
         {!isUser && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: hovered || isLast ? 1 : 0 }}
-            className="mt-3 flex items-center gap-1 border-t border-border pt-2"
+          <div
+            className={cn(
+              "mt-3 flex items-center gap-1 border-t border-border pt-2 transition-opacity duration-200",
+              // Mobile: always visible
+              "opacity-100",
+              // Desktop: show on hover or if last message, otherwise hidden
+              "md:opacity-0 md:group-hover:opacity-100",
+              // Also show on desktop if it's the last message or hovered
+              (hovered || isLast) && "md:opacity-100"
+            )}
           >
             <Button
               variant="ghost"
               size="sm"
               onClick={handleCopy}
-              className="h-7 gap-1.5 text-xs text-muted-foreground hover:text-foreground"
+              className="h-9 min-h-[44px] gap-1.5 px-3 text-xs text-muted-foreground hover:text-foreground"
             >
               {copied ? (
                 <>
-                  <Check className="h-3 w-3" />
-                  Copied
+                  <Check className="h-4 w-4" />
+                  <span className="hidden sm:inline">Copied</span>
                 </>
               ) : (
                 <>
-                  <Copy className="h-3 w-3" />
-                  Copy
+                  <Copy className="h-4 w-4" />
+                  <span className="hidden sm:inline">Copy</span>
                 </>
               )}
             </Button>
@@ -131,22 +137,22 @@ function MessageBubble({
               size="sm"
               onClick={handleSave}
               disabled={saving}
-              className="h-7 gap-1.5 text-xs text-muted-foreground hover:text-foreground"
+              className="h-9 min-h-[44px] gap-1.5 px-3 text-xs text-muted-foreground hover:text-foreground"
             >
               {saving ? (
                 <>
-                  <Loader2 className="h-3 w-3 animate-spin" />
-                  Saving...
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <span className="hidden sm:inline">Saving...</span>
                 </>
               ) : saved ? (
                 <>
-                  <Check className="h-3 w-3" />
-                  Saved
+                  <Check className="h-4 w-4" />
+                  <span className="hidden sm:inline">Saved</span>
                 </>
               ) : (
                 <>
-                  <Bookmark className="h-3 w-3" />
-                  Save
+                  <Bookmark className="h-4 w-4" />
+                  <span className="hidden sm:inline">Save</span>
                 </>
               )}
             </Button>
@@ -154,12 +160,12 @@ function MessageBubble({
               variant="ghost"
               size="sm"
               onClick={() => onRegenerate(message.id)}
-              className="h-7 gap-1.5 text-xs text-muted-foreground hover:text-foreground"
+              className="h-9 min-h-[44px] gap-1.5 px-3 text-xs text-muted-foreground hover:text-foreground"
             >
-              <RefreshCw className="h-3 w-3" />
-              Regenerate
+              <RefreshCw className="h-4 w-4" />
+              <span className="hidden sm:inline">Regenerate</span>
             </Button>
-          </motion.div>
+          </div>
         )}
       </div>
     </motion.div>

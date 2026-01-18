@@ -192,21 +192,22 @@ export function ChatInput({
   return (
     <>
       <div className="relative">
-        {/* Context Pills */}
+        {/* Context Pills - horizontal scroll on mobile, wrap on desktop */}
         {selectedContext.length > 0 && (
-          <div className="mb-2 flex flex-wrap gap-2">
+          <div className="mb-2 flex gap-2 overflow-x-auto scrollbar-hide max-w-full pb-1 md:flex-wrap md:overflow-visible">
             {selectedContext.map((item) => (
               <span
                 key={`${item.type}-${item.id}`}
                 className={cn(
-                  "inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium",
+                  "inline-flex items-center gap-1 rounded-full px-2.5 py-1.5 text-xs font-medium shrink-0",
+                  "min-h-[32px]", // Better touch target
                   getPillColor(item.type)
                 )}
               >
                 @{item.name}
                 <button 
                   onClick={() => removeContext(item.id, item.type)} 
-                  className="ml-0.5 rounded-full p-0.5 hover:bg-black/10"
+                  className="ml-0.5 rounded-full p-1 hover:bg-black/10 min-w-[24px] min-h-[24px] flex items-center justify-center"
                 >
                   <X className="h-3 w-3" />
                 </button>
@@ -222,17 +223,17 @@ export function ChatInput({
             type="button"
             variant="ghost"
             size="icon"
-            className="h-9 w-9 shrink-0 text-muted-foreground hover:text-foreground"
+            className="h-11 w-11 min-h-[44px] min-w-[44px] shrink-0 text-muted-foreground hover:text-foreground"
             onClick={() => {
               setInitialSearch("")
               setShowContextModal(true)
             }}
             title="Add context"
           >
-            <Plus className="h-4 w-4" />
+            <Plus className="h-5 w-5" />
           </Button>
 
-          {/* Text Input */}
+          {/* Text Input - text-base (16px) prevents iOS zoom on focus */}
           <textarea
             ref={textareaRef}
             value={value}
@@ -241,7 +242,7 @@ export function ChatInput({
             placeholder="Message DRSS AI... (@ to add context)"
             disabled={disabled}
             rows={1}
-            className="max-h-[200px] min-h-[44px] flex-1 resize-none bg-transparent px-2 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none disabled:opacity-50"
+            className="max-h-[200px] min-h-[44px] flex-1 resize-none bg-transparent px-2 py-2 text-base md:text-sm text-foreground placeholder:text-muted-foreground focus:outline-none disabled:opacity-50"
           />
 
           {/* Extended Thinking Toggle */}
@@ -252,13 +253,13 @@ export function ChatInput({
             onClick={() => setUseExtendedThinking(!useExtendedThinking)}
             title={useExtendedThinking ? 'Extended thinking enabled' : 'Enable extended thinking'}
             className={cn(
-              "h-9 w-9 shrink-0 rounded-lg transition-colors",
+              "h-11 w-11 min-h-[44px] min-w-[44px] shrink-0 rounded-lg transition-colors",
               useExtendedThinking 
                 ? "bg-primary/10 text-primary hover:bg-primary/20" 
                 : "text-muted-foreground hover:bg-muted hover:text-foreground"
             )}
           >
-            <Brain className="h-4 w-4" />
+            <Brain className="h-5 w-5" />
           </Button>
 
           {/* Send Button */}
@@ -266,9 +267,9 @@ export function ChatInput({
             onClick={handleSubmit}
             disabled={disabled || (!value.trim() && selectedContext.length === 0)}
             size="icon"
-            className="h-9 w-9 shrink-0 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
+            className="h-11 w-11 min-h-[44px] min-w-[44px] shrink-0 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
           >
-            <ArrowUp className="h-4 w-4" />
+            <ArrowUp className="h-5 w-5" />
           </Button>
         </div>
       </div>

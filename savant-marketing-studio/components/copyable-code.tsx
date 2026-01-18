@@ -45,7 +45,7 @@ export function CopyableCode({ code, className = '', showIcon = true }: Copyable
     >
       <span>{code}</span>
       {showIcon && (
-        <span className="opacity-0 group-hover:opacity-100 transition-opacity">
+        <span className="opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
           {copied ? (
             <Check size={12} className="text-success" />
           ) : (

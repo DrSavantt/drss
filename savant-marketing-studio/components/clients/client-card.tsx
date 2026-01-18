@@ -99,7 +99,7 @@ export const ClientCard = memo(function ClientCard({ client, onEdit, onDelete }:
             <Button
               variant="ghost"
               size="icon"
-              className="absolute top-4 right-4 h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity bg-card/80 hover:bg-muted z-10"
+              className="absolute top-4 right-4 h-8 w-8 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity bg-card/80 hover:bg-muted z-10"
               onClick={(e) => e.preventDefault()}
             >
               <MoreHorizontal className="h-4 w-4" />

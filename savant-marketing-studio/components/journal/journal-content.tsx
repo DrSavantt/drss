@@ -729,7 +729,7 @@ export function JournalContent({
                     onClick={() => handleTogglePin(entry.id, entry.is_pinned || false)}
                     className={cn(
                       "absolute top-2 right-20 p-1.5 rounded hover:bg-amber-500/20 transition-opacity z-10",
-                      entry.is_pinned ? "opacity-100" : "opacity-0 group-hover:opacity-100"
+                      entry.is_pinned ? "opacity-100" : "opacity-100 md:opacity-0 md:group-hover:opacity-100"
                     )}
                     title={entry.is_pinned ? "Unpin entry" : "Pin entry"}
                   >
@@ -744,7 +744,7 @@ export function JournalContent({
                   {!entry.is_converted && (
                     <button
                       onClick={() => handleConvertToContent(entry.id, entry.content)}
-                      className="absolute top-2 right-10 p-1.5 rounded hover:bg-green-500/10 opacity-0 group-hover:opacity-100 transition-opacity z-10"
+                      className="absolute top-2 right-10 p-1.5 rounded hover:bg-green-500/10 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity z-10"
                       title="Convert to content"
                     >
                       <FileText className="w-4 h-4 text-green-500" />
@@ -754,7 +754,7 @@ export function JournalContent({
                   {/* Delete button */}
                   <button
                     onClick={() => handleDeleteEntry(entry.id)}
-                    className="absolute top-2 right-2 p-1.5 rounded hover:bg-destructive/10 opacity-0 group-hover:opacity-100 transition-opacity z-10"
+                    className="absolute top-2 right-2 p-1.5 rounded hover:bg-destructive/10 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity z-10"
                     title="Delete entry"
                   >
                     <Trash2 className="w-4 h-4 text-destructive" />
