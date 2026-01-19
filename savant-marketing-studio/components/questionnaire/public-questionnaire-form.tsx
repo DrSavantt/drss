@@ -415,7 +415,7 @@ export function PublicQuestionnaireForm({
                 key={section.id}
                 onClick={() => setCurrentSectionIndex(index)}
                 className={cn(
-                  "relative px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-all",
+                  "relative px-4 py-2 min-h-[44px] items-center rounded-full text-sm font-medium whitespace-nowrap transition-all",
                   index === currentSectionIndex
                     ? "bg-primary text-primary-foreground shadow-lg"
                     : allAnswered

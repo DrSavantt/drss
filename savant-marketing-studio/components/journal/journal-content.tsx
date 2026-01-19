@@ -669,7 +669,7 @@ export function JournalContent({
             <div className="lg:hidden">
               <Sheet open={sidebarOpen} onOpenChange={setSidebarOpen}>
                 <SheetTrigger asChild>
-                  <Button variant="outline" size="icon" className="h-10 w-10 shrink-0">
+                  <Button variant="outline" size="icon" className="h-11 w-11 shrink-0">
                     <Menu className="h-5 w-5" />
                     <span className="sr-only">Open sidebar</span>
                   </Button>

@@ -1164,7 +1164,7 @@ export function AnalyticsPageContent({ initialData, initialClients }: AnalyticsP
 
       {/* Tab Navigation */}
       <div className="border-b border-[var(--glass-border)] mb-6 overflow-x-auto">
-        <nav className="flex gap-1 md:gap-6 min-w-max">
+        <nav className="flex gap-2 md:gap-6 min-w-max">
           {TABS.map(tab => (
             <button
               key={tab.id}
