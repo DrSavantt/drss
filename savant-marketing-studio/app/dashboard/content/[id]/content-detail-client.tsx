@@ -26,6 +26,8 @@ import { format } from 'date-fns'
 import { updateContentAsset, deleteContentAsset } from '@/app/actions/content'
 import { cn } from '@/lib/utils'
 import dynamic from 'next/dynamic'
+import { createClient } from '@/lib/supabase/client'
+import type { AIModel } from '@/components/editor/ai-prompt-bar'
 
 const TiptapEditor = dynamic(
   () => import('@/components/tiptap-editor').then(mod => ({ default: mod.TiptapEditor })),
@@ -76,6 +78,22 @@ export function ContentDetailClient({ content }: ContentDetailClientProps) {
   const [hasChanges, setHasChanges] = useState(false)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle')
+  const [aiModels, setAiModels] = useState<AIModel[]>([])
+
+  // Fetch AI models on mount
+  useEffect(() => {
+    async function fetchModels() {
+      const supabase = createClient()
+      const { data } = await supabase
+        .from('ai_models')
+        .select('id, model_name, display_name, max_tokens')
+        .eq('is_active', true)
+        .order('display_name')
+      
+      if (data) setAiModels(data)
+    }
+    fetchModels()
+  }, [])
 
   // Track changes
   useEffect(() => {
@@ -279,6 +297,8 @@ export function ContentDetailClient({ content }: ContentDetailClientProps) {
                   content={editorContent}
                   onChange={setEditorContent}
                   editable={true}
+                  clientId={content.client_id}
+                  models={aiModels}
                 />
               </CardContent>
             </Card>

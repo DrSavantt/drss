@@ -1,8 +1,10 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import dynamic from 'next/dynamic'
 import { Loader2 } from 'lucide-react'
+import { createClient } from '@/lib/supabase/client'
+import type { AIModel } from '@/components/editor/ai-prompt-bar'
 
 const TiptapEditor = dynamic(
   () => import('@/components/tiptap-editor').then(mod => ({ default: mod.TiptapEditor })),
@@ -33,6 +35,22 @@ export default function TestTiptapAIPage() {
 
 <p>Select the paragraph above and try: "Rewrite this to be more compelling [@selection]"</p>
 `)
+  const [aiModels, setAiModels] = useState<AIModel[]>([])
+
+  // Fetch AI models on mount
+  useEffect(() => {
+    async function fetchModels() {
+      const supabase = createClient()
+      const { data } = await supabase
+        .from('ai_models')
+        .select('id, model_name, display_name, max_tokens')
+        .eq('is_active', true)
+        .order('display_name')
+      
+      if (data) setAiModels(data)
+    }
+    fetchModels()
+  }, [])
 
   return (
     <div className="min-h-screen bg-background p-8">
@@ -55,6 +73,7 @@ export default function TestTiptapAIPage() {
               editable={true}
               showAIBar={true}
               clientId={undefined} // Set to actual client ID if testing client context
+              models={aiModels}
             />
           </div>
 

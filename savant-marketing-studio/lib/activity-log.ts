@@ -12,13 +12,20 @@ export type ActivityType =
   | 'content_created'
   | 'content_updated'
   | 'content_deleted'
+  | 'content_reassigned'      // When content is moved to different project/client
   | 'questionnaire_completed'
   | 'questionnaire_updated'
   | 'file_uploaded'
   | 'file_deleted'
-  | 'ai_generation';
+  | 'ai_generation'
+  | 'research_created'        // When deep research is saved
+  | 'bulk_delete'             // When multiple items deleted at once
+  | 'bulk_move'               // When multiple items moved at once
+  | 'bulk_reassign'           // When multiple items reassigned at once
+  | 'chat_linked'             // When AI chat is linked to a client
+  | 'chat_summarized';        // When chat is summarized and continued
 
-export type EntityType = 'client' | 'project' | 'content' | 'questionnaire' | 'file' | 'ai_execution';
+export type EntityType = 'client' | 'project' | 'content' | 'questionnaire' | 'file' | 'ai_execution' | 'chat' | 'research';
 
 interface LogActivityParams {
   activityType: ActivityType;

@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Roboto, Geist_Mono } from "next/font/google";
 import { ThemeProvider } from "@/lib/theme-provider";
 import { ErrorBoundary } from "@/components/error-boundary";
+import { ConfirmDialogProvider } from "@/components/providers/confirm-dialog-provider";
 import "./globals.css";
 
 const roboto = Roboto({
@@ -97,7 +98,9 @@ export default function RootLayout({
       <body className={`${roboto.variable} ${geistMono.variable} antialiased font-sans min-h-screen`}>
         <ErrorBoundary>
           <ThemeProvider>
-            {children}
+            <ConfirmDialogProvider>
+              {children}
+            </ConfirmDialogProvider>
           </ThemeProvider>
         </ErrorBoundary>
       </body>

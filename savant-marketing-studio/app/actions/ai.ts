@@ -379,6 +379,13 @@ export async function getAIModelLabel(modelId: string): Promise<string> {
 
 // Generate inline edit (for AI prompt bar)
 export interface InlineEditContext {
+  // Multi-selection support
+  selections?: Array<{
+    text: string;
+    from: number;
+    to: number;
+  }>;
+  // Keep old field for backward compatibility
   selectedText?: string;
   fullContent: string;
   clientId?: string;
@@ -387,10 +394,22 @@ export interface InlineEditContext {
   model?: string;
 }
 
+// Edit result for multi-selection
+export interface InlineEditResult {
+  content: string;
+  edits?: Array<{
+    original: string;
+    edited: string;
+    from: number;
+    to: number;
+  }>;
+  error?: string;
+}
+
 export async function generateInlineEdit(
   prompt: string,
   context: InlineEditContext
-): Promise<{ content: string; error?: string }> {
+): Promise<InlineEditResult> {
   try {
     const supabase = await createClient();
     if (!supabase) throw new Error('Supabase not configured');
@@ -432,44 +451,134 @@ export async function generateInlineEdit(
       }
     }
 
-    systemPrompt += `\n\nGuidelines:
+    // Check if we have multiple selections
+    const hasMultipleSelections = context.selections && context.selections.length > 0;
+
+    if (hasMultipleSelections) {
+      // Multi-selection mode: Ask AI to edit each selection independently
+      systemPrompt += `\n\nYou are editing specific text selections in a document. 
+Apply the following edit instruction to EACH selection independently.
+
+Guidelines:
+1. Apply the edit instruction to each selection separately
+2. Maintain the context and meaning appropriate to each selection
+3. Keep the same general tone/style across all edits
+4. Return your response as valid JSON only - no markdown, no explanations`;
+
+      const selectionsPrompt = context.selections!
+        .map((s, i) => `Selection ${i + 1}: "${s.text}"`)
+        .join('\n');
+
+      const userMessage = `Edit instruction: ${prompt}
+
+Selections to edit:
+${selectionsPrompt}
+
+${context.fullContent ? `\nFull document context:\n${context.fullContent}` : ''}
+
+Respond with ONLY a valid JSON object in this exact format (no markdown code blocks):
+{"edits":[{"index":0,"original":"original text","edited":"edited text"},{"index":1,"original":"original text","edited":"edited text"}]}`;
+
+      // Execute AI task with specified model
+      const orchestrator = new AIOrchestrator();
+      const result = await orchestrator.executeTask({
+        type: 'inline_edit',
+        complexity: 'simple',
+        clientId: context.clientId,
+        forceModel: context.model,
+        request: {
+          messages: [
+            { role: 'user', content: userMessage }
+          ],
+          maxTokens: 4096,
+          temperature: 0.7,
+          systemPrompt,
+        },
+      });
+
+      // Parse the JSON response
+      try {
+        // Clean up the response - remove markdown code blocks if present
+        let cleanContent = result.content.trim();
+        
+        // Remove markdown code block wrappers if present
+        if (cleanContent.startsWith('```json')) {
+          cleanContent = cleanContent.slice(7);
+        } else if (cleanContent.startsWith('```')) {
+          cleanContent = cleanContent.slice(3);
+        }
+        if (cleanContent.endsWith('```')) {
+          cleanContent = cleanContent.slice(0, -3);
+        }
+        cleanContent = cleanContent.trim();
+        
+        const parsed = JSON.parse(cleanContent);
+        
+        if (parsed.edits && Array.isArray(parsed.edits)) {
+          const edits = parsed.edits.map((edit: { index: number; original: string; edited: string }, i: number) => ({
+            original: edit.original || context.selections![edit.index]?.text || '',
+            edited: edit.edited,
+            from: context.selections![edit.index]?.from || 0,
+            to: context.selections![edit.index]?.to || 0,
+          }));
+
+          return {
+            content: '',
+            edits,
+          };
+        } else {
+          throw new Error('Invalid response format');
+        }
+      } catch (parseError) {
+        console.error('Failed to parse multi-edit response:', parseError);
+        console.error('Raw response:', result.content);
+        
+        // Fallback: treat as single edit for all selections
+        return {
+          content: result.content,
+          error: 'Failed to parse multi-edit response. Try with fewer selections.',
+        };
+      }
+    } else {
+      // Single selection mode (backward compatibility)
+      systemPrompt += `\n\nGuidelines:
 1. Respond ONLY with the edited/generated content - no explanations or meta-commentary
 2. Maintain the same format/structure unless asked to change it
 3. If working with selected text, focus on that specific portion
 4. Match any existing brand voice or tone if context is provided
 5. Be concise and direct`;
 
-    // Build the user message
-    let userMessage = prompt;
-    
-    if (context.selectedText) {
-      userMessage += `\n\nSELECTED TEXT TO WORK WITH:\n${context.selectedText}`;
-    }
-    
-    if (context.fullContent && context.fullContent !== context.selectedText) {
-      userMessage += `\n\nFULL CONTENT FOR CONTEXT:\n${context.fullContent}`;
-    }
+      let userMessage = prompt;
+      
+      if (context.selectedText) {
+        userMessage += `\n\nSELECTED TEXT TO WORK WITH:\n${context.selectedText}`;
+      }
+      
+      if (context.fullContent && context.fullContent !== context.selectedText) {
+        userMessage += `\n\nFULL CONTENT FOR CONTEXT:\n${context.fullContent}`;
+      }
 
-    // Execute AI task with specified model
-    const orchestrator = new AIOrchestrator();
-    const result = await orchestrator.executeTask({
-      type: 'inline_edit',
-      complexity: 'simple',
-      clientId: context.clientId,
-      forceModel: context.model, // Use specified model if provided
-      request: {
-        messages: [
-          { role: 'user', content: userMessage }
-        ],
-        maxTokens: 2048,
-        temperature: 0.7,
-        systemPrompt,
-      },
-    });
+      // Execute AI task with specified model
+      const orchestrator = new AIOrchestrator();
+      const result = await orchestrator.executeTask({
+        type: 'inline_edit',
+        complexity: 'simple',
+        clientId: context.clientId,
+        forceModel: context.model,
+        request: {
+          messages: [
+            { role: 'user', content: userMessage }
+          ],
+          maxTokens: 2048,
+          temperature: 0.7,
+          systemPrompt,
+        },
+      });
 
-    return {
-      content: result.content,
-    };
+      return {
+        content: result.content,
+      };
+    }
   } catch (error) {
     console.error('Inline edit generation failed:', error);
     return {

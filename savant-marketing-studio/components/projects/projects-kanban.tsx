@@ -8,7 +8,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { KanbanColumn } from "./kanban-column"
 import { MobileKanban } from "./mobile-kanban"
 import { NewProjectDialog } from "./new-project-dialog"
-import { updateProjectStatus } from "@/app/actions/projects"
+import { updateProjectStatus, getProjects } from "@/app/actions/projects"
+import { getClientsForDropdown } from "@/app/actions/ai"
 import { cn } from "@/lib/utils"
 import {
   DndContext,
@@ -71,76 +72,62 @@ export function ProjectsKanban() {
     useSensor(KeyboardSensor)
   )
 
-  // Fetch projects and clients - OPTIMIZED: Parallel fetches with AbortController
+  // Fetch projects and clients using server actions (more reliable than API routes)
   useEffect(() => {
-    const abortController = new AbortController()
+    let isMounted = true
     
     async function fetchData() {
       try {
-        // OPTIMIZED: Parallel fetches instead of sequential waterfall
-        // Previously: projects fetched THEN clients - sequential
-        // Now: Both fetch simultaneously - parallel
-        const [projectsRes, clientsRes] = await Promise.all([
-          fetch('/api/projects', { signal: abortController.signal }),
-          fetch('/api/clients', { signal: abortController.signal })
-        ])
-        
-        // Check if aborted before processing responses
-        if (abortController.signal.aborted) return
-        
+        // Parallel server action calls
         const [projectsData, clientsData] = await Promise.all([
-          projectsRes.json(),
-          clientsRes.json()
+          getProjects(),
+          getClientsForDropdown()
         ])
         
-        // Check if aborted before updating state
-        if (abortController.signal.aborted) return
+        // Check if component still mounted before updating state
+        if (!isMounted) return
         
-        // Defensive check: API may return { error: "..." } on failure instead of array
-        // Handle both non-ok responses and non-array data
-        if (!projectsRes.ok || !Array.isArray(projectsData)) {
-          console.error('Projects API error:', projectsData?.error || 'Invalid response format')
-          setProjects([])
-        } else {
-          // Transform to v0 Project format
+        // Transform projects to v0 Project format
+        if (Array.isArray(projectsData)) {
           const transformedProjects: Project[] = projectsData.map((p: any) => ({
             id: p.id,
             title: p.name,
-            client: p.client_name || 'Unknown',
+            client: p.clients?.name || 'Unknown',
             clientId: p.client_id || '',
             dueDate: p.due_date || '',
             priority: (p.priority || 'medium') as "low" | "medium" | "high",
             status: mapStatus(p.status),
           }))
           setProjects(transformedProjects)
+        } else {
+          setProjects([])
         }
         
-        // Defensive check: API may return { error: "..." } on failure instead of array
-        if (!clientsRes.ok || !Array.isArray(clientsData)) {
-          console.error('Clients API error:', clientsData?.error || 'Invalid response format')
-          setClients([{ id: "all", name: "All Clients" }])
-        } else {
+        // Transform clients for dropdown
+        if (Array.isArray(clientsData)) {
           const clientOptions = [
             { id: "all", name: "All Clients" },
             ...clientsData.map((c: any) => ({ id: c.id, name: c.name }))
           ]
           setClients(clientOptions)
+        } else {
+          setClients([{ id: "all", name: "All Clients" }])
         }
       } catch (error) {
-        // Ignore abort errors - component unmounted
-        if (error instanceof Error && error.name === 'AbortError') return
         console.error('Failed to fetch data:', error)
+        setProjects([])
+        setClients([{ id: "all", name: "All Clients" }])
       } finally {
-        if (!abortController.signal.aborted) {
+        if (isMounted) {
           setLoading(false)
         }
       }
     }
     fetchData()
     
-    // Cleanup: abort on unmount or dialogOpen change
+    // Cleanup: mark as unmounted
     return () => {
-      abortController.abort()
+      isMounted = false
     }
   }, [dialogOpen]) // Refetch when dialog closes
 

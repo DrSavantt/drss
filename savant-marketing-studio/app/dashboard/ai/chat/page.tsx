@@ -75,7 +75,7 @@ export default async function AIChatPage({ searchParams }: PageProps) {
       .order('name'),
     supabase
       .from('ai_models')
-      .select('id, model_name, display_name')
+      .select('id, model_name, display_name, max_tokens')
       .eq('is_active', true)
       .order('display_name'),
     listConversations({ status: 'active' }),

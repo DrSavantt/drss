@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect } from "react"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
-import { ArrowUp, X, Brain, Plus } from "lucide-react"
+import { ArrowUp, X, Brain, Plus, AlertTriangle } from "lucide-react"
 import { ContextPickerModal, type ContextItem } from "./context-picker-modal"
 import { InlineMentionPopup, type InlineMentionPopupRef } from "./inline-mention-popup"
 
@@ -23,6 +23,14 @@ interface ChatInputProps {
     mentionedContent?: Array<{ id: string; name: string }>
   }>
   writingFrameworks: Array<{ id: string; name: string; category?: string }>
+  // Token overflow warning props
+  currentTokens?: number
+  maxTokens?: number
+}
+
+// Rough token estimation: ~4 characters = 1 token
+function estimateTokens(text: string): number {
+  return Math.ceil(text.length / 4)
 }
 
 export function ChatInput({
@@ -33,6 +41,8 @@ export function ChatInput({
   contentAssets,
   journalEntries,
   writingFrameworks,
+  currentTokens = 0,
+  maxTokens = 200000,
 }: ChatInputProps) {
   const [value, setValue] = useState("")
   const [selectedContext, setSelectedContext] = useState<ContextItem[]>([])
@@ -47,6 +57,10 @@ export function ChatInput({
   const [inlinePosition, setInlinePosition] = useState({ top: 0, left: 0 })
   const [inlineSelectedIndex, setInlineSelectedIndex] = useState(0)
   const inlinePopupRef = useRef<InlineMentionPopupRef>(null)
+  
+  // Token overflow warning state
+  const [showOverflowWarning, setShowOverflowWarning] = useState(false)
+  const [projectedTokens, setProjectedTokens] = useState(0)
 
   // Auto-resize textarea
   useEffect(() => {
@@ -55,6 +69,19 @@ export function ChatInput({
       textareaRef.current.style.height = `${Math.min(textareaRef.current.scrollHeight, 200)}px`
     }
   }, [value])
+
+  // Calculate token overflow warning
+  useEffect(() => {
+    const messageTokens = estimateTokens(value)
+    // Estimate context tokens from selected items (rough estimate of serialized content)
+    const contextTokens = selectedContext.reduce((total, item) => {
+      // Estimate ~50 tokens per context item (name, metadata, etc.)
+      return total + 50
+    }, 0)
+    const projected = currentTokens + messageTokens + contextTokens
+    setProjectedTokens(projected)
+    setShowOverflowWarning(projected > maxTokens * 0.9)
+  }, [value, selectedContext, currentTokens, maxTokens])
 
   // Handle @ key to show inline popup
   const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
@@ -213,6 +240,16 @@ export function ChatInput({
                 </button>
               </span>
             ))}
+          </div>
+        )}
+
+        {/* Token Overflow Warning */}
+        {showOverflowWarning && (
+          <div className="mb-2 flex items-center gap-2 rounded-lg bg-amber-500/10 px-3 py-2 text-sm text-amber-600 dark:text-amber-500">
+            <AlertTriangle className="h-4 w-4 flex-shrink-0" />
+            <span>
+              This message may exceed the context limit ({Math.round((projectedTokens / maxTokens) * 100)}% of {maxTokens.toLocaleString()} tokens). Consider summarizing first.
+            </span>
           </div>
         )}
 

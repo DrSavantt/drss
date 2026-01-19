@@ -523,10 +523,24 @@ function formatActivityText(activity: any): string {
       return `Project moved to ${activity.metadata?.new_status}`
     case 'content_created':
       return `Content created: ${name}`
+    case 'content_reassigned':
+      return `Content reassigned: ${name}`
     case 'questionnaire_updated':
       return 'Questionnaire updated'
     case 'questionnaire_completed':
       return 'Questionnaire completed'
+    case 'research_created':
+      return `Research saved: ${name}`
+    case 'bulk_delete':
+      return `Bulk delete: ${activity.metadata?.count || 'multiple'} items`
+    case 'bulk_move':
+      return `Bulk move: ${activity.metadata?.count || 'multiple'} items`
+    case 'bulk_reassign':
+      return `Bulk reassign: ${activity.metadata?.count || 'multiple'} items`
+    case 'chat_linked':
+      return `Chat linked: ${name}`
+    case 'chat_summarized':
+      return `Chat summarized: ${name}`
     default:
       return activity.activity_type.replace(/_/g, ' ')
   }

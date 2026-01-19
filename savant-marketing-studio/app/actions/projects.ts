@@ -13,9 +13,9 @@ export async function getProjects(clientId?: string) {
   
   let query = supabase
     .from('projects')
-    .select('id, name, description, client_id, clients(name)')
+    .select('id, name, description, client_id, status, priority, due_date, clients(id, name)')
     .is('deleted_at', null)
-    .order('name', { ascending: true })
+    .order('created_at', { ascending: false })
 
   if (clientId) {
     query = query.eq('client_id', clientId)

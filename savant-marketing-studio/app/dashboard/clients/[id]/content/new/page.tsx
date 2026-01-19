@@ -6,6 +6,8 @@ import Link from 'next/link'
 import { useParams } from 'next/navigation'
 import dynamic from 'next/dynamic'
 import { Loader2 } from 'lucide-react'
+import { createClient } from '@/lib/supabase/client'
+import type { AIModel } from '@/components/editor/ai-prompt-bar'
 
 const TiptapEditor = dynamic(
   () => import('@/components/tiptap-editor').then(mod => ({ default: mod.TiptapEditor })),
@@ -32,13 +34,25 @@ export default function NewContentPage() {
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [projects, setProjects] = useState<{ id: string; name: string }[]>([])
+  const [aiModels, setAiModels] = useState<AIModel[]>([])
 
   useEffect(() => {
-    async function loadProjects() {
-      const data = await getClientProjects(clientId)
-      setProjects(data)
+    async function loadData() {
+      // Load projects
+      const projectsData = await getClientProjects(clientId)
+      setProjects(projectsData)
+      
+      // Load AI models
+      const supabase = createClient()
+      const { data: modelsData } = await supabase
+        .from('ai_models')
+        .select('id, model_name, display_name, max_tokens')
+        .eq('is_active', true)
+        .order('display_name')
+      
+      if (modelsData) setAiModels(modelsData)
     }
-    loadProjects()
+    loadData()
   }, [clientId])
 
   async function handleSubmit(e: React.FormEvent) {
@@ -133,6 +147,8 @@ export default function NewContentPage() {
               content={content}
               onChange={(html) => setContent(html)}
               editable={!loading}
+              clientId={clientId}
+              models={aiModels}
             />
           </div>
 

@@ -45,7 +45,7 @@ export interface ChatInterfaceProps {
   writingFrameworks: Array<{ id: string; name: string; category: string }>
   projects: Array<{ id: string; name: string; description: string | null; clientId: string | null; clientName: string | null }>
   contentAssets: Array<{ id: string; title: string; content: string | null; contentType: string | null; clientId: string | null; clientName: string | null }>
-  models: Array<{ id: string; model_name: string; display_name: string }>
+  models: Array<{ id: string; model_name: string; display_name: string; max_tokens: number | null }>
   initialConversations: ConversationListItem[]
   journalEntries: JournalEntrySummary[]
   initialConversationId?: string | null  // URL param to auto-select a conversation
@@ -63,7 +63,7 @@ export function ChatInterface({
 }: ChatInterfaceProps) {
   const [sidebarOpen, setSidebarOpen] = useState(true) // Desktop sidebar
   const [mobileSheetOpen, setMobileSheetOpen] = useState(false) // Mobile sheet
-  const [selectedModel, setSelectedModel] = useState(models[0] || { id: "", model_name: "", display_name: "No model" })
+  const [selectedModel, setSelectedModel] = useState(models[0] || { id: "", model_name: "", display_name: "No model", max_tokens: 200000 })
   const [conversations, setConversations] = useState<ConversationListItem[]>(initialConversations)
   const [currentConversationId, setCurrentConversationId] = useState<string | null>(initialConversationId)
   const [messages, setMessages] = useState<ConversationMessage[]>([])
@@ -601,13 +601,15 @@ export function ChatInterface({
           <TokenCounter 
             inputTokens={conversationTokens.input}
             outputTokens={conversationTokens.output}
+            maxTokens={selectedModel?.max_tokens || 200000}
           />
         </header>
 
         {/* Token Limit Warning Banner with Summarize & Continue */}
         {(() => {
           const total = conversationTokens.input + conversationTokens.output
-          const percentage = (total / 200000) * 100
+          const maxTokens = selectedModel?.max_tokens || 200000
+          const percentage = (total / maxTokens) * 100
           
           // Critical: ≥95% - Red banner with urgent action
           if (percentage >= 95) {
@@ -721,6 +723,8 @@ export function ChatInterface({
                 contentAssets={contentAssets}
                 journalEntries={journalEntries}
                 writingFrameworks={writingFrameworks}
+                currentTokens={conversationTokens.input + conversationTokens.output}
+                maxTokens={selectedModel?.max_tokens || 200000}
               />
             </div>
           </div>

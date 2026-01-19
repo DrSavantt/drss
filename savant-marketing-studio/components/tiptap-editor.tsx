@@ -2,9 +2,10 @@
 
 import { useEditor, EditorContent } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { Sparkles } from 'lucide-react'
-import { AIPromptBar } from '@/components/editor/ai-prompt-bar'
+import { AIPromptBar, AIModel } from '@/components/editor/ai-prompt-bar'
+import { FloatingSelectionMenu } from '@/components/editor/floating-selection-menu'
 
 interface TiptapEditorProps {
   content?: string | object
@@ -12,6 +13,7 @@ interface TiptapEditorProps {
   editable?: boolean
   showAIBar?: boolean
   clientId?: string
+  models?: AIModel[]
 }
 
 export function TiptapEditor({
@@ -19,12 +21,21 @@ export function TiptapEditor({
   onChange,
   editable = true,
   showAIBar = true,
-  clientId
+  clientId,
+  models = []
 }: TiptapEditorProps) {
   const [showHtml, setShowHtml] = useState(false)
   const [selectedText, setSelectedText] = useState('')
+  const [selectionRange, setSelectionRange] = useState<{ from: number; to: number } | null>(null)
   const [isGenerating, setIsGenerating] = useState(false)
   const aiBarRef = useRef<HTMLDivElement>(null)
+  
+  // State for pending selection from floating menu
+  const [pendingSelection, setPendingSelection] = useState<{
+    text: string;
+    from: number;
+    to: number;
+  } | null>(null)
 
   const editor = useEditor({
     extensions: [StarterKit],
@@ -39,6 +50,7 @@ export function TiptapEditor({
       const { from, to } = editor.state.selection
       const text = editor.state.doc.textBetween(from, to, ' ')
       setSelectedText(text)
+      setSelectionRange(text ? { from, to } : null)
     },
     editorProps: {
       attributes: {
@@ -69,6 +81,46 @@ export function TiptapEditor({
       editor.setEditable(editable)
     }
   }, [editor, editable])
+
+  // Clear selection handler - collapses selection to cursor position
+  const clearSelection = useCallback(() => {
+    if (editor) {
+      const { from } = editor.state.selection
+      editor.commands.setTextSelection(from)
+      setSelectedText('')
+      setSelectionRange(null)
+    }
+  }, [editor])
+
+  // Replace selection at specific position - for multi-selection support
+  const replaceSelection = useCallback((from: number, to: number, newText: string) => {
+    if (editor) {
+      editor.chain()
+        .focus()
+        .setTextSelection({ from, to })
+        .deleteSelection()
+        .insertContent(newText)
+        .run()
+    }
+  }, [editor])
+
+  // Handler for adding selection from floating menu
+  const handleAddSelectionFromFloat = useCallback(() => {
+    if (selectedText && selectionRange) {
+      setPendingSelection({
+        text: selectedText,
+        from: selectionRange.from,
+        to: selectionRange.to,
+      });
+      // Clear editor selection
+      clearSelection();
+    }
+  }, [selectedText, selectionRange, clearSelection])
+
+  // Handler to clear pending selection after it's been handled
+  const handlePendingSelectionHandled = useCallback(() => {
+    setPendingSelection(null);
+  }, [])
 
   if (!editor) {
     return null
@@ -164,7 +216,7 @@ export function TiptapEditor({
           </button>
 
           <div className="ml-auto flex items-center gap-2">
-            {showAIBar && (
+            {showAIBar && models.length > 0 && (
               <button
                 onClick={() => {
                   aiBarRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
@@ -195,8 +247,19 @@ export function TiptapEditor({
       )}
 
       {/* Editor Content - Clean Document Style */}
-      <div className={editable ? 'bg-dark-gray/30' : ''}>
+      <div className={`tiptap-editor-container relative ${editable ? 'bg-dark-gray/30' : ''}`}>
         <EditorContent editor={editor} />
+        
+        {/* Floating Selection Menu - Google Docs style with inline editing */}
+        {showAIBar && editable && models && models.length > 0 && (
+          <FloatingSelectionMenu
+            editor={editor}
+            models={models}
+            clientId={clientId}
+            onAddToList={selectedText ? handleAddSelectionFromFloat : undefined}
+            disabled={isGenerating}
+          />
+        )}
       </div>
 
       {/* HTML Output */}
@@ -209,8 +272,8 @@ export function TiptapEditor({
         </div>
       )}
 
-      {/* AI Prompt Bar - Minimal Cursor Style */}
-      {showAIBar && editable && (
+      {/* AI Prompt Bar - Multi-Selection Support */}
+      {showAIBar && editable && models.length > 0 && (
         <div 
           ref={aiBarRef}
           className="border-t border-mid-gray/30 p-4"
@@ -218,13 +281,20 @@ export function TiptapEditor({
           <AIPromptBar
             editorContent={editor.getHTML()}
             selectedText={selectedText}
+            selectionRange={selectionRange}
+            onClearSelection={clearSelection}
+            onReplaceSelection={replaceSelection}
             clientId={clientId}
             showModelSelector={true}
+            models={models}
+            pendingSelection={pendingSelection}
+            onPendingSelectionHandled={handlePendingSelectionHandled}
             onResponse={(text) => {
               setIsGenerating(true)
               
               try {
-                if (selectedText && selectedText.length > 0) {
+                // Fallback for single response (when not using multi-selection targeted replacement)
+                if (selectedText && selectedText.length > 0 && selectionRange) {
                   // Replace selected text with AI response
                   editor.chain().focus().deleteSelection().insertContent(text).run()
                 } else {
@@ -241,6 +311,7 @@ export function TiptapEditor({
                 
                 // Clear selection after insertion
                 setSelectedText('')
+                setSelectionRange(null)
               } catch (error) {
                 console.error('Failed to insert AI content:', error)
               } finally {
@@ -249,13 +320,6 @@ export function TiptapEditor({
             }}
             disabled={isGenerating}
           />
-          
-          {/* Subtle selection indicator (optional) */}
-          {selectedText && (
-            <div className="mt-2 text-xs text-muted-foreground/60 text-center">
-              {selectedText.length} characters selected
-            </div>
-          )}
         </div>
       )}
     </div>

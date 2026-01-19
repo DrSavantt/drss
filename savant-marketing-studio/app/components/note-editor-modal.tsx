@@ -7,6 +7,8 @@ import { getClientProjects } from '@/app/actions/content'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
 import { VisuallyHidden } from '@/components/ui/visually-hidden'
 import { AnimatedButton } from '@/components/animated-button'
+import { createClient } from '@/lib/supabase/client'
+import type { AIModel } from '@/components/editor/ai-prompt-bar'
 
 const TiptapEditor = dynamic(
   () => import('@/components/tiptap-editor').then(mod => ({ default: mod.TiptapEditor })),
@@ -62,6 +64,22 @@ export function NoteEditorModal({
   const [projects, setProjects] = useState<Project[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [aiModels, setAiModels] = useState<AIModel[]>([])
+
+  // Fetch AI models on mount
+  useEffect(() => {
+    async function fetchModels() {
+      const supabase = createClient()
+      const { data } = await supabase
+        .from('ai_models')
+        .select('id, model_name, display_name, max_tokens')
+        .eq('is_active', true)
+        .order('display_name')
+      
+      if (data) setAiModels(data)
+    }
+    fetchModels()
+  }, [])
 
   useEffect(() => {
     async function loadProjects() {
@@ -221,6 +239,8 @@ export function NoteEditorModal({
                 content={content}
                 onChange={setContent}
                 editable={!loading}
+                clientId={selectedClientId || undefined}
+                models={aiModels}
               />
             </div>
           </div>
