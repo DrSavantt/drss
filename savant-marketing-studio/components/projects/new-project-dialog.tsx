@@ -101,7 +101,7 @@ export function NewProjectDialog({ open, onOpenChange, defaultClientId, defaultC
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-[500px]">
+      <DialogContent className="w-full max-w-[500px]">
         <DialogHeader>
           <DialogTitle>Create New Project</DialogTitle>
           <DialogDescription>Add a new project to track your client work.</DialogDescription>
@@ -144,7 +144,7 @@ export function NewProjectDialog({ open, onOpenChange, defaultClientId, defaultC
               <Label htmlFor="description">Description</Label>
               <Textarea id="description" name="description" placeholder="Brief description of the project..." />
             </div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="grid gap-2">
                 <Label htmlFor="due">Due Date</Label>
                 <Input id="due" name="due" type="date" required />

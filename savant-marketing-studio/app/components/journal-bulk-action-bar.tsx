@@ -24,7 +24,7 @@ export function JournalBulkActionBar({
   if (selectedCount === 0) return null
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 z-40 bg-charcoal border-t-2 border-red-primary shadow-2xl pb-safe-bottom">
+    <div className="fixed bottom-0 left-0 right-0 z-[60] bg-charcoal border-t-2 border-red-primary shadow-2xl pb-safe-bottom">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="py-4 flex flex-row items-center justify-between gap-4">
           {/* Selection Count */}

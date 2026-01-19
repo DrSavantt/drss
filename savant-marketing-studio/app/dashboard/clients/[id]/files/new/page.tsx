@@ -1,6 +1,7 @@
 'use client'
 
 import { createFileAsset, getUploadUrl, getClientProjects } from '@/app/actions/content'
+import { getAssetTypeFromMimeType } from '@/lib/content-types'
 import { useState, useEffect } from 'react'
 import { Loader2 } from 'lucide-react'
 import Link from 'next/link'
@@ -100,10 +101,7 @@ export default function NewFilePage() {
       const publicUrl = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/client-files/${urlResult.path}`
 
       // Step 4: Determine asset type based on file type
-      let assetType = 'research_pdf'
-      if (file.type.startsWith('image/')) {
-        assetType = 'research_pdf' // Still categorize images as research for now
-      }
+      const assetType = getAssetTypeFromMimeType(file.type)
 
       // Step 5: Save file metadata
       formData.append('file_url', publicUrl)

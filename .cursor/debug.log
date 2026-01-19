@@ -1,0 +1,5 @@
+{"location":"chat.ts:buildContextFromMentions:return","message":"Returning from buildContextFromMentions","data":{"imageCount":1,"hasContextParts":true,"imageSizes":[336820]},"timestamp":1768828731321,"sessionId":"debug-session","hypothesisId":"H1"}
+{"location":"chat.ts:sendMessage:afterBuildContext","message":"After buildContextFromMentions","data":{"hasContextText":true,"imageCount":1,"mentionCount":1},"timestamp":1768828731321,"sessionId":"debug-session","hypothesisId":"H2"}
+{"location":"chat.ts:sendMessage:beforeExecuteTask","message":"Calling orchestrator.executeTask","data":{"imageCount":1,"messageCount":1},"timestamp":1768828731480,"sessionId":"debug-session","hypothesisId":"H3"}
+{"location":"claude.ts:generateText:entry","message":"Claude generateText called","data":{"hasImages":true,"imageCount":1,"messageCount":1},"timestamp":1768828732051,"sessionId":"debug-session","hypothesisId":"H4"}
+{"location":"claude.ts:generateText:multiModal","message":"Formatting multi-modal message","data":{"imageCount":1,"mediaTypes":["image/png"],"textLength":261},"timestamp":1768828732052,"sessionId":"debug-session","hypothesisId":"H5"}

@@ -6,21 +6,6 @@ import { ContentPageContent } from '@/components/content/content-page-content'
 // ISR: Cache page for 60 seconds, then revalidate in background
 export const revalidate = 60
 
-// Helper: Map database asset_type to UI type
-function mapContentType(assetType: string): "email" | "ad" | "landing" | "blog" | "note" {
-  const typeMap: Record<string, "email" | "ad" | "landing" | "blog" | "note"> = {
-    'email': 'email',
-    'ad_copy': 'ad',
-    'landing_page': 'landing',
-    'blog_post': 'blog',
-    'note': 'note',
-    'research_pdf': 'note',
-    'research_report': 'note',
-    'other': 'note',
-  }
-  return typeMap[assetType] || 'note'
-}
-
 // Helper: Extract preview text from content
 function extractPreview(content: any): string {
   try {
@@ -148,7 +133,7 @@ async function ContentListLoader() {
   const transformedContent = (content || []).map((c: any) => ({
     id: c.id,
     title: c.title,
-    type: mapContentType(c.asset_type),
+    asset_type: c.asset_type || 'note',
     client: c.clients?.name || 'Unknown',
     clientId: c.client_id || '',
     preview: extractPreview(c),

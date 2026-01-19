@@ -1414,7 +1414,7 @@ function EditQuestionDialog({
                     onCheckedChange={setRequired}
                   />
                 </div>
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <Label htmlFor="minLength">Min Length</Label>
                     <Input

@@ -24,6 +24,7 @@ import {
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useDebouncedValue } from '@/hooks/use-debounced-value'
+import { getContentTypeLabel } from '@/lib/content-types'
 
 interface CommandItem {
   id: string
@@ -116,7 +117,7 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
       const contentItems: CommandItem[] = contentData.slice(0, 20).map((c: any) => ({
         id: `content-${c.id}`,
         label: c.title,
-        description: c.asset_type,
+        description: c.asset_type ? getContentTypeLabel(c.asset_type) : undefined,
         icon: <FileText className="w-4 h-4" />,
         href: `/dashboard/content/${c.id}`,
         type: 'content' as const

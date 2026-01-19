@@ -154,13 +154,19 @@ Output ONLY the requested content, no explanations or meta-commentary.`;
 // Map content types to asset types in content_assets table
 function mapContentTypeToAssetType(contentType: string): string {
   const mapping: Record<string, string> = {
+    // Direct matches
     email: 'email',
     ad: 'ad_copy',
+    social: 'social_post',
+    other: 'note',
+    // UI shorthand values
+    landing: 'landing_page',
+    blog: 'blog_post',
+    // Full values (for backward compatibility)
     landing_page: 'landing_page',
     blog_post: 'blog_post',
-    social: 'note',
-    headline: 'note',
-    other: 'note',
+    ad_copy: 'ad_copy',
+    social_post: 'social_post',
   };
   return mapping[contentType] || 'note';
 }

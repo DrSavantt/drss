@@ -94,7 +94,7 @@ export function EditClientDialog({ client, open, onOpenChange }: EditClientDialo
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-[425px]">
+      <DialogContent className="w-full max-w-[425px]">
         <DialogHeader>
           <DialogTitle>Edit Client</DialogTitle>
           <DialogDescription>Update the client's profile information.</DialogDescription>

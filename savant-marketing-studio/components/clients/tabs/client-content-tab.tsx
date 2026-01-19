@@ -4,7 +4,8 @@ import Link from 'next/link'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { FileText, Plus, Calendar, Sparkles, Mail, Search, File } from 'lucide-react'
+import { FileText, Plus, Calendar, Sparkles } from 'lucide-react'
+import { getContentTypeConfig } from '@/lib/content-types'
 
 // ============================================================================
 // CLIENT CONTENT TAB
@@ -28,24 +29,12 @@ interface ClientContentTabProps {
   onNewContent: () => void
 }
 
-function getContentIcon(assetType: string) {
-  switch (assetType) {
-    case 'note':
-      return <FileText className="h-4 w-4 text-blue-500" />
-    case 'research_pdf':
-      return <File className="h-4 w-4 text-red-500" />
-    case 'research_report':
-      return <Search className="h-4 w-4 text-primary" />
-    case 'ad_copy':
-      return <Sparkles className="h-4 w-4 text-purple-500" />
-    case 'email':
-      return <Mail className="h-4 w-4 text-green-500" />
-    case 'blog_post':
-      return <FileText className="h-4 w-4 text-orange-500" />
-    default:
-      return <File className="h-4 w-4 text-gray-500" />
-  }
-}
+// ContentIcon helper using centralized config
+const ContentIcon = ({ assetType }: { assetType: string }) => {
+  const config = getContentTypeConfig(assetType);
+  const Icon = config.icon;
+  return <Icon className={`h-4 w-4 ${config.color}`} />;
+};
 
 export function ClientContentTab({
   clientId,
@@ -95,7 +84,7 @@ export function ClientContentTab({
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
                     <div className="flex items-center gap-3 mb-2">
-                      {getContentIcon(item.asset_type)}
+                      <ContentIcon assetType={item.asset_type} />
                       <h3 className="text-base font-semibold">
                         {item.title}
                       </h3>

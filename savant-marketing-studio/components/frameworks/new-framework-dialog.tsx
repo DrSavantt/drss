@@ -65,7 +65,7 @@ export function NewFrameworkDialog({ open, onOpenChange }: NewFrameworkDialogPro
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-[600px]">
+      <DialogContent className="w-full max-w-[600px]">
         <DialogHeader>
           <DialogTitle>Add New Framework</DialogTitle>
           <DialogDescription>

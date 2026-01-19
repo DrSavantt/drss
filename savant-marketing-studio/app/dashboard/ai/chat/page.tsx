@@ -3,26 +3,12 @@ import { listConversations } from '@/app/actions/chat'
 import { getContentAssets } from '@/app/actions/content'
 import { getProjects } from '@/app/actions/projects'
 import { ChatInterface } from '@/components/ai-chat/chat-interface'
+import { getContentTypeLabel } from '@/lib/content-types'
 
 export const dynamic = 'force-dynamic'
 
 interface PageProps {
   searchParams: Promise<{ conversation?: string }>
-}
-
-function mapContentType(assetType: string | null): string | null {
-  if (!assetType) return null
-  const typeMap: Record<string, string> = {
-    email: 'email',
-    ad_copy: 'ad',
-    landing_page: 'landing',
-    blog_post: 'blog',
-    note: 'note',
-    research_pdf: 'note',
-    research_report: 'note',
-    other: 'note',
-  }
-  return typeMap[assetType] || assetType.replace(/_/g, ' ')
 }
 
 function extractContentText(content: { content_json?: unknown; title?: string | null }): string | null {
@@ -117,7 +103,7 @@ export default async function AIChatPage({ searchParams }: PageProps) {
       id: asset.id,
       title: asset.title,
       content: extractContentText(asset),
-      contentType: mapContentType(asset.asset_type ?? null),
+      contentType: asset.asset_type ? getContentTypeLabel(asset.asset_type) : null,
       clientId,
       clientName,
     }))

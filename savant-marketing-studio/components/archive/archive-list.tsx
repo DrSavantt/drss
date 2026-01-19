@@ -37,6 +37,7 @@ import { restoreContentAsset, permanentlyDeleteContentAsset } from '@/app/action
 import { restoreFramework, permanentlyDeleteFramework } from '@/app/actions/frameworks'
 import { restoreJournalEntry, permanentlyDeleteJournalEntry } from '@/app/actions/journal'
 import { restoreConversation, permanentlyDeleteConversation } from '@/app/actions/chat'
+import { getContentTypeLabel } from '@/lib/content-types'
 
 interface ArchivedClient {
   id: string
@@ -283,7 +284,7 @@ export function ArchiveList({
             getMetadata={(item) => {
               const meta = []
               if (item.clients?.name) meta.push(`Client: ${item.clients.name}`)
-              if (item.asset_type) meta.push(`Type: ${item.asset_type}`)
+              if (item.asset_type) meta.push(`Type: ${getContentTypeLabel(item.asset_type)}`)
               return meta
             }}
             loading={loading}

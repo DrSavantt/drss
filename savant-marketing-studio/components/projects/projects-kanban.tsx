@@ -96,25 +96,36 @@ export function ProjectsKanban() {
         // Check if aborted before updating state
         if (abortController.signal.aborted) return
         
-        // Transform to v0 Project format
-        const transformedProjects: Project[] = projectsData.map((p: any) => ({
-          id: p.id,
-          title: p.name,
-          client: p.client_name || 'Unknown',
-          clientId: p.client_id || '',
-          dueDate: p.due_date || '',
-          priority: (p.priority || 'medium') as "low" | "medium" | "high",
-          status: mapStatus(p.status),
-        }))
+        // Defensive check: API may return { error: "..." } on failure instead of array
+        // Handle both non-ok responses and non-array data
+        if (!projectsRes.ok || !Array.isArray(projectsData)) {
+          console.error('Projects API error:', projectsData?.error || 'Invalid response format')
+          setProjects([])
+        } else {
+          // Transform to v0 Project format
+          const transformedProjects: Project[] = projectsData.map((p: any) => ({
+            id: p.id,
+            title: p.name,
+            client: p.client_name || 'Unknown',
+            clientId: p.client_id || '',
+            dueDate: p.due_date || '',
+            priority: (p.priority || 'medium') as "low" | "medium" | "high",
+            status: mapStatus(p.status),
+          }))
+          setProjects(transformedProjects)
+        }
         
-        setProjects(transformedProjects)
-        
-        const clientOptions = [
-          { id: "all", name: "All Clients" },
-          ...clientsData.map((c: any) => ({ id: c.id, name: c.name }))
-        ]
-        
-        setClients(clientOptions)
+        // Defensive check: API may return { error: "..." } on failure instead of array
+        if (!clientsRes.ok || !Array.isArray(clientsData)) {
+          console.error('Clients API error:', clientsData?.error || 'Invalid response format')
+          setClients([{ id: "all", name: "All Clients" }])
+        } else {
+          const clientOptions = [
+            { id: "all", name: "All Clients" },
+            ...clientsData.map((c: any) => ({ id: c.id, name: c.name }))
+          ]
+          setClients(clientOptions)
+        }
       } catch (error) {
         // Ignore abort errors - component unmounted
         if (error instanceof Error && error.name === 'AbortError') return

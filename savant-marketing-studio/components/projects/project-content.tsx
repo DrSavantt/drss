@@ -1,11 +1,12 @@
 'use client'
 
 import Link from 'next/link'
-import { FileText, Plus, Mail, Megaphone, Globe, Share2, BookOpen } from 'lucide-react'
+import { FileText, Plus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { formatDistanceToNow } from 'date-fns'
 import { cn } from '@/lib/utils'
+import { getContentTypeConfig } from '@/lib/content-types'
 
 interface ContentItem {
   id: string
@@ -19,18 +20,33 @@ interface ProjectContentProps {
   content: ContentItem[]
 }
 
-const ASSET_TYPE_CONFIG: Record<string, { label: string; color: string; icon: typeof FileText }> = {
-  email: { label: 'Email', color: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400', icon: Mail },
-  ad: { label: 'Ad', color: 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400', icon: Megaphone },
-  landing_page: { label: 'Landing', color: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400', icon: Globe },
-  social_post: { label: 'Social', color: 'bg-pink-100 text-pink-800 dark:bg-pink-900/30 dark:text-pink-400', icon: Share2 },
-  blog_post: { label: 'Blog', color: 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-400', icon: BookOpen },
-  note: { label: 'Note', color: 'bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400', icon: FileText },
-}
-
 function getAssetTypeConfig(type: string | null) {
-  if (!type) return { label: 'Content', color: 'bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400', icon: FileText }
-  return ASSET_TYPE_CONFIG[type] || { label: type, color: 'bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400', icon: FileText }
+  const fallback = { 
+    label: 'Content', 
+    color: 'bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400', 
+    icon: FileText 
+  };
+  
+  if (!type) return fallback;
+  
+  const config = getContentTypeConfig(type);
+  
+  // Map central config text colors to badge background colors for this component
+  const badgeColorMap: Record<string, string> = {
+    'text-blue-500': 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400',
+    'text-red-500': 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400',
+    'text-cyan-500': 'bg-cyan-100 text-cyan-800 dark:bg-cyan-900/30 dark:text-cyan-400',
+    'text-purple-500': 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400',
+    'text-green-500': 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400',
+    'text-orange-500': 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-400',
+    'text-pink-500': 'bg-pink-100 text-pink-800 dark:bg-pink-900/30 dark:text-pink-400',
+  };
+  
+  return {
+    label: config.label,
+    color: badgeColorMap[config.color] || fallback.color,
+    icon: config.icon,
+  };
 }
 
 export function ProjectContent({ projectId, content }: ProjectContentProps) {

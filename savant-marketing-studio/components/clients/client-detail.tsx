@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react"
 import Link from "next/link"
-import { ArrowLeft, Building2, Globe, Mail, MoreHorizontal, Pencil, Calendar, Plus, File } from "lucide-react"
+import { ArrowLeft, Building2, Globe, Mail, MoreHorizontal, Pencil, Calendar, Plus } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsTrigger } from "@/components/ui/tabs"
@@ -15,7 +15,8 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { StatCard } from "@/components/ui/stat-card"
-import { FolderKanban, FileText, Sparkles, Zap, Search } from "lucide-react"
+import { FolderKanban, FileText, Sparkles, Zap } from "lucide-react"
+import { getContentTypeConfig } from "@/lib/content-types"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { ClientQuestionnaire } from "./client-questionnaire"
 import { EditClientDialog } from "./edit-client-dialog"
@@ -413,14 +414,11 @@ export function ClientDetail({ clientId }: ClientDetailProps) {
                         <div className="flex-1">
                           <div className="flex items-center gap-3 mb-2">
                             {/* Content type icon */}
-                            {item.asset_type === 'note' && <FileText className="h-4 w-4 text-blue-500" />}
-                            {item.asset_type === 'research_pdf' && <File className="h-4 w-4 text-red-500" />}
-                            {item.asset_type === 'research_report' && <Search className="h-4 w-4 text-primary" />}
-                            {item.asset_type === 'ad_copy' && <Sparkles className="h-4 w-4 text-purple-500" />}
-                            {item.asset_type === 'email' && <Mail className="h-4 w-4 text-green-500" />}
-                            {item.asset_type === 'blog_post' && <FileText className="h-4 w-4 text-orange-500" />}
-                            {!['note', 'research_pdf', 'research_report', 'ad_copy', 'email', 'blog_post'].includes(item.asset_type) && 
-                              <File className="h-4 w-4 text-gray-500" />}
+                            {(() => {
+                              const config = getContentTypeConfig(item.asset_type);
+                              const Icon = config.icon;
+                              return <Icon className={`h-4 w-4 ${config.color}`} />;
+                            })()}
                             
                             <h3 className="text-base font-semibold">
                               {item.title}

@@ -2,11 +2,15 @@
 
 import { useState, useEffect, useMemo } from "react"
 import Link from "next/link"
-import { Plus, Search, Filter, Mail, Megaphone, FileText, PenTool, Sparkles, Trash2, FolderInput } from "lucide-react"
+import { Plus, Search, Filter, Sparkles, Trash2, FolderInput } from "lucide-react"
+import { 
+  getContentTypeConfig,
+  FILTER_OPTIONS 
+} from '@/lib/content-types'
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Checkbox } from "@/components/ui/checkbox"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Select, SelectContent, SelectItem, SelectSeparator, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Badge } from "@/components/ui/badge"
 import { cn } from "@/lib/utils"
 import { bulkDeleteContent, bulkChangeProject, getAllProjects, bulkReassignContentToClient } from "@/app/actions/content"
@@ -30,20 +34,12 @@ import { CreateContentModal } from "./create-content-modal"
 interface ContentItem {
   id: string
   title: string
-  type: "email" | "ad" | "landing" | "blog" | "note"
+  asset_type: string
   client: string
   clientId: string
   preview: string
   createdAt: Date
   aiGenerated: boolean
-}
-
-const typeConfig = {
-  email: { icon: Mail, label: "Email" },
-  ad: { icon: Megaphone, label: "Ad Copy" },
-  landing: { icon: FileText, label: "Landing Page" },
-  blog: { icon: PenTool, label: "Blog Post" },
-  note: { icon: FileText, label: "Note" },
 }
 
 export function ContentLibrary() {
@@ -87,11 +83,11 @@ export function ContentLibrary() {
         // Check if aborted before updating state
         if (abortController.signal.aborted) return
         
-        // Transform to v0 format
+        // Transform to UI format
         const transformedContent: ContentItem[] = contentData.map((c: any) => ({
           id: c.id,
           title: c.title,
-          type: mapContentType(c.asset_type),
+          asset_type: c.asset_type || 'note',
           client: c.client_name || 'Unknown',
           clientId: c.client_id || '',
           preview: extractPreview(c),
@@ -141,7 +137,7 @@ export function ContentLibrary() {
         item.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
         item.preview.toLowerCase().includes(searchQuery.toLowerCase())
       const matchesClient = clientFilter === "all" || item.clientId === clientFilter
-      const matchesType = typeFilter === "all" || item.type === typeFilter
+      const matchesType = typeFilter === "all" || item.asset_type === typeFilter
       const matchesAi =
         aiFilter === "all" || (aiFilter === "yes" && item.aiGenerated) || (aiFilter === "no" && !item.aiGenerated)
       return matchesSearch && matchesClient && matchesType && matchesAi
@@ -221,7 +217,7 @@ export function ContentLibrary() {
       const transformedContent: ContentItem[] = contentData.map((c: any) => ({
         id: c.id,
         title: c.title,
-        type: mapContentType(c.asset_type),
+        asset_type: c.asset_type || 'note',
         client: c.client_name || 'Unknown',
         clientId: c.client_id || '',
         preview: extractPreview(c),
@@ -301,12 +297,15 @@ export function ContentLibrary() {
               <SelectValue placeholder="Type" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All Types</SelectItem>
-              <SelectItem value="email">Email</SelectItem>
-              <SelectItem value="ad">Ad Copy</SelectItem>
-              <SelectItem value="landing">Landing Page</SelectItem>
-              <SelectItem value="blog">Blog Post</SelectItem>
-              <SelectItem value="note">Note</SelectItem>
+              {FILTER_OPTIONS.map((option, index) => 
+                option.isSeparator ? (
+                  <SelectSeparator key={`sep-${index}`} />
+                ) : (
+                  <SelectItem key={option.value} value={option.value}>
+                    {option.label}
+                  </SelectItem>
+                )
+              )}
             </SelectContent>
           </Select>
           <Select value={aiFilter} onValueChange={setAiFilter}>
@@ -340,7 +339,8 @@ export function ContentLibrary() {
       {/* Content List */}
       <div className="space-y-2">
         {filteredContent.map((item) => {
-          const TypeIcon = typeConfig[item.type].icon
+          const config = getContentTypeConfig(item.asset_type)
+          const TypeIcon = config.icon
           return (
             <div
               key={item.id}
@@ -366,7 +366,7 @@ export function ContentLibrary() {
               >
                 <div className="flex items-start justify-between gap-4">
                   <div className="flex items-center gap-2">
-                    <TypeIcon className="h-4 w-4 text-muted-foreground shrink-0" />
+                    <TypeIcon className={cn("h-4 w-4 shrink-0", config.color)} />
                     <h3 className="font-medium truncate">{item.title}</h3>
                     {item.aiGenerated && (
                       <Badge variant="outline" className="shrink-0 bg-primary/10 text-primary border-primary/20">
@@ -379,7 +379,7 @@ export function ContentLibrary() {
                 <div className="mt-1 flex items-center gap-2 text-sm text-muted-foreground">
                   <span>{item.client}</span>
                   <span>•</span>
-                  <span>{typeConfig[item.type].label}</span>
+                  <span>{config.label}</span>
                   <span>•</span>
                   <span>
                     {item.createdAt.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
@@ -474,21 +474,6 @@ export function ContentLibrary() {
       />
     </div>
   )
-}
-
-// Helper: Map database asset_type to v0 type
-function mapContentType(assetType: string): "email" | "ad" | "landing" | "blog" | "note" {
-  const typeMap: Record<string, "email" | "ad" | "landing" | "blog" | "note"> = {
-    'email': 'email',
-    'ad_copy': 'ad',
-    'landing_page': 'landing',
-    'blog_post': 'blog',
-    'note': 'note',
-    'research_pdf': 'note',
-    'research_report': 'note',
-    'other': 'note',
-  }
-  return typeMap[assetType] || 'note'
 }
 
 // Helper: Extract preview text from content
