@@ -24,15 +24,48 @@ export class ClaudeProvider extends BaseAIProvider {
         ? thinkingBudget + 8000  // e.g., 10000 + 8000 = 18000
         : (request.maxTokens || 4096);
 
+      // Build messages - handle multi-modal (images) for last user message
+      const formattedMessages = request.messages.map((msg, index) => {
+        const isLastUserMessage = 
+          msg.role === 'user' && 
+          index === request.messages.length - 1;
+        
+        // If this is the last user message AND we have images, use multi-modal format
+        if (isLastUserMessage && request.images?.length) {
+          return {
+            role: 'user' as const,
+            content: [
+              // Add all images first
+              ...request.images.map(img => ({
+                type: 'image' as const,
+                source: {
+                  type: 'base64' as const,
+                  media_type: img.mediaType as 'image/png' | 'image/jpeg' | 'image/gif' | 'image/webp',
+                  data: img.base64,
+                },
+              })),
+              // Then add the text content
+              {
+                type: 'text' as const,
+                text: msg.content,
+              },
+            ],
+          };
+        }
+        
+        // Standard text-only message
+        return {
+          role: (msg.role === 'system' ? 'user' : msg.role) as 'user' | 'assistant',
+          content: msg.content,
+        };
+      });
+
       const response = await this.client.messages.create({
         model: modelName,
         max_tokens: maxTokens,
         temperature,
         system: request.systemPrompt,
-        messages: request.messages.map(msg => ({
-          role: msg.role === 'system' ? 'user' : msg.role,
-          content: msg.content,
-        })),
+        messages: formattedMessages,
         // Add extended thinking when enabled
         ...(request.useExtendedThinking && {
           thinking: {

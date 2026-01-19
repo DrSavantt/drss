@@ -11,6 +11,8 @@ export interface AIRequest {
   // Extended thinking support
   useExtendedThinking?: boolean;
   thinkingBudget?: number; // Token budget for thinking (default 10000)
+  // Vision support - images to include with last user message
+  images?: Array<{ base64: string; mediaType: string }>;
 }
 
 export interface AIResponse {

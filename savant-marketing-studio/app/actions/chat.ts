@@ -3,6 +3,7 @@
 import { createClient } from '@/lib/supabase/server';
 import { AIOrchestrator } from '@/lib/ai/orchestrator';
 import { getModelIdFromName } from '@/lib/ai/model-lookup';
+import { extractFileContent } from '@/lib/ai/file-processor';
 import { revalidatePath } from 'next/cache';
 import { logActivity } from '@/lib/activity-log';
 import type { Database, Json } from '@/types/database';
@@ -130,10 +131,11 @@ function extractTextFromTipTap(json: unknown): string {
 async function buildContextFromMentions(
   supabase: NonNullable<Awaited<ReturnType<typeof createClient>>>,
   mentions: NonNullable<SendMessageInput['mentions']>
-): Promise<string | null> {
-  if (!mentions.length) return null;
+): Promise<{ text: string | null; images: Array<{ base64: string; mediaType: string }> }> {
+  if (!mentions.length) return { text: null, images: [] };
 
   const contextParts: string[] = [];
+  const images: Array<{ base64: string; mediaType: string }> = [];
 
   // Group mentions by type
   const clientIds = mentions.filter(m => m.type === 'client').map(m => m.id);
@@ -232,22 +234,46 @@ async function buildContextFromMentions(
   if (contentIds.length) {
     const { data: contents } = await supabase
       .from('content_assets')
-      .select('id, title, content_json, asset_type, metadata')
+      .select('id, title, content_json, asset_type, metadata, file_url, file_type')
       .in('id', contentIds);
 
     if (contents?.length) {
-      contextParts.push(`## Referenced Content\n${contents.map(c => {
+      const contentParts: string[] = [];
+
+      for (const c of contents) {
         const parts = [`### ${c.title}`];
         parts.push(`Type: ${c.asset_type}`);
+        
+        // Handle TipTap editor content
         if (c.content_json) {
           const text = extractTextFromTipTap(c.content_json);
           if (text) parts.push(`Content:\n${text}`);
         }
-        if (c.metadata) {
+        // Handle uploaded files
+        else if (c.file_url) {
+          const extracted = await extractFileContent(c.file_url, c.file_type);
+          
+          if (extracted.isImage && extracted.base64 && extracted.mediaType) {
+            // Store image for multi-modal message
+            images.push({ base64: extracted.base64, mediaType: extracted.mediaType });
+            parts.push(`[Image attached - Claude can see this image]`);
+          } else if (extracted.text) {
+            parts.push(`Content:\n${extracted.text}`);
+          }
+        }
+        
+        if (c.metadata && Object.keys(c.metadata).length > 0) {
           parts.push(`Metadata:\n\`\`\`json\n${JSON.stringify(c.metadata, null, 2)}\n\`\`\``);
         }
-        return parts.join('\n');
-      }).join('\n\n')}`);
+        
+        contentParts.push(parts.join('\n'));
+      }
+
+      if (contentParts.length) {
+        contextParts.push(`## Referenced Content\n${contentParts.join('\n\n')}`);
+      }
+
+      // Images are now returned and passed to Claude's vision API
     }
   }
 
@@ -288,12 +314,17 @@ async function buildContextFromMentions(
     }
   }
 
-  if (contextParts.length === 0) return null;
+  if (contextParts.length === 0) {
+    return { text: null, images };
+  }
 
-  return `# CONTEXT FOR THIS MESSAGE
+  return {
+    text: `# CONTEXT FOR THIS MESSAGE
 The user has attached the following context. Use this information to inform your response.
 
-${contextParts.join('\n\n---\n\n')}`;
+${contextParts.join('\n\n---\n\n')}`,
+    images,
+  };
 }
 
 /**
@@ -1138,8 +1169,10 @@ export async function sendMessage(
 
     // Build context from mentions if present
     let userMessageContent = data.content;
+    let contextImages: Array<{ base64: string; mediaType: string }> = [];
     if (data.mentions?.length) {
-      const contextText = await buildContextFromMentions(supabase, data.mentions);
+      const { text: contextText, images } = await buildContextFromMentions(supabase, data.mentions);
+      contextImages = images;
       if (contextText) {
         userMessageContent = `${contextText}\n\n---\n\nUSER REQUEST:\n${data.content}`;
       }
@@ -1199,6 +1232,7 @@ export async function sendMessage(
           systemPrompt: conversation.system_prompt || undefined,
           useExtendedThinking: data.useExtendedThinking,
           thinkingBudget: data.useExtendedThinking ? 10000 : undefined,
+          images: contextImages,
         },
       });
     } catch (aiError) {
