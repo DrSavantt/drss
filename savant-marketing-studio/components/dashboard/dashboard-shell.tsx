@@ -4,6 +4,7 @@ import { AppShell } from '@/components/layout/app-shell'
 import { ErrorBoundary } from '@/components/error-boundary'
 import { PerfMonitor } from '@/components/perf-monitor'
 import { SidebarProvider } from '@/contexts/sidebar-context'
+import { InstallPrompt } from '@/components/pwa/install-prompt'
 
 interface User {
   id: string
@@ -43,6 +44,9 @@ export function DashboardShell({ user, children }: DashboardShellProps) {
       
       {/* Performance monitor for development */}
       <PerfMonitor />
+      
+      {/* PWA install prompt */}
+      <InstallPrompt />
     </ErrorBoundary>
   )
 }
