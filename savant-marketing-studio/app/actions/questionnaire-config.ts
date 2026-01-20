@@ -71,6 +71,10 @@ export type QuestionWithHelp = QuestionConfig & {
 // ===== READ OPERATIONS =====
 
 export async function getSections(): Promise<SectionConfig[]> {
+  // #region agent log
+  fetch('http://127.0.0.1:7243/ingest/de6f83dd-b5e0-4c9a-99d4-d76568bc937c',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'questionnaire-config.ts:getSections:entry',message:'getSections called',data:{timestamp:Date.now()},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H6'})}).catch(()=>{});
+  // #endregion
+  
   const supabase = await createClient()
   
   if (!supabase) {
@@ -81,6 +85,10 @@ export async function getSections(): Promise<SectionConfig[]> {
     .from('questionnaire_sections')
     .select('*')
     .order('sort_order')
+  
+  // #region agent log
+  fetch('http://127.0.0.1:7243/ingest/de6f83dd-b5e0-4c9a-99d4-d76568bc937c',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'questionnaire-config.ts:getSections:result',message:'getSections data received',data:{sectionOrder:data?.map(s=>({id:s.id,sort_order:s.sort_order}))||[],error:error?.message||null},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H6'})}).catch(()=>{});
+  // #endregion
   
   if (error) {
     console.error('[getSections] Database error:', error.message)
@@ -207,6 +215,10 @@ export async function getHelp(questionId: string): Promise<HelpContent | null> {
  * Returns global configuration (per-client overrides feature removed).
  */
 export async function getSectionsForClient(clientId: string): Promise<SectionConfig[]> {
+  console.log('=== getSectionsForClient CALLED ===')
+  console.log('clientId:', clientId)
+  console.log('timestamp:', new Date().toISOString())
+  
   const supabase = await createClient()
   
   if (!supabase) {
@@ -224,6 +236,13 @@ export async function getSectionsForClient(clientId: string): Promise<SectionCon
     console.error('[getSectionsForClient] Error fetching sections:', sectionsError)
     throw sectionsError
   }
+  
+  console.log('=== getSectionsForClient RESULT ===')
+  console.log('Sections received:', sections?.map(s => ({ 
+    id: s.id, 
+    title: s.title, 
+    sort_order: s.sort_order 
+  })))
   
   return sections || []
 }
@@ -275,6 +294,7 @@ export async function updateSection(id: number, updates: Partial<Omit<SectionCon
   }
   
   revalidatePath('/dashboard/settings/questionnaire')
+  revalidatePath('/form', 'layout') // Revalidate all form pages to reflect changes
 }
 
 export async function toggleSection(id: number, enabled: boolean) {
@@ -282,15 +302,24 @@ export async function toggleSection(id: number, enabled: boolean) {
 }
 
 export async function reorderSections(orderedIds: number[]) {
+  // #region agent log
+  fetch('http://127.0.0.1:7243/ingest/de6f83dd-b5e0-4c9a-99d4-d76568bc937c',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'questionnaire-config.ts:reorderSections:entry',message:'Server action called',data:{orderedIds,orderedIdsTypes:orderedIds.map(id=>typeof id)},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H4'})}).catch(()=>{});
+  // #endregion
+  
   // Use service role client to bypass RLS for admin operations
   const supabase = getServiceClient()
   
   // Update all sections with new sort orders
   for (let i = 0; i < orderedIds.length; i++) {
-    const { error } = await supabase
+    const { error, data } = await supabase
       .from('questionnaire_sections')
       .update({ sort_order: i + 1 })
       .eq('id', orderedIds[i])
+      .select()
+    
+    // #region agent log
+    fetch('http://127.0.0.1:7243/ingest/de6f83dd-b5e0-4c9a-99d4-d76568bc937c',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'questionnaire-config.ts:reorderSections:update',message:`Update section ${orderedIds[i]}`,data:{sectionId:orderedIds[i],newSortOrder:i+1,error:error?.message||null,dataReturned:data},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H4'})}).catch(()=>{});
+    // #endregion
     
     if (error) {
       console.error('Error reordering sections:', error)
@@ -298,15 +327,37 @@ export async function reorderSections(orderedIds: number[]) {
     }
   }
   
+  // #region agent log
+  fetch('http://127.0.0.1:7243/ingest/de6f83dd-b5e0-4c9a-99d4-d76568bc937c',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'questionnaire-config.ts:reorderSections:complete',message:'All updates complete',data:{},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H4'})}).catch(()=>{});
+  // #endregion
+  
+  console.log('=== reorderSections: Calling revalidatePath ===')
+  console.log('Revalidating: /dashboard/settings/questionnaire')
   revalidatePath('/dashboard/settings/questionnaire')
+  console.log('Revalidating: /form (layout)')
+  revalidatePath('/form', 'layout') // Revalidate all form pages to reflect new order
+  console.log('=== reorderSections: Complete ===')
 }
 
-export async function addSection(section: Omit<SectionConfig, 'id' | 'created_at' | 'updated_at'>) {
+export async function addSection(section: Omit<SectionConfig, 'id' | 'sort_order' | 'created_at' | 'updated_at'>) {
   const supabase = getServiceClient()
+  
+  // Get the max sort_order from database to avoid conflicts
+  const { data: maxData } = await supabase
+    .from('questionnaire_sections')
+    .select('sort_order')
+    .order('sort_order', { ascending: false })
+    .limit(1)
+    .single()
+  
+  const nextSortOrder = (maxData?.sort_order ?? 0) + 1
   
   const { data, error } = await supabase
     .from('questionnaire_sections')
-    .insert(section)
+    .insert({
+      ...section,
+      sort_order: nextSortOrder
+    })
     .select()
     .single()
   
@@ -335,6 +386,7 @@ export async function deleteSection(id: number) {
   }
   
   revalidatePath('/dashboard/settings/questionnaire')
+  revalidatePath('/form', 'layout') // Revalidate all form pages to reflect changes
 }
 
 // ===== QUESTION UPDATE OPERATIONS =====
@@ -363,29 +415,14 @@ export async function toggleQuestion(id: string, enabled: boolean) {
 }
 
 export async function reorderQuestions(sectionId: number, orderedIds: string[]) {
-  const supabase = await createClient()
+  // Use service role client to bypass RLS for admin operations
+  const supabase = getServiceClient()
   
-  if (!supabase) {
-    console.error('Supabase client not available')
-    throw new Error('Supabase client not available')
-  }
-  
-  // Get the starting sort_order for this section
-  const firstQuestion = await supabase
-    .from('questionnaire_questions')
-    .select('sort_order')
-    .eq('section_id', sectionId)
-    .order('sort_order')
-    .limit(1)
-    .single()
-  
-  const startOrder = firstQuestion.data?.sort_order || 1
-  
-  // Update all questions with new sort orders
+  // Update all questions with new sort orders (1-based sequential)
   for (let i = 0; i < orderedIds.length; i++) {
     const { error } = await supabase
       .from('questionnaire_questions')
-      .update({ sort_order: startOrder + i })
+      .update({ sort_order: i + 1 })
       .eq('id', orderedIds[i])
     
     if (error) {
@@ -395,14 +432,29 @@ export async function reorderQuestions(sectionId: number, orderedIds: string[]) 
   }
   
   revalidatePath('/dashboard/settings/questionnaire')
+  revalidatePath('/form', 'layout') // Revalidate all form pages to reflect new order
 }
 
-export async function addQuestion(question: Omit<QuestionConfig, 'created_at' | 'updated_at'>) {
+export async function addQuestion(question: Omit<QuestionConfig, 'sort_order' | 'created_at' | 'updated_at'>) {
   const supabase = getServiceClient()
+  
+  // Get the max sort_order for this section from database to avoid conflicts
+  const { data: maxData } = await supabase
+    .from('questionnaire_questions')
+    .select('sort_order')
+    .eq('section_id', question.section_id)
+    .order('sort_order', { ascending: false })
+    .limit(1)
+    .single()
+  
+  const nextSortOrder = (maxData?.sort_order ?? 0) + 1
   
   const { error } = await supabase
     .from('questionnaire_questions')
-    .insert(question)
+    .insert({
+      ...question,
+      sort_order: nextSortOrder
+    })
   
   if (error) {
     console.error('Error adding question:', error)
@@ -411,6 +463,7 @@ export async function addQuestion(question: Omit<QuestionConfig, 'created_at' | 
   
   revalidatePath('/dashboard/settings/questionnaire')
   revalidatePath('/dashboard/clients/onboarding')
+  revalidatePath('/form', 'layout') // Revalidate all form pages to reflect changes
   return question.id
 }
 
@@ -428,6 +481,7 @@ export async function deleteQuestion(id: string) {
   }
   
   revalidatePath('/dashboard/settings/questionnaire')
+  revalidatePath('/form', 'layout') // Revalidate all form pages to reflect changes
 }
 
 // ===== HELP UPDATE OPERATIONS =====
@@ -455,6 +509,7 @@ export async function updateHelp(questionId: string, updates: Partial<HelpConten
   }
   
   revalidatePath('/dashboard/settings/questionnaire')
+  revalidatePath('/form', 'layout') // Revalidate all form pages to reflect changes
   return { success: true, data }
 }
 
@@ -477,6 +532,7 @@ export async function deleteHelp(questionId: string) {
   }
   
   revalidatePath('/dashboard/settings/questionnaire')
+  revalidatePath('/form', 'layout') // Revalidate all form pages to reflect changes
 }
 
 // ===== BULK OPERATIONS =====
@@ -502,6 +558,7 @@ export async function bulkToggleQuestions(questionIds: string[], enabled: boolea
   }
   
   revalidatePath('/dashboard/settings/questionnaire')
+  revalidatePath('/form', 'layout') // Revalidate all form pages to reflect changes
 }
 
 export async function duplicateQuestion(id: string): Promise<string> {
@@ -544,6 +601,7 @@ export async function duplicateQuestion(id: string): Promise<string> {
   }
   
   revalidatePath('/dashboard/settings/questionnaire')
+  revalidatePath('/form', 'layout') // Revalidate all form pages to reflect changes
   return newId
 }
 

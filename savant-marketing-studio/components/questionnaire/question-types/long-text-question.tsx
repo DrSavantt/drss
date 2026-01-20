@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState } from 'react';
 import { AlertCircle } from 'lucide-react';
 import { useDebouncedInput } from '@/hooks/use-debounced-value';
 
@@ -34,11 +34,19 @@ export default function LongTextQuestion({
   
   const charCount = localValue?.length || 0;
   
-  // Only show counter when approaching limits or there's an issue
-  const showCounter = charCount > 0 && (charCount < minLength || charCount > maxLength * 0.9);
+  // Show counter when typing (focused) or near limits
+  const showCounter = isFocused || (charCount > 0 && (charCount < minLength || charCount > maxLength * 0.8));
   const isUnderMin = charCount > 0 && charCount < minLength;
-  const isNearMax = charCount > maxLength * 0.9;
+  const isNearMax = charCount > maxLength * 0.8;
   const isOverMax = charCount > maxLength;
+
+  // Determine counter color
+  const getCounterClass = () => {
+    if (isOverMax) return 'text-destructive';
+    if (isNearMax) return 'text-warning';
+    if (isUnderMin) return 'text-warning';
+    return 'text-muted-foreground/70';
+  };
 
   return (
     <div className="space-y-2">
@@ -52,26 +60,31 @@ export default function LongTextQuestion({
         }}
         placeholder={placeholder}
         rows={5}
+        style={{
+          paddingLeft: 'var(--form-input-padding-x)',
+          paddingRight: 'var(--form-input-padding-x)',
+          paddingTop: 'var(--form-input-padding-y)',
+          paddingBottom: 'var(--form-input-padding-y)',
+        }}
         className={`
-          w-full min-h-[140px] max-h-[400px]
-          bg-background 
-          border rounded-lg 
-          p-4 
-          text-foreground text-base leading-relaxed
-          placeholder:text-muted-foreground
+          w-full min-h-[120px] max-h-[400px]
+          bg-transparent
+          border-2 rounded-lg
+          text-foreground text-lg leading-relaxed
+          placeholder:text-muted-foreground/50
           resize-y
           transition-all duration-200
-          ${error 
-            ? 'border-destructive focus:border-destructive focus:ring-1 focus:ring-destructive' 
-            : isFocused 
-              ? 'border-primary ring-1 ring-ring' 
-              : 'border-border hover:border-border/80'
-          }
           focus:outline-none
+          ${error 
+            ? 'border-destructive focus:border-destructive focus:ring-2 focus:ring-destructive/20' 
+            : isFocused 
+              ? 'border-primary focus:ring-2 focus:ring-primary/20' 
+              : 'border-border hover:border-muted-foreground/50'
+          }
         `}
       />
       
-      {/* Conditional Counter/Feedback - Only shows when needed */}
+      {/* Feedback row - error and/or character counter */}
       {(showCounter || error) && (
         <div className="flex items-center justify-between text-xs">
           <div className="flex items-center gap-2">
@@ -82,14 +95,14 @@ export default function LongTextQuestion({
               </span>
             )}
             {!error && isUnderMin && (
-              <span className="text-amber-500">
-                Add more detail ({charCount}/{minLength} min)
+              <span className="text-warning">
+                {minLength - charCount} more characters needed
               </span>
             )}
           </div>
           
-          {(isNearMax || isOverMax) && (
-            <span className={isOverMax ? 'text-destructive' : 'text-amber-500'}>
+          {showCounter && (
+            <span className={getCounterClass()}>
               {charCount}/{maxLength}
             </span>
           )}

@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useState } from 'react';
-import { Upload, X, FileText, Image as ImageIcon, File } from 'lucide-react';
+import { Upload, X, FileText, Image as ImageIcon, File, AlertCircle } from 'lucide-react';
 
 // Allowed file types for uploads (must match server validation)
 const ALLOWED_TYPES = [
@@ -129,9 +129,9 @@ export function FileUploadQuestion({
   );
 
   const getFileIcon = (type: string) => {
-    if (type.startsWith('image/')) return <ImageIcon size={20} className="text-blue-500" />;
-    if (type === 'application/pdf') return <FileText size={20} className="text-primary" />;
-    return <File size={20} className="text-muted-foreground" />;
+    if (type.startsWith('image/')) return <ImageIcon className="w-5 h-5 text-info" />;
+    if (type === 'application/pdf') return <FileText className="w-5 h-5 text-primary" />;
+    return <File className="w-5 h-5 text-muted-foreground" />;
   };
 
   const formatFileSize = (bytes: number) => {
@@ -140,16 +140,14 @@ export function FileUploadQuestion({
     return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
   };
 
+  const isDisabled = value.length >= maxFiles;
+
   return (
     <div className="space-y-4">
-      <div>
-        <label className="block text-sm font-medium text-foreground mb-2">
-          {label}
-        </label>
-        {description && (
-          <p className="text-sm text-muted-foreground mb-4">{description}</p>
-        )}
-      </div>
+      {/* Description if provided */}
+      {description && (
+        <p className="text-sm text-muted-foreground">{description}</p>
+      )}
 
       {/* Upload Area */}
       <div
@@ -157,12 +155,16 @@ export function FileUploadQuestion({
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
         className={`
-          relative border-2 border-dashed rounded-lg p-8 text-center transition-all duration-200
+          relative min-h-[120px]
+          border-2 border-dashed rounded-lg
+          flex flex-col items-center justify-center
+          p-8 text-center
+          transition-all duration-200
           ${isDragging
-            ? 'border-primary bg-primary/5'
-            : 'border-border hover:border-primary/50 bg-muted'
+            ? 'border-solid border-primary bg-primary/5'
+            : 'border-border hover:border-muted-foreground/50'
           }
-          ${value.length >= maxFiles ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}
+          ${isDisabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}
         `}
       >
         <input
@@ -170,27 +172,29 @@ export function FileUploadQuestion({
           multiple
           accept={acceptedTypes.join(',')}
           onChange={handleFileInput}
-          disabled={value.length >= maxFiles}
+          disabled={isDisabled}
           className="absolute inset-0 w-full h-full opacity-0 cursor-pointer disabled:cursor-not-allowed"
         />
         
-        <Upload size={40} className="mx-auto mb-4 text-muted-foreground" />
+        <Upload className={`
+          w-8 h-8 mb-3
+          transition-colors duration-200
+          ${isDragging ? 'text-primary' : 'text-muted-foreground'}
+        `} />
         
         <p className="text-sm font-medium text-foreground mb-1">
-          {isDragging ? 'Drop files here' : 'Drag & drop files here'}
-        </p>
-        <p className="text-xs text-muted-foreground mb-2">
-          or click to browse
+          {isDragging ? 'Drop files here' : 'Drop files here or click to upload'}
         </p>
         <p className="text-xs text-muted-foreground/70">
-          Max {maxFiles} files • Up to {maxSizeInMB}MB each
+          Max {maxFiles} files · Up to {maxSizeInMB}MB each · PDF and images
         </p>
       </div>
 
       {/* Error Messages */}
       {(error || uploadError) && (
-        <div className="text-sm text-destructive bg-destructive/10 border border-destructive/30 rounded-lg p-3">
-          {error || uploadError}
+        <div className="flex items-center gap-2 text-sm text-destructive">
+          <AlertCircle className="w-4 h-4 flex-shrink-0" />
+          <span>{error || uploadError}</span>
         </div>
       )}
 
@@ -198,12 +202,20 @@ export function FileUploadQuestion({
       {value.length > 0 && (
         <div className="space-y-2">
           <p className="text-xs text-muted-foreground font-medium">
-            Uploaded Files ({value.length}/{maxFiles})
+            {value.length} of {maxFiles} files uploaded
           </p>
           {value.map((file) => (
             <div
               key={file.id}
-              className="flex items-center gap-3 bg-muted border border-border rounded-lg p-3 hover:border-primary/50 transition-all duration-200"
+              className="
+                flex items-center gap-3 
+                py-3 px-4 
+                bg-muted/30 rounded-lg
+                border-2 border-transparent
+                hover:border-muted-foreground/20
+                transition-all duration-200
+                group
+              "
             >
               <div className="flex-shrink-0">
                 {getFileIcon(file.type)}
@@ -219,10 +231,16 @@ export function FileUploadQuestion({
               <button
                 type="button"
                 onClick={() => removeFile(file.id)}
-                className="flex-shrink-0 p-1 hover:bg-destructive/10 rounded transition-colors"
+                className="
+                  flex-shrink-0 p-1.5 rounded
+                  text-muted-foreground 
+                  hover:text-destructive hover:bg-destructive/10
+                  opacity-0 group-hover:opacity-100
+                  transition-all duration-200
+                "
                 aria-label="Remove file"
               >
-                <X size={16} className="text-muted-foreground hover:text-destructive" />
+                <X className="w-4 h-4" />
               </button>
             </div>
           ))}

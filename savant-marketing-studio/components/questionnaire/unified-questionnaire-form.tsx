@@ -1,7 +1,8 @@
 'use client';
 
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import { SidebarLayout, PillsLayout } from './layouts';
+import { AnimatePresence, motion } from 'framer-motion';
+import { SidebarLayout, PillsLayout, FocusLayout } from './layouts';
 import { FormFooter } from './navigation/form-footer';
 import { QuestionRenderer } from './question-renderer';
 import HelpPanel from './help-system/help-panel';
@@ -134,6 +135,7 @@ export function UnifiedQuestionnaireForm({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [internalDarkMode, setInternalDarkMode] = useState(false);
   const [helpQuestion, setHelpQuestion] = useState<QuestionConfig | null>(null);
+  const [isFocusMode, setIsFocusMode] = useState(false);
   
   // Use external theme control if provided, otherwise use internal state
   const isDark = externalDarkMode ?? internalDarkMode;
@@ -142,9 +144,10 @@ export function UnifiedQuestionnaireForm({
   // MEMOIZED VALUES
   // ============================================
   
-  // Get enabled sections only, sorted by ID
+  // Get enabled sections only - preserve the order from props (already sorted by sort_order)
+  // DO NOT re-sort by id, as that ignores the user's custom sort_order
   const enabledSections = useMemo(() => 
-    sections.filter(s => s.enabled).sort((a, b) => a.id - b.id),
+    sections.filter(s => s.enabled),
     [sections]
   );
   
@@ -158,6 +161,22 @@ export function UnifiedQuestionnaireForm({
       .filter(q => q.sectionId === currentSection.id && q.enabled)
       .sort((a, b) => a.order - b.order);
   }, [questions, currentSection]);
+  
+  // Calculate global question number offset for current section
+  // This is the count of all enabled questions in sections BEFORE the current one
+  const questionNumberOffset = useMemo(() => {
+    let offset = 0;
+    for (let i = 0; i < currentSectionIndex; i++) {
+      const section = enabledSections[i];
+      if (section) {
+        const sectionQuestionCount = questions.filter(
+          q => q.sectionId === section.id && q.enabled
+        ).length;
+        offset += sectionQuestionCount;
+      }
+    }
+    return offset;
+  }, [enabledSections, currentSectionIndex, questions]);
   
   // Flatten form data for question renderer
   const flatFormData = useMemo(() => flattenFormData(formData), [formData]);
@@ -447,6 +466,10 @@ export function UnifiedQuestionnaireForm({
     setHelpQuestion(null);
   }, []);
   
+  const toggleFocusMode = useCallback(() => {
+    setIsFocusMode(prev => !prev);
+  }, []);
+  
   // ============================================
   // RENDER
   // ============================================
@@ -463,10 +486,13 @@ export function UnifiedQuestionnaireForm({
   // Render questions for current section
   const questionsContent = (
     <div className="space-y-8">
-      {currentQuestions.map((question) => {
+      {currentQuestions.map((question, indexInSection) => {
         // Check if question should be shown (conditional logic)
         const shouldShow = configLike.shouldShowQuestion(question.id, flatFormData);
         if (!shouldShow) return null;
+        
+        // Global question number = offset from previous sections + position in current section (1-based)
+        const globalQuestionNumber = questionNumberOffset + indexInSection + 1;
         
         return (
           <QuestionRenderer
@@ -476,6 +502,7 @@ export function UnifiedQuestionnaireForm({
             onChange={(value) => updateQuestion(question.id, value)}
             onBlur={() => markQuestionCompleted(question.key)}
             onHelpClick={() => openHelp(question)}
+            globalQuestionNumber={globalQuestionNumber}
           />
         );
       })}
@@ -495,41 +522,104 @@ export function UnifiedQuestionnaireForm({
     />
   );
   
+  // Compute canSubmit for focus layout
+  const canSubmit = completedSections.size === enabledSections.length;
+  
   // Render based on layout
-  const formContent = layout === 'sidebar' ? (
-    <SidebarLayout
-      sections={enabledSections}
-      currentSectionIndex={currentSectionIndex}
-      completedSections={completedSections}
-      onSectionClick={goToSection}
-      progressPercent={progressPercent}
-      currentSection={currentSection}
-      onSave={showSaveButton && onSave ? handleSave : undefined}
-      isSaving={saveStatus === 'saving'}
-      lastSaved={lastSaved}
-      footer={footerContent}
-    >
-      {questionsContent}
-    </SidebarLayout>
-  ) : (
-    <PillsLayout
-      sections={enabledSections}
-      currentSectionIndex={currentSectionIndex}
-      completedSections={completedSections}
-      onSectionClick={goToSection}
-      progressPercent={progressPercent}
-      currentSection={currentSection}
-      clientName={clientName}
-      showThemeToggle={showThemeToggle}
-      isDarkMode={isDark}
-      onToggleTheme={toggleTheme}
-      saveStatus={saveStatus}
-      lastSaved={lastSaved}
-      footer={footerContent}
-    >
-      {questionsContent}
-    </PillsLayout>
-  );
+  const renderLayout = () => {
+    // Focus mode takes priority when user toggles it on
+    // Also renders if layout prop is explicitly set to 'focus'
+    if (isFocusMode || layout === 'focus') {
+      return (
+        <FocusLayout
+          sections={enabledSections}
+          questions={questions}
+          currentSectionIndex={currentSectionIndex}
+          currentSection={currentSection}
+          flatFormData={flatFormData}
+          updateQuestion={updateQuestion}
+          markQuestionCompleted={markQuestionCompleted}
+          onHelpClick={openHelp}
+          goToSection={goToSection}
+          progressPercent={progressPercent}
+          completedSections={completedSections}
+          clientName={clientName}
+          showThemeToggle={showThemeToggle}
+          isDarkMode={isDark}
+          onToggleTheme={toggleTheme}
+          onSubmit={handleSubmit}
+          isSubmitting={isSubmitting}
+          canSubmit={canSubmit}
+          onExitFocusMode={isFocusMode ? () => setIsFocusMode(false) : undefined}
+        />
+      );
+    }
+    
+    // Sidebar layout - V0-style 2-column
+    if (layout === 'sidebar') {
+      return (
+        <SidebarLayout
+          sections={enabledSections}
+          currentSectionIndex={currentSectionIndex}
+          completedSections={completedSections}
+          onSectionClick={goToSection}
+          progressPercent={progressPercent}
+          currentSection={currentSection}
+          onSave={showSaveButton && onSave ? handleSave : undefined}
+          isSaving={saveStatus === 'saving'}
+          lastSaved={lastSaved}
+          onToggleFocusMode={toggleFocusMode}
+          footer={footerContent}
+        >
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={currentSection?.id}
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -20 }}
+              transition={{ duration: 0.2 }}
+            >
+              {questionsContent}
+            </motion.div>
+          </AnimatePresence>
+        </SidebarLayout>
+      );
+    }
+    
+    // Default: Pills layout - horizontal tabs
+    return (
+      <PillsLayout
+        sections={enabledSections}
+        currentSectionIndex={currentSectionIndex}
+        completedSections={completedSections}
+        onSectionClick={goToSection}
+        progressPercent={progressPercent}
+        currentSection={currentSection}
+        clientName={clientName}
+        showThemeToggle={showThemeToggle}
+        isDarkMode={isDark}
+        onToggleTheme={toggleTheme}
+        onToggleFocusMode={toggleFocusMode}
+        saveStatus={saveStatus}
+        lastSaved={lastSaved}
+        footer={footerContent}
+      >
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={currentSection?.id}
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -20 }}
+            transition={{ duration: 0.2 }}
+          >
+            {questionsContent}
+          </motion.div>
+        </AnimatePresence>
+      </PillsLayout>
+    );
+  };
+  
+  const formContent = renderLayout();
   
   return (
     <>

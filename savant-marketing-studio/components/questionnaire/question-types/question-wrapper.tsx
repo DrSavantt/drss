@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { HelpCircle, Clock } from 'lucide-react';
+import { HelpCircle } from 'lucide-react';
 
 interface QuestionWrapperProps {
   questionNumber: number;
@@ -10,6 +10,8 @@ interface QuestionWrapperProps {
   onHelpClick?: () => void;
   estimatedTime?: string;
   children: React.ReactNode;
+  /** Show keyboard hint below the input (e.g., "Press Enter ↵") */
+  keyboardHint?: string;
 }
 
 export default function QuestionWrapper({
@@ -19,36 +21,44 @@ export default function QuestionWrapper({
   onHelpClick,
   estimatedTime,
   children,
+  keyboardHint,
 }: QuestionWrapperProps) {
   return (
-    <div className="relative bg-card border border-border rounded-xl p-6 hover:border-primary/40 transition-all duration-200 group">
-      {/* Header Row */}
-      <div className="flex items-start justify-between gap-4 mb-4">
-        {/* Left: Question Badge + Text */}
-        <div className="flex-1">
-          <div className="flex items-center gap-3 mb-2">
-            <span className="inline-flex items-center justify-center bg-primary/20 text-primary min-w-[40px] h-8 px-3 rounded-lg text-sm font-bold">
-              Q{questionNumber}
-            </span>
-            {estimatedTime && (
-              <span className="flex items-center gap-1 text-xs text-muted-foreground bg-muted px-2 py-1 rounded-md">
-                <Clock className="w-3 h-3" />
-                {estimatedTime}
-              </span>
-            )}
-          </div>
-          <p className="text-lg font-medium text-foreground leading-relaxed">
-            {questionText}
-            {isRequired && <span className="text-primary ml-1">*</span>}
-          </p>
-        </div>
+    <div className="relative">
+      {/* Question Number - Small, subtle, above question text */}
+      <div className="flex items-center gap-2 mb-1">
+        <span className="text-sm font-medium text-muted-foreground">
+          Q{questionNumber}
+        </span>
+        {estimatedTime && (
+          <span className="text-xs text-muted-foreground/70">
+            · {estimatedTime}
+          </span>
+        )}
+      </div>
 
-        {/* Right: Help Button */}
+      {/* Question Text - Hero element, large and prominent */}
+      <div className="flex items-start gap-3">
+        <h2 
+          className="flex-1 max-w-2xl text-2xl md:text-3xl font-semibold text-foreground leading-tight"
+          style={{ 
+            fontSize: 'var(--form-question-size)',
+            lineHeight: 'var(--form-question-line-height)',
+            fontWeight: 'var(--form-question-weight)'
+          }}
+        >
+          {questionText}
+          {isRequired && (
+            <span className="text-destructive/50 ml-1">*</span>
+          )}
+        </h2>
+
+        {/* Help Button - Subtle, discoverable */}
         {onHelpClick && (
           <button
             type="button"
             onClick={onHelpClick}
-            className="flex-shrink-0 p-2 text-muted-foreground hover:text-primary hover:bg-muted rounded-lg transition-all duration-200"
+            className="flex-shrink-0 p-1.5 text-muted-foreground/60 hover:text-foreground rounded-md transition-all duration-200 hover:bg-muted/50"
             aria-label="Get help for this question"
           >
             <HelpCircle className="w-5 h-5" />
@@ -56,10 +66,17 @@ export default function QuestionWrapper({
         )}
       </div>
 
-      {/* Input Area */}
-      <div className="mt-4">
+      {/* Input Area - Generous spacing from question */}
+      <div className="mt-6">
         {children}
       </div>
+
+      {/* Keyboard Hint - Subtle guidance */}
+      {keyboardHint && (
+        <p className="mt-3 text-xs text-muted-foreground/70 text-right">
+          {keyboardHint}
+        </p>
+      )}
     </div>
   );
 }

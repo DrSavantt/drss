@@ -3,4 +3,5 @@
 
 export { SidebarLayout } from './sidebar-layout';
 export { PillsLayout } from './pills-layout';
+export { FocusLayout } from './focus-layout';
 

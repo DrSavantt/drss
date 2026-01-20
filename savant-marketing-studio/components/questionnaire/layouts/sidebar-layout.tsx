@@ -3,7 +3,7 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Button } from '@/components/ui/button';
-import { Check, Save } from 'lucide-react';
+import { Check, Save, Focus } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { SectionConfig } from '@/lib/questionnaire/questions-config';
 
@@ -24,6 +24,9 @@ interface SidebarLayoutProps {
   onSave?: () => void;
   isSaving?: boolean;
   lastSaved?: Date | null;
+  
+  // Focus mode toggle
+  onToggleFocusMode?: () => void;
   
   // Children (the questions)
   children: React.ReactNode;
@@ -50,6 +53,7 @@ export function SidebarLayout({
   onSave,
   isSaving,
   lastSaved,
+  onToggleFocusMode,
   children,
   footer,
 }: SidebarLayoutProps) {
@@ -118,25 +122,38 @@ export function SidebarLayout({
               </CardDescription>
             )}
           </div>
-          {onSave && (
-            <div className="flex flex-col items-end gap-1 shrink-0">
+          <div className="flex items-center gap-2 shrink-0">
+            {onToggleFocusMode && (
               <Button 
-                variant="outline" 
-                size="sm" 
-                onClick={onSave}
-                disabled={isSaving}
-                className="gap-2"
+                variant="ghost" 
+                size="icon" 
+                onClick={onToggleFocusMode}
+                title="Focus Mode - One question at a time"
+                aria-label="Toggle focus mode"
               >
-                <Save className="w-4 h-4" />
-                {isSaving ? 'Saving...' : 'Save Draft'}
+                <Focus className="w-5 h-5" />
               </Button>
-              {lastSaved && (
-                <span className="text-xs text-muted-foreground">
-                  Last saved {lastSaved.toLocaleTimeString()}
-                </span>
-              )}
-            </div>
-          )}
+            )}
+            {onSave && (
+              <div className="flex flex-col items-end gap-1">
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={onSave}
+                  disabled={isSaving}
+                  className="gap-2"
+                >
+                  <Save className="w-4 h-4" />
+                  {isSaving ? 'Saving...' : 'Save Draft'}
+                </Button>
+                {lastSaved && (
+                  <span className="text-xs text-muted-foreground">
+                    Last saved {lastSaved.toLocaleTimeString()}
+                  </span>
+                )}
+              </div>
+            )}
+          </div>
         </CardHeader>
         <CardContent className="space-y-6">
           {/* Question content */}

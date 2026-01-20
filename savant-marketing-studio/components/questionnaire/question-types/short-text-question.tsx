@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { AlertCircle } from 'lucide-react';
 import { useDebouncedInput } from '@/hooks/use-debounced-value';
 
@@ -17,7 +17,7 @@ export default function ShortTextQuestion({
   value,
   onChange,
   onBlur,
-  placeholder = 'Enter your answer...',
+  placeholder = 'Type your answer here...',
   maxLength = 200,
   error,
 }: ShortTextQuestionProps) {
@@ -46,37 +46,41 @@ export default function ShortTextQuestion({
           onBlur?.();
         }}
         placeholder={placeholder}
+        style={{
+          paddingLeft: 'var(--form-input-padding-x)',
+          paddingRight: 'var(--form-input-padding-x)',
+        }}
         className={`
-          w-full
-          bg-background 
-          border rounded-lg 
-          px-4 py-3
-          text-foreground text-base
-          placeholder:text-muted-foreground
+          w-full h-14
+          bg-transparent
+          border-2 rounded-lg
+          text-foreground text-lg
+          placeholder:text-muted-foreground/50
           transition-all duration-200
-          ${error 
-            ? 'border-destructive focus:border-destructive focus:ring-1 focus:ring-destructive' 
-            : isFocused 
-              ? 'border-primary ring-1 ring-ring' 
-              : 'border-border hover:border-border/80'
-          }
           focus:outline-none
+          ${error 
+            ? 'border-destructive focus:border-destructive focus:ring-2 focus:ring-destructive/20' 
+            : isFocused 
+              ? 'border-primary focus:ring-2 focus:ring-primary/20' 
+              : 'border-border hover:border-muted-foreground/50'
+          }
         `}
       />
       
       {/* Conditional Counter/Error */}
       {(error || isNearMax) && (
         <div className="flex items-center justify-between text-xs">
-          {error && (
+          {error ? (
             <span className="flex items-center gap-1 text-destructive">
               <AlertCircle className="w-3 h-3" />
               {error}
             </span>
+          ) : (
+            <span />
           )}
-          {!error && <span />}
           
           {isNearMax && (
-            <span className={isOverMax ? 'text-destructive' : 'text-amber-500'}>
+            <span className={isOverMax ? 'text-destructive' : 'text-warning'}>
               {charCount}/{maxLength}
             </span>
           )}

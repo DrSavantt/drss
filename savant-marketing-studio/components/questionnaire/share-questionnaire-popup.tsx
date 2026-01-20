@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { 
   ChevronDown, 
   ChevronRight, 
@@ -129,6 +129,19 @@ export function ShareQuestionnairePopup({
       setIsLoading(false)
     }
   }
+
+  // Calculate cumulative question offsets for global numbering
+  // Maps section.id to the number of questions in all previous sections
+  const questionOffsets = useMemo(() => {
+    const offsets: Record<number, number> = {};
+    let cumulative = 0;
+    for (const section of sections) {
+      offsets[section.id] = cumulative;
+      const sectionQuestionCount = questions.filter(q => q.section_id === section.id).length;
+      cumulative += sectionQuestionCount;
+    }
+    return offsets;
+  }, [sections, questions]);
 
   // Toggle section expansion
   const toggleSectionExpansion = (sectionId: number) => {
@@ -420,10 +433,12 @@ export function ShareQuestionnairePopup({
                       {isExpanded && (
                         <div className="px-4 pb-4 pl-16">
                           <div className="space-y-2">
-                            {sectionQuestions.map(question => {
+                            {sectionQuestions.map((question, questionIndex) => {
                               const questionEnabled = getQuestionEnabled(question)
                               const questionText = getQuestionText(question)
                               const isCustom = hasOverride(question)
+                              // Global question number = offset from previous sections + position in current section (1-based)
+                              const globalQuestionNumber = (questionOffsets[section.id] || 0) + questionIndex + 1
 
                               return (
                                 <div
@@ -435,7 +450,7 @@ export function ShareQuestionnairePopup({
                                 >
                                   <div className="flex-1 min-w-0">
                                     <div className="flex items-center gap-2">
-                                      <span className="text-sm font-medium">Q{question.sort_order}</span>
+                                      <span className="text-sm font-medium">Q{globalQuestionNumber}</span>
                                       <Badge variant="outline" className="text-xs">{question.type}</Badge>
                                       {question.required && (
                                         <Badge variant="secondary" className="text-xs">Required</Badge>

@@ -148,6 +148,10 @@ export function QuestionnaireSettings({
     // Don't reload while saving - prevents race condition
     if (isSavingRef.current) return
     
+    // #region agent log
+    fetch('http://127.0.0.1:7243/ingest/de6f83dd-b5e0-4c9a-99d4-d76568bc937c',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'questionnaire-settings.tsx:loadData:entry',message:'loadData called',data:{isSaving:isSavingRef.current},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H6,H7'})}).catch(()=>{});
+    // #endregion
+    
     try {
       setLoading(true)
       
@@ -156,6 +160,10 @@ export function QuestionnaireSettings({
         getSections(),
         getQuestionsWithHelp()
       ])
+      
+      // #region agent log
+      fetch('http://127.0.0.1:7243/ingest/de6f83dd-b5e0-4c9a-99d4-d76568bc937c',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'questionnaire-settings.tsx:loadData:dataReceived',message:'Data fetched from server',data:{sectionsOrder:sectionsData.map(s=>({id:s.id,sort_order:s.sort_order}))},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H6,H7'})}).catch(()=>{});
+      // #endregion
       
       // In client mode, also fetch client overrides and merge
       if (isClientMode) {
@@ -345,14 +353,13 @@ export function QuestionnaireSettings({
     isSavingRef.current = true
     try {
       const key = generateSectionKey(values.title)
-      const sort_order = sections.length + 1
 
       await addSection({
         key,
         title: values.title,
         description: values.description,
         estimated_minutes: values.estimated_minutes,
-        sort_order,
+        // sort_order calculated server-side from MAX(sort_order) + 1
         enabled: true,
       })
 
@@ -395,13 +402,11 @@ export function QuestionnaireSettings({
     isSavingRef.current = true
     try {
       const id = generateQuestionId(values.text)
-      const sectionQuestions = questions.filter(q => q.section_id === values.section.id)
-      const sort_order = sectionQuestions.length + 1
       const payload = {
         id,
         section_id: values.section.id,
         question_key: id,
-        sort_order,
+        // sort_order calculated server-side from MAX(sort_order) + 1 for this section
         text: values.text,
         type: values.type,
         required: values.required,
@@ -452,20 +457,53 @@ export function QuestionnaireSettings({
   async function handleSectionDragEnd(event: DragEndEvent) {
     const { active, over } = event
     
+    // #region agent log
+    fetch('http://127.0.0.1:7243/ingest/de6f83dd-b5e0-4c9a-99d4-d76568bc937c',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'questionnaire-settings.tsx:handleSectionDragEnd:entry',message:'Drag end triggered',data:{activeId:active.id,activeIdType:typeof active.id,overId:over?.id,overIdType:typeof over?.id,hasOver:!!over},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H1,H2'})}).catch(()=>{});
+    // #endregion
+    
     if (over && active.id !== over.id) {
-      const oldIndex = sections.findIndex(s => s.id === active.id)
-      const newIndex = sections.findIndex(s => s.id === over.id)
+      const oldIndex = sections.findIndex(s => s.id === Number(active.id))
+      const newIndex = sections.findIndex(s => s.id === Number(over.id))
+      
+      // #region agent log
+      fetch('http://127.0.0.1:7243/ingest/de6f83dd-b5e0-4c9a-99d4-d76568bc937c',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'questionnaire-settings.tsx:handleSectionDragEnd:indices',message:'Index lookup results',data:{oldIndex,newIndex,activeIdNum:Number(active.id),overIdNum:Number(over.id),sectionIds:sections.map(s=>({id:s.id,type:typeof s.id}))},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H3'})}).catch(()=>{});
+      // #endregion
+      
+      if (oldIndex === -1 || newIndex === -1) {
+        // #region agent log
+        fetch('http://127.0.0.1:7243/ingest/de6f83dd-b5e0-4c9a-99d4-d76568bc937c',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'questionnaire-settings.tsx:handleSectionDragEnd:indexFail',message:'FAILED: Index not found',data:{oldIndex,newIndex},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H3'})}).catch(()=>{});
+        // #endregion
+        return
+      }
       
       const newOrder = arrayMove(sections, oldIndex, newIndex)
       setSections(newOrder)
       
+      // #region agent log
+      fetch('http://127.0.0.1:7243/ingest/de6f83dd-b5e0-4c9a-99d4-d76568bc937c',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'questionnaire-settings.tsx:handleSectionDragEnd:beforeServer',message:'About to call reorderSections',data:{newOrderIds:newOrder.map(s=>s.id)},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H4'})}).catch(()=>{});
+      // #endregion
+      
       try {
         await reorderSections(newOrder.map(s => s.id))
+        // #region agent log
+        fetch('http://127.0.0.1:7243/ingest/de6f83dd-b5e0-4c9a-99d4-d76568bc937c',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'questionnaire-settings.tsx:handleSectionDragEnd:serverSuccess',message:'reorderSections completed',data:{},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H4'})}).catch(()=>{});
+        // #endregion
+        await loadData() // Refresh to get updated sort_order values
+        // #region agent log
+        fetch('http://127.0.0.1:7243/ingest/de6f83dd-b5e0-4c9a-99d4-d76568bc937c',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'questionnaire-settings.tsx:handleSectionDragEnd:loadDataDone',message:'loadData completed',data:{currentSectionIds:sections.map(s=>s.id)},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H5'})}).catch(()=>{});
+        // #endregion
         toast.success('Sections reordered')
       } catch (error) {
+        // #region agent log
+        fetch('http://127.0.0.1:7243/ingest/de6f83dd-b5e0-4c9a-99d4-d76568bc937c',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'questionnaire-settings.tsx:handleSectionDragEnd:error',message:'reorderSections FAILED',data:{error:String(error)},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H4'})}).catch(()=>{});
+        // #endregion
         setSections(sections)
         toast.error('Failed to reorder sections')
       }
+    } else {
+      // #region agent log
+      fetch('http://127.0.0.1:7243/ingest/de6f83dd-b5e0-4c9a-99d4-d76568bc937c',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'questionnaire-settings.tsx:handleSectionDragEnd:noReorder',message:'No reorder needed',data:{hasOver:!!over,activeId:active.id,overId:over?.id,idsEqual:active.id===over?.id},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H2'})}).catch(()=>{});
+      // #endregion
     }
   }
 
@@ -486,6 +524,7 @@ export function QuestionnaireSettings({
       
       try {
         await reorderQuestions(sectionId, newOrder.map(q => q.id))
+        await loadData() // Refresh to get updated sort_order values
         toast.success('Questions reordered')
       } catch (error) {
         setQuestions(questions)

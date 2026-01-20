@@ -21,8 +21,9 @@ export type FormMode = 'embedded' | 'public' | 'preview';
  * - sidebar: V0-style 2-column layout with sticky sidebar navigation
  * - pills: Horizontal pill tabs at the top (better for public forms)
  * - stepper: Linear step-by-step wizard (future enhancement)
+ * - focus: One question at a time (Typeform style)
  */
-export type LayoutType = 'sidebar' | 'pills' | 'stepper';
+export type LayoutType = 'sidebar' | 'pills' | 'stepper' | 'focus';
 
 /**
  * Auto-save status indicator

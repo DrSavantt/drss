@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { ChevronDown, ChevronRight, CheckCircle2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { safeRender, isEmptyObject } from '@/lib/utils/safe-render'
@@ -87,6 +87,18 @@ export function ResponseViewer({ responseData, sections, className }: ResponseVi
     }).length
   }
 
+  // Calculate cumulative question offsets for global numbering
+  // Maps sectionKey to the number of questions in all previous sections
+  const questionOffsets = useMemo(() => {
+    const offsets: Record<string, number> = {};
+    let cumulative = 0;
+    for (const section of sections) {
+      offsets[section.sectionKey] = cumulative;
+      cumulative += section.questions.length;
+    }
+    return offsets;
+  }, [sections]);
+
   return (
     <div className={cn('space-y-4', className)}>
       {/* Controls */}
@@ -157,12 +169,14 @@ export function ResponseViewer({ responseData, sections, className }: ResponseVi
                     const answer = getAnswer(section.sectionKey, question.questionKey)
                     const formattedAnswer = formatAnswer(answer, question.type)
                     const hasAnswer = formattedAnswer !== '—'
+                    // Global question number = offset from previous sections + position in current section (1-based)
+                    const globalQuestionNumber = (questionOffsets[section.sectionKey] || 0) + index + 1
 
                     return (
                       <div key={question.questionKey} className="p-4">
                         <div className="flex items-start gap-3">
                           <span className="text-xs text-muted-foreground bg-muted px-2 py-1 rounded font-mono">
-                            Q{index + 1}
+                            Q{globalQuestionNumber}
                           </span>
                           <div className="flex-1 space-y-2">
                             <p className="text-sm font-medium text-foreground">

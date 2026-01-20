@@ -1,12 +1,11 @@
 'use client';
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Progress } from '@/components/ui/progress';
 import { Button } from '@/components/ui/button';
-import { Check, Moon, Sun } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { Moon, Sun, Focus } from 'lucide-react';
 import type { SectionConfig } from '@/lib/questionnaire/questions-config';
 import type { SaveStatus } from '@/lib/questionnaire/unified-types';
+import { SectionNav } from '../navigation/section-nav';
 
 interface PillsLayoutProps {
   // Navigation
@@ -31,6 +30,9 @@ interface PillsLayoutProps {
   saveStatus?: SaveStatus;
   lastSaved?: Date | null;
   
+  // Focus mode toggle
+  onToggleFocusMode?: () => void;
+  
   // Children (the questions)
   children: React.ReactNode;
   
@@ -44,8 +46,7 @@ interface PillsLayoutProps {
  * 
  * Structure:
  * - Top: Header with client name and theme toggle
- * - Progress bar
- * - Horizontal pill navigation
+ * - Section navigation with step circles and progress bar
  * - Section content card
  * - Footer with navigation buttons
  */
@@ -62,6 +63,7 @@ export function PillsLayout({
   onToggleTheme,
   saveStatus = 'idle',
   lastSaved,
+  onToggleFocusMode,
   children,
   footer,
 }: PillsLayoutProps) {
@@ -91,6 +93,19 @@ export function PillsLayout({
             </span>
           )}
           
+          {/* Focus mode toggle */}
+          {onToggleFocusMode && (
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              onClick={onToggleFocusMode}
+              title="Focus Mode - One question at a time"
+              aria-label="Toggle focus mode"
+            >
+              <Focus className="h-5 w-5" />
+            </Button>
+          )}
+          
           {/* Theme toggle */}
           {showThemeToggle && onToggleTheme && (
             <Button 
@@ -109,48 +124,14 @@ export function PillsLayout({
         </div>
       </div>
 
-      {/* Progress Bar */}
-      <div className="space-y-2">
-        <Progress value={progressPercent} className="h-2" />
-        <p className="text-sm text-muted-foreground text-center">
-          {progressPercent}% complete
-        </p>
-      </div>
-
-      {/* Section Pills */}
-      <div className="flex flex-wrap gap-2 justify-center">
-        {sections.map((section, index) => {
-          const isComplete = completedSections.has(section.key);
-          const isCurrent = index === currentSectionIndex;
-          
-          return (
-            <button
-              key={section.id}
-              onClick={() => onSectionClick(index)}
-              className={cn(
-                "flex items-center gap-2 px-4 py-2 rounded-full text-sm transition-all",
-                "border font-medium",
-                "focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2",
-                isCurrent 
-                  ? "bg-primary text-primary-foreground border-primary shadow-sm"
-                  : isComplete
-                    ? "bg-green-500/10 text-green-600 border-green-500/30 hover:bg-green-500/20"
-                    : "bg-muted/50 text-muted-foreground border-muted hover:bg-muted hover:text-foreground"
-              )}
-              aria-current={isCurrent ? 'step' : undefined}
-            >
-              {isComplete ? (
-                <Check className="w-4 h-4" />
-              ) : (
-                <span className="w-4 h-4 flex items-center justify-center text-xs font-semibold">
-                  {index + 1}
-                </span>
-              )}
-              <span>{section.title}</span>
-            </button>
-          );
-        })}
-      </div>
+      {/* Section Navigation with Step Circles and Progress */}
+      <SectionNav
+        sections={sections}
+        currentSectionIndex={currentSectionIndex}
+        completedSections={completedSections}
+        onSectionClick={onSectionClick}
+        progressPercent={progressPercent}
+      />
 
       {/* Section Content Card */}
       <Card className="border-border bg-card">
@@ -176,4 +157,3 @@ export function PillsLayout({
     </div>
   );
 }
-

@@ -14,6 +14,27 @@ interface QuestionRendererProps {
   onBlur: () => void;
   onHelpClick: () => void;
   error?: string;
+  /** Global question number across all sections (e.g., Q7 instead of section's Q1) */
+  globalQuestionNumber?: number;
+}
+
+/**
+ * Get keyboard hint based on question type
+ */
+function getKeyboardHint(type: QuestionConfig['type']): string | undefined {
+  switch (type) {
+    case 'short-text':
+      return 'Press Enter ↵';
+    case 'long-text':
+      return 'Shift + Enter for new line';
+    case 'multiple-choice':
+    case 'checkbox':
+      return undefined; // Selection auto-advances
+    case 'file-upload':
+      return undefined; // No keyboard hint for file uploads
+    default:
+      return undefined;
+  }
 }
 
 export function QuestionRenderer({
@@ -22,7 +43,8 @@ export function QuestionRenderer({
   onChange,
   onBlur,
   onHelpClick,
-  error
+  error,
+  globalQuestionNumber
 }: QuestionRendererProps) {
   
   const renderInput = () => {
@@ -104,26 +126,19 @@ export function QuestionRenderer({
     }
   };
   
-  // For file upload questions, the QuestionWrapper content is different
-  if (question.type === 'file-upload') {
-    return (
-      <QuestionWrapper
-        questionNumber={question.order}
-        questionText={question.text}
-        isRequired={question.required}
-        onHelpClick={onHelpClick}
-      >
-        {renderInput()}
-      </QuestionWrapper>
-    );
-  }
+  // Use global question number if provided, otherwise fall back to section order
+  const displayNumber = globalQuestionNumber ?? question.order;
+  
+  // Get keyboard hint based on question type
+  const keyboardHint = getKeyboardHint(question.type);
   
   return (
     <QuestionWrapper
-      questionNumber={question.order}
+      questionNumber={displayNumber}
       questionText={question.text}
       isRequired={question.required}
       onHelpClick={onHelpClick}
+      keyboardHint={keyboardHint}
     >
       {renderInput()}
     </QuestionWrapper>
@@ -131,4 +146,3 @@ export function QuestionRenderer({
 }
 
 export default QuestionRenderer;
-
