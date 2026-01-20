@@ -498,7 +498,7 @@ export function ChatInterface({
   }
 
   return (
-    <div className="flex h-[calc(100vh-4rem)] pb-16 md:pb-0 bg-background">
+    <div className="flex h-[calc(100vh-4rem)] bg-background">
       {/* Mobile: Sheet for sidebar */}
       <Sheet open={mobileSheetOpen} onOpenChange={setMobileSheetOpen}>
         <SheetContent side="left" className="w-[300px] p-0 md:hidden">
@@ -712,8 +712,8 @@ export function ChatInterface({
             </div>
           )}
 
-          {/* Chat Input - sticky bottom with safe area for iOS */}
-          <div className="sticky bottom-0 border-t border-border bg-background p-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
+          {/* Chat Input - sticky bottom with safe area for iOS + space for bottom nav on mobile */}
+          <div className="sticky bottom-0 border-t border-border bg-background p-4 pb-[calc(4rem+max(1rem,env(safe-area-inset-bottom)))] md:pb-[max(1rem,env(safe-area-inset-bottom))]">
             <div className="mx-auto max-w-3xl">
               <ChatInput
                 onSend={handleSendMessage}
