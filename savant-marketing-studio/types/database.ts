@@ -458,7 +458,7 @@ export type Database = {
       content_assets: {
         Row: {
           asset_type: string
-          client_id: string
+          client_id: string | null
           content_json: Json | null
           created_at: string | null
           deleted_at: string | null
@@ -472,11 +472,12 @@ export type Database = {
           project_id: string | null
           title: string
           updated_at: string | null
+          user_id: string | null
           version: number | null
         }
         Insert: {
           asset_type: string
-          client_id: string
+          client_id?: string | null
           content_json?: Json | null
           created_at?: string | null
           deleted_at?: string | null
@@ -490,11 +491,12 @@ export type Database = {
           project_id?: string | null
           title: string
           updated_at?: string | null
+          user_id?: string | null
           version?: number | null
         }
         Update: {
           asset_type?: string
-          client_id?: string
+          client_id?: string | null
           content_json?: Json | null
           created_at?: string | null
           deleted_at?: string | null
@@ -508,6 +510,7 @@ export type Database = {
           project_id?: string | null
           title?: string
           updated_at?: string | null
+          user_id?: string | null
           version?: number | null
         }
         Relationships: [
@@ -621,13 +624,17 @@ export type Database = {
           converted_to_content_id: string | null
           created_at: string | null
           deleted_at: string | null
+          icon: string | null
           id: string
           is_converted: boolean | null
           is_pinned: boolean | null
           mentioned_clients: string[] | null
           mentioned_content: string[] | null
           mentioned_projects: string[] | null
+          parent_id: string | null
+          sort_order: number | null
           tags: string[] | null
+          title: string | null
           updated_at: string | null
           user_id: string
           voice_url: string | null
@@ -639,13 +646,17 @@ export type Database = {
           converted_to_content_id?: string | null
           created_at?: string | null
           deleted_at?: string | null
+          icon?: string | null
           id?: string
           is_converted?: boolean | null
           is_pinned?: boolean | null
           mentioned_clients?: string[] | null
           mentioned_content?: string[] | null
           mentioned_projects?: string[] | null
+          parent_id?: string | null
+          sort_order?: number | null
           tags?: string[] | null
+          title?: string | null
           updated_at?: string | null
           user_id: string
           voice_url?: string | null
@@ -657,13 +668,17 @@ export type Database = {
           converted_to_content_id?: string | null
           created_at?: string | null
           deleted_at?: string | null
+          icon?: string | null
           id?: string
           is_converted?: boolean | null
           is_pinned?: boolean | null
           mentioned_clients?: string[] | null
           mentioned_content?: string[] | null
           mentioned_projects?: string[] | null
+          parent_id?: string | null
+          sort_order?: number | null
           tags?: string[] | null
+          title?: string | null
           updated_at?: string | null
           user_id?: string
           voice_url?: string | null
@@ -683,6 +698,13 @@ export type Database = {
             referencedRelation: "content_assets"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "journal_entries_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "journal_entries"
+            referencedColumns: ["id"]
+          },
         ]
       }
       journal_folders: {
@@ -691,6 +713,7 @@ export type Database = {
           created_at: string | null
           id: string
           name: string
+          parent_id: string | null
           position: number | null
           updated_at: string | null
           user_id: string
@@ -700,6 +723,7 @@ export type Database = {
           created_at?: string | null
           id?: string
           name: string
+          parent_id?: string | null
           position?: number | null
           updated_at?: string | null
           user_id: string
@@ -709,11 +733,20 @@ export type Database = {
           created_at?: string | null
           id?: string
           name?: string
+          parent_id?: string | null
           position?: number | null
           updated_at?: string | null
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "journal_folders_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "journal_folders"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       marketing_frameworks: {
         Row: {
@@ -1019,6 +1052,101 @@ export type Database = {
     Functions: {
       count_journal_entries: { Args: never; Returns: number }
       generate_client_code: { Args: never; Returns: string }
+      get_folder_descendants: {
+        Args: { folder_id: string }
+        Returns: {
+          depth: number
+          id: string
+          name: string
+          parent_id: string
+        }[]
+      }
+      get_folder_path: {
+        Args: { folder_id: string }
+        Returns: {
+          depth: number
+          id: string
+          name: string
+        }[]
+      }
+      get_folder_tree: {
+        Args: { p_user_id: string }
+        Returns: {
+          chat_count: number
+          color: string
+          created_at: string
+          id: string
+          name: string
+          parent_id: string
+          sort_position: number
+          updated_at: string
+        }[]
+      }
+      get_page_children: {
+        Args: { page_id: string }
+        Returns: {
+          child_count: number
+          created_at: string
+          has_children: boolean
+          icon: string
+          id: string
+          sort_order: number
+          title: string
+          updated_at: string
+        }[]
+      }
+      get_page_descendants: {
+        Args: { page_id: string }
+        Returns: {
+          depth: number
+          id: string
+          parent_id: string
+          title: string
+        }[]
+      }
+      get_page_path: {
+        Args: { page_id: string }
+        Returns: {
+          depth: number
+          id: string
+          title: string
+        }[]
+      }
+      get_page_tree: {
+        Args: { p_user_id: string }
+        Returns: {
+          child_count: number
+          created_at: string
+          has_children: boolean
+          icon: string
+          id: string
+          parent_id: string
+          sort_order: number
+          title: string
+          updated_at: string
+        }[]
+      }
+      get_root_pages: {
+        Args: { p_user_id: string }
+        Returns: {
+          child_count: number
+          created_at: string
+          has_children: boolean
+          icon: string
+          id: string
+          sort_order: number
+          title: string
+          updated_at: string
+        }[]
+      }
+      is_folder_descendant: {
+        Args: { potential_ancestor: string; potential_descendant: string }
+        Returns: boolean
+      }
+      is_page_descendant: {
+        Args: { page_id: string; potential_ancestor_id: string }
+        Returns: boolean
+      }
       match_framework_chunks:
         | {
             Args: {
@@ -1186,3 +1314,4 @@ export const Constants = {
     Enums: {},
   },
 } as const
+
