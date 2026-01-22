@@ -83,7 +83,7 @@ export default async function AIChatPage({ searchParams }: PageProps) {
     // Fetch journal entries with mention arrays
     supabase
       .from('journal_entries')
-      .select('id, content, tags, mentioned_clients, mentioned_projects, mentioned_content, created_at')
+      .select('id, title, icon, content, tags, mentioned_clients, mentioned_projects, mentioned_content, created_at, parent_id')
       .is('deleted_at', null)
       .order('created_at', { ascending: false })
       .limit(50),
@@ -138,6 +138,8 @@ export default async function AIChatPage({ searchParams }: PageProps) {
   const journalEntriesRaw = journalEntriesResult.data || []
   const journalEntries = journalEntriesRaw.map((entry: {
     id: string
+    title: string | null
+    icon: string | null
     content: string
     tags: string[] | null
     mentioned_clients: string[] | null
@@ -146,7 +148,8 @@ export default async function AIChatPage({ searchParams }: PageProps) {
     created_at: string
   }) => ({
     id: entry.id,
-    title: null as string | null, // journal entries don't have titles
+    title: entry.title || null,
+    icon: entry.icon || null,
     content: entry.content,
     tags: entry.tags,
     created_at: entry.created_at,

@@ -281,12 +281,12 @@ async function buildContextFromMentions(
   if (captureIds.length) {
     const { data: captures } = await supabase
       .from('journal_entries')
-      .select('id, content, tags')
+      .select('id, title, content, tags')
       .in('id', captureIds);
 
     if (captures?.length) {
       contextParts.push(`## Referenced Captures\n${captures.map(c => {
-        const parts = [`### Capture`];
+        const parts = [`### ${c.title || 'Untitled'}`];
         parts.push(c.content);
         if (c.tags?.length) {
           parts.push(`Tags: ${c.tags.join(', ')}`);

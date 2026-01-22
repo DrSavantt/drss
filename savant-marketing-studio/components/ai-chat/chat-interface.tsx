@@ -32,6 +32,7 @@ import { toast } from "sonner"
 export type JournalEntrySummary = {
   id: string
   title: string | null
+  icon?: string | null
   content: string
   tags: string[] | null
   created_at: string
