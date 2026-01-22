@@ -123,22 +123,22 @@ export function NoteEditorModal({
       if (modelsRes.data) setAiModels(modelsRes.data)
       if (clientsRes.data) setContextClients(clientsRes.data)
       if (projectsRes.data) {
-        setContextProjects(projectsRes.data.map((p: { id: string; name: string; clients?: { name: string } | null }) => ({
+        setContextProjects(projectsRes.data.map((p) => ({
           id: p.id,
           name: p.name,
-          clientName: p.clients?.name || null
+          clientName: (p.clients as { name: string } | null)?.name || null
         })))
       }
       if (contentRes.data) {
-        setContextContent(contentRes.data.map((c: { id: string; title: string; asset_type?: string | null; clients?: { name: string } | null }) => ({
+        setContextContent(contentRes.data.map((c) => ({
           id: c.id,
           title: c.title,
           contentType: c.asset_type || null,
-          clientName: c.clients?.name || null
+          clientName: (c.clients as { name: string } | null)?.name || null
         })))
       }
       if (journalRes.data) {
-        setContextJournal(journalRes.data.map((j: { id: string; title: string | null; content: string | null; tags?: string[] | null }) => ({
+        setContextJournal(journalRes.data.map((j) => ({
           id: j.id,
           title: j.title,
           content: j.content || '',
