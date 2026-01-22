@@ -126,7 +126,7 @@ export function NoteEditorModal({
         setContextProjects(projectsRes.data.map((p) => ({
           id: p.id,
           name: p.name,
-          clientName: (p.clients as { name: string } | null)?.name || null
+          clientName: (p.clients as unknown as { name: string } | null)?.name || null
         })))
       }
       if (contentRes.data) {
@@ -134,7 +134,7 @@ export function NoteEditorModal({
           id: c.id,
           title: c.title,
           contentType: c.asset_type || null,
-          clientName: (c.clients as { name: string } | null)?.name || null
+          clientName: (c.clients as unknown as { name: string } | null)?.name || null
         })))
       }
       if (journalRes.data) {
