@@ -1,11 +1,9 @@
 'use client'
 
-import { useState, useRef, useEffect, KeyboardEvent, useMemo } from 'react'
-import { Send, Loader2, AtSign, Command, ChevronDown, Check, AlertTriangle, Scissors, Plus, X, Trash2 } from 'lucide-react'
+import { useState, useRef, useEffect, KeyboardEvent, useMemo, useCallback } from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
+import { Send, Loader2, AtSign, Command, ChevronDown, Check, AlertTriangle, Scissors, Plus, X, Trash2, CheckCircle2, FileText, Brain } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { MentionAutocomplete } from './mention-autocomplete'
-import { MentionOption, AutocompleteType } from '@/lib/editor/types'
-import { filterMentions } from '@/lib/editor/ai-commands'
 import { generateInlineEdit } from '@/app/actions/ai'
 import { toast } from 'sonner'
 import {
@@ -16,6 +14,8 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { Button } from '@/components/ui/button'
 import { MultiEditPreview } from './multi-edit-preview'
+import { ContextPickerModal, type ContextItem, type ContextItemType } from '@/components/ai-chat/context-picker-modal'
+import { InlineMentionPopup, type InlineMentionPopupRef } from '@/components/ai-chat/inline-mention-popup'
 
 // Rough token estimation: ~4 characters = 1 token
 function estimateTokens(text: string): number {
@@ -179,6 +179,21 @@ interface AIPromptBarProps {
     to: number;
   } | null;
   onPendingSelectionHandled?: () => void;
+  
+  // Context injection - entity data
+  clients?: Array<{ id: string; name: string }>
+  projects?: Array<{ id: string; name: string; clientName?: string | null }>
+  contentAssets?: Array<{ id: string; title: string; contentType?: string | null; clientName?: string | null }>
+  journalEntries?: Array<{
+    id: string
+    title: string | null
+    content: string
+    tags?: string[] | null
+    mentionedClients?: Array<{ id: string; name: string }>
+    mentionedProjects?: Array<{ id: string; name: string }>
+    mentionedContent?: Array<{ id: string; name: string }>
+  }>
+  writingFrameworks?: Array<{ id: string; name: string; category?: string }>
 }
 
 export function AIPromptBar({
@@ -195,13 +210,15 @@ export function AIPromptBar({
   models = [],
   pendingSelection,
   onPendingSelectionHandled,
+  // Entity data for context injection
+  clients = [],
+  projects = [],
+  contentAssets = [],
+  journalEntries = [],
+  writingFrameworks = [],
 }: AIPromptBarProps) {
   const [value, setValue] = useState('')
   const [isLoading, setIsLoading] = useState(false)
-  const [activeMentions, setActiveMentions] = useState<string[]>([])
-  const [autocompleteType, setAutocompleteType] = useState<AutocompleteType>(null)
-  const [autocompleteQuery, setAutocompleteQuery] = useState('')
-  const [selectedIndex, setSelectedIndex] = useState(0)
   const [isFocused, setIsFocused] = useState(false)
   const [selectedModel, setSelectedModel] = useState(models[0]?.model_name || '')
   const [modelOpen, setModelOpen] = useState(false)
@@ -214,6 +231,26 @@ export function AIPromptBar({
   
   // State for pending AI changes (multi-edit preview)
   const [pendingEdits, setPendingEdits] = useState<EditResult[] | null>(null)
+  
+  // Context injection state
+  const [selectedContext, setSelectedContext] = useState<ContextItem[]>([])
+  const [showInlinePopup, setShowInlinePopup] = useState(false)
+  const [inlineQuery, setInlineQuery] = useState('')
+  const [inlinePopupPosition, setInlinePopupPosition] = useState({ top: 0, left: 0 })
+  const [inlineSelectedIndex, setInlineSelectedIndex] = useState(0)
+  const [showContextModal, setShowContextModal] = useState(false)
+  const [cursorPosition, setCursorPosition] = useState(0)
+  const inlineMentionRef = useRef<InlineMentionPopupRef>(null)
+  
+  // Track actual token usage from last generation
+  const [lastTokenUsage, setLastTokenUsage] = useState<{
+    input: number;
+    output: number;
+    total: number;
+  } | null>(null)
+  
+  // Extended thinking toggle
+  const [useExtendedThinking, setUseExtendedThinking] = useState(false)
   
   // Update selected model when models prop changes
   useEffect(() => {
@@ -338,114 +375,244 @@ export function AIPromptBar({
     textarea.style.height = `${Math.min(scrollHeight, maxHeight)}px`
   }, [value])
 
-  // Detect autocomplete triggers (@, /)
-  useEffect(() => {
-    const cursorPos = textareaRef.current?.selectionStart || 0
-    const textBeforeCursor = value.slice(0, cursorPos)
+  // Calculate caret position for inline popup
+  const getCaretCoordinates = useCallback(() => {
+    if (!textareaRef.current || !containerRef.current) return { top: 0, left: 0 }
     
-    // Check for mention trigger (@)
-    const mentionMatch = textBeforeCursor.match(/@(\w*)$/)
-    if (mentionMatch) {
-      setAutocompleteType('mention')
-      setAutocompleteQuery(mentionMatch[1])
-      setSelectedIndex(0)
-      return
+    const textarea = textareaRef.current
+    const containerRect = containerRef.current.getBoundingClientRect()
+    const textareaRect = textarea.getBoundingClientRect()
+    
+    // Simple estimation - popup will appear above the textarea
+    return {
+      top: textareaRect.top,
+      left: textareaRect.left + 16, // Small offset from left edge
+    }
+  }, [])
+
+  // Handle input change with @ detection
+  const handleInputChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const newValue = e.target.value
+    const newCursorPos = e.target.selectionStart || 0
+    setValue(newValue)
+    setCursorPosition(newCursorPos)
+    setError(null)
+    
+    // Detect @ for inline popup
+    const textBeforeCursor = newValue.slice(0, newCursorPos)
+    const atMatch = textBeforeCursor.match(/@(\w*)$/)
+    
+    if (atMatch) {
+      setInlineQuery(atMatch[1] || '')
+      setShowInlinePopup(true)
+      setInlineSelectedIndex(0)
+      setInlinePopupPosition(getCaretCoordinates())
+    } else {
+      setShowInlinePopup(false)
+      setInlineQuery('')
+    }
+  }, [getCaretCoordinates])
+
+  // Handle context selection from inline popup or modal
+  const handleSelectContext = useCallback((item: ContextItem) => {
+    // Avoid duplicates
+    if (!selectedContext.find(c => c.type === item.type && c.id === item.id)) {
+      setSelectedContext(prev => [...prev, item])
     }
     
-    // Check for command trigger (/)
-    const commandMatch = textBeforeCursor.match(/\/(\w*)$/)
-    if (commandMatch) {
-      setAutocompleteType('command')
-      setAutocompleteQuery(commandMatch[1])
-      setSelectedIndex(0)
-      return
+    // Remove @query from input if inline popup was used
+    if (showInlinePopup) {
+      const textBeforeCursor = value.slice(0, cursorPosition)
+      const textAfterCursor = value.slice(cursorPosition)
+      const newText = textBeforeCursor.replace(/@\w*$/, '') + textAfterCursor
+      setValue(newText)
     }
     
-    // No triggers found
-    if (autocompleteType) {
-      setAutocompleteType(null)
-      setAutocompleteQuery('')
-    }
-  }, [value, autocompleteType])
+    setShowInlinePopup(false)
+    setInlineQuery('')
+    
+    // Focus back on textarea
+    setTimeout(() => textareaRef.current?.focus(), 0)
+  }, [selectedContext, showInlinePopup, value, cursorPosition])
+
+  // Handle context items from modal (receives array)
+  const handleSelectContextFromModal = useCallback((items: ContextItem[]) => {
+    setSelectedContext(prev => {
+      const newItems = items.filter(item => 
+        !prev.find(c => c.type === item.type && c.id === item.id)
+      )
+      return [...prev, ...newItems]
+    })
+    setShowContextModal(false)
+  }, [])
+
+  // Remove context item
+  const handleRemoveContext = useCallback((id: string, type: ContextItemType) => {
+    setSelectedContext(prev => prev.filter(c => !(c.id === id && c.type === type)))
+  }, [])
 
   const handleSubmit = async () => {
     if (!value.trim() || isLoading || disabled || pendingEdits) return
     
-    if (selections.length === 0) {
-      setError('Add at least one selection to edit');
-      return;
-    }
-    
     const prompt = value.trim()
     setIsLoading(true)
     setError(null)
+    setLastTokenUsage(null) // Clear previous token usage
+    
+    // Determine mode: EDIT (with selections) vs GENERATE (no selections)
+    const isGenerateMode = selections.length === 0;
     
     // Show loading toast
-    const toastId = toast.loading(`Generating edits for ${selections.length} selection${selections.length > 1 ? 's' : ''} with ${currentModel?.display_name || 'AI'}...`)
+    const toastId = toast.loading(
+      isGenerateMode 
+        ? (useExtendedThinking 
+            ? `🧠 Extended thinking with ${currentModel?.display_name || 'AI'}...`
+            : `Generating content with ${currentModel?.display_name || 'AI'}...`)
+        : (useExtendedThinking
+            ? `🧠 Extended thinking on ${selections.length} selection${selections.length > 1 ? 's' : ''}...`
+            : `Generating edits for ${selections.length} selection${selections.length > 1 ? 's' : ''} with ${currentModel?.display_name || 'AI'}...`)
+    )
     
     try {
-      // Build context based on active mentions
-      const includeClientContext = activeMentions.includes('client')
-      const includeFramework = activeMentions.includes('framework')
+      // Build mentions array from selected context
+      const mentions = selectedContext.map(c => ({
+        type: c.type,
+        id: c.id,
+        name: c.name,
+      }))
       
-      // Call server action with multiple selections
-      const result = await generateInlineEdit(prompt, {
-        selections: selections.map(s => ({
-          text: s.text,
-          from: s.from,
-          to: s.to,
-        })),
-        fullContent: editorContent,
-        clientId: includeClientContext ? clientId : undefined,
-        includeClientContext,
-        frameworkId: includeFramework ? 'default' : undefined,
-        model: selectedModel,
-      })
+      // Check if client context should be included (either from mentions or clientId)
+      const hasClientInMentions = selectedContext.some(c => c.type === 'client')
+      const includeClientContext = hasClientInMentions || !!clientId
       
-      if (result.error) {
-        toast.error('AI Error', {
-          description: result.error,
-          id: toastId,
+      if (isGenerateMode) {
+        // GENERATE MODE: No selections - generate new content and insert at cursor
+        const result = await generateInlineEdit(prompt, {
+          fullContent: editorContent,
+          clientId: clientId,
+          includeClientContext,
+          model: selectedModel,
+          mentions: mentions.length > 0 ? mentions : undefined,
+          useExtendedThinking,
         })
-        setError(result.error)
-        return
-      }
-      
-      // Store edits for preview
-      if (result.edits && result.edits.length > 0) {
-        // Map edits back to selections with IDs
-        const editsWithIds: EditResult[] = result.edits.map((edit, i) => ({
-          id: selections[i]?.id || generateId(),
-          original: edit.original,
-          edited: edit.edited,
-          from: edit.from,
-          to: edit.to,
-        }));
         
-        setPendingEdits(editsWithIds);
+        if (result.error) {
+          toast.error('AI Error', {
+            description: result.error,
+            id: toastId,
+          })
+          setError(result.error)
+          return
+        }
         
-        toast.success('Review Suggested Changes', {
-          description: `${editsWithIds.length} edit${editsWithIds.length > 1 ? 's' : ''} ready for review`,
-          id: toastId,
-        })
-      } else if (result.content) {
-        // Fallback for single content response (backward compatibility)
-        const singleEdit: EditResult = {
-          id: selections[0]?.id || generateId(),
-          original: selections[0]?.text || '',
-          edited: result.content,
-          from: selections[0]?.from || 0,
-          to: selections[0]?.to || 0,
-        };
-        setPendingEdits([singleEdit]);
-        
-        toast.success('Review Suggested Changes', {
-          description: 'Edit ready for review',
-          id: toastId,
-        })
+        if (result.content) {
+          // Use onResponse to insert content at cursor position
+          onResponse(result.content);
+          
+          // Capture token usage if available
+          if (result.totalTokens) {
+            setLastTokenUsage({
+              input: result.inputTokens || 0,
+              output: result.outputTokens || 0,
+              total: result.totalTokens,
+            });
+          }
+          
+          // Clear state
+          setValue('');
+          setSelectedContext([]);
+          
+          if (textareaRef.current) {
+            textareaRef.current.style.height = 'auto'
+          }
+          
+          toast.success('Content Generated!', {
+            description: 'New content inserted at cursor position',
+            id: toastId,
+          })
+        } else {
+          setError('No content generated')
+          toast.error('No content generated', { id: toastId })
+        }
       } else {
-        setError('No edits generated')
-        toast.error('No edits generated', { id: toastId })
+        // EDIT MODE: With selections - edit selected text
+        const result = await generateInlineEdit(prompt, {
+          selections: selections.map(s => ({
+            text: s.text,
+            from: s.from,
+            to: s.to,
+          })),
+          fullContent: editorContent,
+          clientId: clientId,
+          includeClientContext,
+          model: selectedModel,
+          mentions: mentions.length > 0 ? mentions : undefined,
+          useExtendedThinking,
+        })
+        
+        if (result.error) {
+          toast.error('AI Error', {
+            description: result.error,
+            id: toastId,
+          })
+          setError(result.error)
+          return
+        }
+        
+        // Store edits for preview
+        if (result.edits && result.edits.length > 0) {
+          // Map edits back to selections with IDs
+          const editsWithIds: EditResult[] = result.edits.map((edit, i) => ({
+            id: selections[i]?.id || generateId(),
+            original: edit.original,
+            edited: edit.edited,
+            from: edit.from,
+            to: edit.to,
+          }));
+          
+          setPendingEdits(editsWithIds);
+          
+          // Capture token usage if available
+          if (result.totalTokens) {
+            setLastTokenUsage({
+              input: result.inputTokens || 0,
+              output: result.outputTokens || 0,
+              total: result.totalTokens,
+            });
+          }
+          
+          toast.success('Review Suggested Changes', {
+            description: `${editsWithIds.length} edit${editsWithIds.length > 1 ? 's' : ''} ready for review`,
+            id: toastId,
+          })
+        } else if (result.content) {
+          // Fallback for single content response (backward compatibility)
+          const singleEdit: EditResult = {
+            id: selections[0]?.id || generateId(),
+            original: selections[0]?.text || '',
+            edited: result.content,
+            from: selections[0]?.from || 0,
+            to: selections[0]?.to || 0,
+          };
+          setPendingEdits([singleEdit]);
+          
+          // Capture token usage if available
+          if (result.totalTokens) {
+            setLastTokenUsage({
+              input: result.inputTokens || 0,
+              output: result.outputTokens || 0,
+              total: result.totalTokens,
+            });
+          }
+          
+          toast.success('Review Suggested Changes', {
+            description: 'Edit ready for review',
+            id: toastId,
+          })
+        } else {
+          setError('No edits generated')
+          toast.error('No edits generated', { id: toastId })
+        }
       }
     } catch (err) {
       console.error('Failed to generate content:', err)
@@ -478,7 +645,7 @@ export function AIPromptBar({
     setPendingEdits(null);
     setSelections([]);
     setValue('');
-    setActiveMentions([]);
+    setSelectedContext([]);
     
     if (textareaRef.current) {
       textareaRef.current.style.height = 'auto'
@@ -514,7 +681,7 @@ export function AIPromptBar({
       setPendingEdits(null);
       setSelections([]);
       setValue('');
-      setActiveMentions([]);
+      setSelectedContext([]);
     } else {
       setPendingEdits(remaining);
       setSelections(prev => prev.filter(s => s.id !== editId));
@@ -537,81 +704,38 @@ export function AIPromptBar({
     toast.info('Edit Rejected');
   }
 
-  const handleMentionSelect = (mention: MentionOption) => {
-    const cursorPos = textareaRef.current?.selectionStart || 0
-    const textBeforeCursor = value.slice(0, cursorPos)
-    const textAfterCursor = value.slice(cursorPos)
-    
-    // Find the @ symbol position
-    const mentionMatch = textBeforeCursor.match(/@\w*$/)
-    if (!mentionMatch) return
-    
-    const mentionStartPos = cursorPos - mentionMatch[0].length
-    const beforeMention = value.slice(0, mentionStartPos)
-    
-    // Insert mention tag
-    const mentionTag = `[${mention.label}]`
-    const newValue = beforeMention + mentionTag + ' ' + textAfterCursor
-    
-    setValue(newValue)
-    setAutocompleteType(null)
-    setAutocompleteQuery('')
-    
-    // Track active mention
-    if (!activeMentions.includes(mention.value)) {
-      setActiveMentions([...activeMentions, mention.value])
-    }
-    
-    // Focus back on textarea and set cursor position
-    setTimeout(() => {
-      if (textareaRef.current) {
-        const newCursorPos = beforeMention.length + mentionTag.length + 1
-        textareaRef.current.focus()
-        textareaRef.current.setSelectionRange(newCursorPos, newCursorPos)
-      }
-    }, 0)
-  }
-
-  const closeAutocomplete = () => {
-    setAutocompleteType(null)
-    setAutocompleteQuery('')
-    setSelectedIndex(0)
-  }
-
   const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
-    // Handle autocomplete navigation
-    if (autocompleteType === 'mention') {
-      const mentions = filterMentions(autocompleteQuery)
-      
+    // Handle inline mention popup navigation
+    if (showInlinePopup) {
       if (e.key === 'ArrowDown') {
         e.preventDefault()
-        setSelectedIndex((prev) => (prev + 1) % mentions.length)
+        setInlineSelectedIndex(prev => prev + 1)
         return
       }
       
       if (e.key === 'ArrowUp') {
         e.preventDefault()
-        setSelectedIndex((prev) => (prev - 1 + mentions.length) % mentions.length)
+        setInlineSelectedIndex(prev => Math.max(0, prev - 1))
         return
       }
       
       if (e.key === 'Enter' && !e.shiftKey) {
         e.preventDefault()
-        if (mentions[selectedIndex]) {
-          handleMentionSelect(mentions[selectedIndex])
-        }
+        // Select the current item via ref
+        inlineMentionRef.current?.selectCurrent()
         return
       }
       
       if (e.key === 'Escape') {
         e.preventDefault()
-        closeAutocomplete()
+        setShowInlinePopup(false)
+        setInlineQuery('')
         return
       }
     }
     
-    // Normal submit (no autocomplete open)
-    if (e.key === 'Enter' && !e.shiftKey && !autocompleteType) {
+    // Normal submit (no inline popup open)
+    if (e.key === 'Enter' && !e.shiftKey && !showInlinePopup) {
       e.preventDefault()
       handleSubmit()
     }
@@ -620,12 +744,17 @@ export function AIPromptBar({
   const isDisabled = disabled || isLoading || !!pendingEdits
 
   const handleMentionButtonClick = () => {
-    // Focus textarea and insert @ to trigger autocomplete
+    // Focus textarea and insert @ to trigger inline popup
     if (textareaRef.current) {
       textareaRef.current.focus()
       const cursorPos = textareaRef.current.selectionStart || 0
       const newValue = value.slice(0, cursorPos) + '@' + value.slice(cursorPos)
       setValue(newValue)
+      setCursorPosition(cursorPos + 1)
+      setInlineQuery('')
+      setShowInlinePopup(true)
+      setInlineSelectedIndex(0)
+      setInlinePopupPosition(getCaretCoordinates())
       // Set cursor after @
       setTimeout(() => {
         textareaRef.current?.setSelectionRange(cursorPos + 1, cursorPos + 1)
@@ -633,19 +762,12 @@ export function AIPromptBar({
     }
   }
 
+  const handlePlusButtonClick = () => {
+    setShowContextModal(true)
+  }
+
   return (
     <div ref={containerRef} className="w-full relative space-y-3">
-      {/* Mention Autocomplete */}
-      {autocompleteType === 'mention' && (
-        <MentionAutocomplete
-          query={autocompleteQuery}
-          onSelect={handleMentionSelect}
-          onClose={closeAutocomplete}
-          isOpen={true}
-          selectedIndex={selectedIndex}
-        />
-      )}
-      
       {/* Multi-Edit Preview */}
       {pendingEdits && pendingEdits.length > 0 && (
         <MultiEditPreview
@@ -684,34 +806,79 @@ export function AIPromptBar({
         </div>
       )}
       
+      {/* Generating Indicator */}
+      <AnimatePresence>
+        {isLoading && (
+          <motion.div 
+            initial={{ opacity: 0, y: 5 }} 
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -5 }}
+            className="flex items-center gap-3 px-4 py-3 rounded-lg bg-primary/5 border border-primary/20"
+          >
+            <div className="relative">
+              <Loader2 className="h-4 w-4 animate-spin text-primary" />
+              <div className="absolute inset-0 h-4 w-4 animate-ping rounded-full bg-primary/20" />
+            </div>
+            <span className="text-sm text-muted-foreground flex items-center gap-1.5">
+              {useExtendedThinking && <Brain className="h-3.5 w-3.5 text-primary" />}
+              {useExtendedThinking 
+                ? 'Thinking deeply...'
+                : selections.length > 0 
+                  ? `Editing ${selections.length} selection${selections.length > 1 ? 's' : ''}...` 
+                  : 'Generating content...'}
+            </span>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Main Input Container - Cursor Style */}
       {!pendingEdits && (
         <div
           className={cn(
             'bg-muted/30 border rounded-xl px-4 py-3 transition-all space-y-2',
             isFocused ? 'border-border' : 'border-border/50',
-            isDisabled && 'opacity-70 cursor-not-allowed'
+            isDisabled && 'opacity-70 cursor-not-allowed',
+            isLoading && 'ring-2 ring-primary/20 ring-offset-1 ring-offset-background'
           )}
         >
+          {/* Context Pills */}
+          {selectedContext.length > 0 && (
+            <div className="flex gap-2 flex-wrap pb-2 border-b border-border/30">
+              {selectedContext.map((item) => (
+                <span
+                  key={`${item.type}-${item.id}`}
+                  className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2.5 py-1 text-xs font-medium text-primary"
+                >
+                  <span className="opacity-60">@</span>
+                  {item.name}
+                  <button
+                    type="button"
+                    onClick={() => handleRemoveContext(item.id, item.type)}
+                    className="ml-0.5 rounded-full p-0.5 hover:bg-primary/20"
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                </span>
+              ))}
+            </div>
+          )}
+
           {/* Input Row */}
           <div className="flex items-center gap-3">
             {/* Textarea Input */}
             <textarea
               ref={textareaRef}
               value={value}
-              onChange={(e) => {
-                setValue(e.target.value)
-                setError(null)
-              }}
+              onChange={handleInputChange}
               onKeyDown={handleKeyDown}
               onFocus={() => setIsFocused(true)}
               onBlur={() => setIsFocused(false)}
               placeholder={
                 isLoading 
-                  ? 'Generating...' 
+                  ? (useExtendedThinking ? 'Thinking deeply...' : 'Generating...') 
                   : selections.length > 0
                     ? `Describe the edit to apply to ${selections.length} selection${selections.length > 1 ? 's' : ''}...`
-                    : "Highlight text and click Add, then describe your edit..."
+                    : "Type a prompt to generate content, or highlight text to edit..."
               }
               disabled={isDisabled}
               rows={1}
@@ -734,15 +901,40 @@ export function AIPromptBar({
                 <Loader2 className="w-4 h-4 animate-spin text-red-primary" />
               ) : (
                 <>
+                  {/* + Button for Context Modal */}
+                  <button
+                    type="button"
+                    onClick={handlePlusButtonClick}
+                    className="hover:text-foreground transition-colors"
+                    title="Add context"
+                    disabled={isDisabled}
+                  >
+                    <Plus className="w-4 h-4" />
+                  </button>
+                  
                   {/* @ Mention Button */}
                   <button
                     type="button"
                     onClick={handleMentionButtonClick}
                     className="hover:text-foreground transition-colors"
-                    title="Add context mention"
+                    title="Add context mention (@)"
                     disabled={isDisabled}
                   >
                     <AtSign className="w-4 h-4" />
+                  </button>
+                  
+                  {/* Extended Thinking Toggle */}
+                  <button
+                    type="button"
+                    className={cn(
+                      "hover:text-foreground transition-colors",
+                      useExtendedThinking && "text-primary"
+                    )}
+                    onClick={() => setUseExtendedThinking(!useExtendedThinking)}
+                    disabled={isDisabled}
+                    title={`Extended Thinking ${useExtendedThinking ? "(On)" : "(Off)"} - Claude thinks deeper before responding`}
+                  >
+                    <Brain className={cn("w-4 h-4", useExtendedThinking && "text-primary")} />
                   </button>
                   
                   {/* Keyboard Shortcut Hint */}
@@ -754,12 +946,12 @@ export function AIPromptBar({
                   <button
                     type="button"
                     onClick={handleSubmit}
-                    disabled={isDisabled || !value.trim() || selections.length === 0}
+                    disabled={isDisabled || !value.trim()}
                     className={cn(
                       'hover:text-foreground transition-colors',
                       'disabled:opacity-30 disabled:cursor-not-allowed'
                     )}
-                    title={selections.length === 0 ? 'Add selections first' : 'Send (Enter)'}
+                    title={selections.length === 0 ? 'Generate content at cursor (Enter)' : 'Edit selections (Enter)'}
                   >
                     <Send className="w-4 h-4" />
                   </button>
@@ -812,6 +1004,14 @@ export function AIPromptBar({
                   </span>
                 )}
                 
+                {/* Editor context indicator */}
+                {editorContent && (
+                  <div className="flex items-center gap-1 text-xs text-muted-foreground" title="Editor content included as context">
+                    <FileText className="h-3 w-3" />
+                    <span className="hidden sm:inline">Editor context</span>
+                  </div>
+                )}
+                
                 <div className="flex items-center gap-2">
                   <span className={cn(
                     "text-xs text-muted-foreground",
@@ -840,12 +1040,57 @@ export function AIPromptBar({
                       <AlertTriangle className="h-3 w-3" />
                     </div>
                   )}
+                  
+                  {/* Actual usage from last generation */}
+                  {lastTokenUsage && !isLoading && (
+                    <motion.div
+                      initial={{ opacity: 0, scale: 0.95 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      className="flex items-center gap-1.5 text-xs text-muted-foreground"
+                    >
+                      <CheckCircle2 className="h-3 w-3 text-green-500" />
+                      <span>Used {lastTokenUsage.total.toLocaleString()}</span>
+                    </motion.div>
+                  )}
                 </div>
               </div>
             </div>
           )}
         </div>
       )}
+
+      {/* Inline @ Mention Popup */}
+      {showInlinePopup && (
+        <InlineMentionPopup
+          ref={inlineMentionRef}
+          query={inlineQuery}
+          position={inlinePopupPosition}
+          selectedIndex={inlineSelectedIndex}
+          onSelectedIndexChange={setInlineSelectedIndex}
+          onSelect={handleSelectContext}
+          onClose={() => {
+            setShowInlinePopup(false)
+            setInlineQuery('')
+          }}
+          clients={clients}
+          projects={projects}
+          contentAssets={contentAssets}
+          journalEntries={journalEntries}
+          writingFrameworks={writingFrameworks}
+        />
+      )}
+
+      {/* Full Context Picker Modal */}
+      <ContextPickerModal
+        open={showContextModal}
+        onOpenChange={setShowContextModal}
+        onSelect={handleSelectContextFromModal}
+        clients={clients}
+        projects={projects}
+        contentAssets={contentAssets}
+        journalEntries={journalEntries}
+        writingFrameworks={writingFrameworks}
+      />
     </div>
   )
 }
