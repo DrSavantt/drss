@@ -7,13 +7,27 @@ import { Sparkles } from 'lucide-react'
 import { AIPromptBar, AIModel } from '@/components/editor/ai-prompt-bar'
 import { FloatingSelectionMenu } from '@/components/editor/floating-selection-menu'
 
-interface TiptapEditorProps {
+export interface TiptapEditorProps {
   content?: string | object
   onChange?: (html: string) => void
   editable?: boolean
   showAIBar?: boolean
   clientId?: string
   models?: AIModel[]
+  // Context injection - entity data for AI mentions
+  clients?: Array<{ id: string; name: string }>
+  projects?: Array<{ id: string; name: string; clientName?: string | null }>
+  contentAssets?: Array<{ id: string; title: string; contentType?: string | null; clientName?: string | null }>
+  journalEntries?: Array<{
+    id: string
+    title: string | null
+    content: string
+    tags?: string[] | null
+    mentionedClients?: Array<{ id: string; name: string }>
+    mentionedProjects?: Array<{ id: string; name: string }>
+    mentionedContent?: Array<{ id: string; name: string }>
+  }>
+  writingFrameworks?: Array<{ id: string; name: string; category?: string }>
 }
 
 export function TiptapEditor({
@@ -22,7 +36,13 @@ export function TiptapEditor({
   editable = true,
   showAIBar = true,
   clientId,
-  models = []
+  models = [],
+  // Context injection props
+  clients = [],
+  projects = [],
+  contentAssets = [],
+  journalEntries = [],
+  writingFrameworks = [],
 }: TiptapEditorProps) {
   const [showHtml, setShowHtml] = useState(false)
   const [selectedText, setSelectedText] = useState('')
@@ -289,6 +309,12 @@ export function TiptapEditor({
             models={models}
             pendingSelection={pendingSelection}
             onPendingSelectionHandled={handlePendingSelectionHandled}
+            // Context injection - entity data
+            clients={clients}
+            projects={projects}
+            contentAssets={contentAssets}
+            journalEntries={journalEntries}
+            writingFrameworks={writingFrameworks}
             onResponse={(text) => {
               setIsGenerating(true)
               
