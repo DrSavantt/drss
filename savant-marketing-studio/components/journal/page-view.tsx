@@ -96,20 +96,73 @@ export function PageView({
   
   // AI Models
   const [aiModels, setAiModels] = useState<AIModel[]>([])
+  
+  // Context injection entity data
+  const [contextClients, setContextClients] = useState<Array<{ id: string; name: string }>>([])
+  const [contextProjects, setContextProjects] = useState<Array<{ id: string; name: string; clientName?: string | null }>>([])
+  const [contextContent, setContextContent] = useState<Array<{ id: string; title: string; contentType?: string | null }>>([])
+  const [contextJournal, setContextJournal] = useState<Array<{ id: string; title: string | null; content: string }>>([])
+  const [contextFrameworks, setContextFrameworks] = useState<Array<{ id: string; name: string; category?: string }>>([])
 
-  // Fetch AI models on mount
+  // Fetch AI models and context data on mount
   useEffect(() => {
-    async function fetchModels() {
+    async function fetchData() {
       const supabase = createClient()
-      const { data } = await supabase
-        .from('ai_models')
-        .select('id, model_name, display_name, max_tokens')
-        .eq('is_active', true)
-        .order('display_name')
       
-      if (data) setAiModels(data)
+      // Fetch all data in parallel
+      const [modelsRes, clientsRes, projectsRes, contentRes, journalRes, frameworksRes] = await Promise.all([
+        supabase
+          .from('ai_models')
+          .select('id, model_name, display_name, max_tokens')
+          .eq('is_active', true)
+          .order('display_name'),
+        supabase
+          .from('clients')
+          .select('id, name')
+          .order('name'),
+        supabase
+          .from('projects')
+          .select('id, name, clients(name)')
+          .order('name'),
+        supabase
+          .from('content_assets')
+          .select('id, title, asset_type')
+          .is('deleted_at', null)
+          .order('created_at', { ascending: false })
+          .limit(100),
+        supabase
+          .from('journal_entries')
+          .select('id, title, content')
+          .is('deleted_at', null)
+          .order('updated_at', { ascending: false })
+          .limit(100),
+        supabase
+          .from('marketing_frameworks')
+          .select('id, name, category')
+          .order('name'),
+      ])
+      
+      if (modelsRes.data) setAiModels(modelsRes.data)
+      if (clientsRes.data) setContextClients(clientsRes.data)
+      if (projectsRes.data) {
+        // Map projects to include clientName
+        setContextProjects(projectsRes.data.map((p: { id: string; name: string; clients?: { name: string } | null }) => ({
+          id: p.id,
+          name: p.name,
+          clientName: p.clients?.name || null,
+        })))
+      }
+      if (contentRes.data) {
+        setContextContent(contentRes.data.map((c: { id: string; title: string; asset_type?: string | null }) => ({
+          id: c.id,
+          title: c.title,
+          contentType: c.asset_type || null,
+        })))
+      }
+      if (journalRes.data) setContextJournal(journalRes.data)
+      if (frameworksRes.data) setContextFrameworks(frameworksRes.data)
     }
-    fetchModels()
+    fetchData()
   }, [])
 
   // Fetch page data
@@ -412,6 +465,11 @@ export function PageView({
               editable={true}
               showAIBar={true}
               models={aiModels}
+              clients={contextClients}
+              projects={contextProjects}
+              contentAssets={contextContent}
+              journalEntries={contextJournal}
+              writingFrameworks={contextFrameworks}
             />
           </div>
 

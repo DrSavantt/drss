@@ -129,6 +129,105 @@ export async function getRootPages(): Promise<JournalPageTreeNode[]> {
   }))
 }
 
+// ============================================================================
+// CONTENT PREVIEW HELPERS
+// ============================================================================
+
+/**
+ * Strip HTML tags and truncate text for content preview
+ */
+function stripHtmlAndTruncate(html: string | null, maxLength: number = 150): string {
+  if (!html) return ''
+  // Remove HTML tags and decode common entities
+  const text = html
+    .replace(/<[^>]*>/g, '')
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/\s+/g, ' ')
+    .trim()
+  // Truncate with ellipsis
+  if (text.length <= maxLength) return text
+  return text.slice(0, maxLength).trim() + '...'
+}
+
+/**
+ * Root page with content preview for library display
+ */
+export interface RootPageWithPreview {
+  id: string
+  title: string
+  icon: string | null
+  child_count: number
+  updated_at: string | null
+  content_preview: string
+}
+
+/**
+ * Get root pages with content preview for the page library dashboard
+ */
+export async function getRootPagesWithPreview(): Promise<RootPageWithPreview[]> {
+  const supabase = await createClient()
+  
+  if (!supabase) {
+    throw new Error('Database connection not configured')
+  }
+  
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) {
+    throw new Error('Not authenticated')
+  }
+  
+  // Get root pages with content
+  const { data: pages, error } = await supabase
+    .from('journal_entries')
+    .select('id, title, icon, content, updated_at')
+    .eq('user_id', user.id)
+    .is('parent_id', null)
+    .is('deleted_at', null)
+    .order('sort_order', { ascending: true })
+  
+  if (error) {
+    console.error('Error fetching root pages with preview:', error)
+    return []
+  }
+  
+  // Get child counts for each root page
+  const pageIds = (pages || []).map(p => p.id)
+  
+  if (pageIds.length === 0) {
+    return []
+  }
+  
+  // Count children for each root page
+  const { data: childCounts } = await supabase
+    .from('journal_entries')
+    .select('parent_id')
+    .in('parent_id', pageIds)
+    .is('deleted_at', null)
+  
+  // Build child count map
+  const childCountMap = new Map<string, number>()
+  ;(childCounts || []).forEach(row => {
+    if (row.parent_id) {
+      childCountMap.set(row.parent_id, (childCountMap.get(row.parent_id) || 0) + 1)
+    }
+  })
+  
+  // Map to result format with content preview
+  return (pages || []).map(page => ({
+    id: page.id,
+    title: page.title || 'Untitled',
+    icon: page.icon,
+    child_count: childCountMap.get(page.id) || 0,
+    updated_at: page.updated_at,
+    content_preview: stripHtmlAndTruncate(page.content, 150)
+  }))
+}
+
 /**
  * Get direct children of a page
  */

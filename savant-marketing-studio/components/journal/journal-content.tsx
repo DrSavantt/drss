@@ -8,7 +8,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet"
 import { cn } from "@/lib/utils"
 import { PageTree } from "./page-tree"
-import { PageView, PageViewEmpty } from "./page-view"
+import { PageView } from "./page-view"
+import { PageLibrary } from "./page-library"
 import { createPage } from "@/app/actions/journal-pages"
 
 // ============================================================================
@@ -167,10 +168,13 @@ export function JournalContent({
               onTreeRefresh={handleTreeRefresh}
             />
           ) : (
-            <PageViewEmpty
-              onCreatePage={handleCreateFirstPage}
-              isCreating={isPending}
-            />
+            <div className="h-full overflow-y-auto p-6">
+              <PageLibrary
+                onSelectPage={handleSelectPage}
+                onCreatePage={handleCreateFirstPage}
+                isCreating={isPending}
+              />
+            </div>
           )}
         </Card>
       </div>
