@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect, KeyboardEvent, useMemo, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Send, Loader2, AtSign, Command, ChevronDown, Check, AlertTriangle, Scissors, Plus, X, Trash2, CheckCircle2, FileText, Brain } from 'lucide-react'
+import { Send, Loader2, AtSign, ChevronDown, Check, AlertTriangle, Scissors, Plus, X, Trash2, CheckCircle2, FileText, Brain } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { generateInlineEdit } from '@/app/actions/ai'
 import { toast } from 'sonner'
@@ -936,11 +936,6 @@ export function AIPromptBar({
                   >
                     <Brain className={cn("w-4 h-4", useExtendedThinking && "text-primary")} />
                   </button>
-                  
-                  {/* Keyboard Shortcut Hint */}
-                  <div className="text-muted-foreground/40" title="Press Enter to send">
-                    <Command className="w-3.5 h-3.5" />
-                  </div>
                   
                   {/* Send Button - Just Icon */}
                   <button

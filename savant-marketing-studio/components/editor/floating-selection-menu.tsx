@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useRef, useCallback } from 'react';
 import { Editor } from '@tiptap/react';
-import { Sparkles, Send, X, Check, Loader2 } from 'lucide-react';
+import { Sparkles, Send, X, Check, Loader2, AtSign } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { 
@@ -15,6 +15,8 @@ import {
 import { cn } from '@/lib/utils';
 import { debounce } from '@/lib/utils';
 import { generateInlineEdit } from '@/app/actions/ai';
+import { InlineMentionPopup, type InlineMentionPopupRef } from '@/components/ai-chat/inline-mention-popup';
+import type { ContextItem, ContextItemType } from '@/components/ai-chat/context-picker-modal';
 
 interface AIModel {
   id: string;
@@ -29,6 +31,20 @@ interface FloatingSelectionMenuProps {
   clientId?: string;
   onAddToList?: () => void; // Keep option to add to main list
   disabled?: boolean;
+  // Context injection props for @mentions
+  clients?: Array<{ id: string; name: string }>;
+  projects?: Array<{ id: string; name: string; clientName?: string | null }>;
+  contentAssets?: Array<{ id: string; title: string; contentType?: string | null; clientName?: string | null }>;
+  journalEntries?: Array<{
+    id: string;
+    title: string | null;
+    content: string;
+    tags?: string[] | null;
+    mentionedClients?: Array<{ id: string; name: string }>;
+    mentionedProjects?: Array<{ id: string; name: string }>;
+    mentionedContent?: Array<{ id: string; name: string }>;
+  }>;
+  writingFrameworks?: Array<{ id: string; name: string; category?: string }>;
 }
 
 export function FloatingSelectionMenu({ 
@@ -36,7 +52,13 @@ export function FloatingSelectionMenu({
   models,
   clientId,
   onAddToList,
-  disabled 
+  disabled,
+  // Context injection props
+  clients = [],
+  projects = [],
+  contentAssets = [],
+  journalEntries = [],
+  writingFrameworks = [],
 }: FloatingSelectionMenuProps) {
   const [isVisible, setIsVisible] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
@@ -61,8 +83,17 @@ export function FloatingSelectionMenu({
     to: number;
   } | null>(null);
   
+  // Context injection state for @mentions
+  const [selectedContext, setSelectedContext] = useState<ContextItem[]>([]);
+  const [showInlinePopup, setShowInlinePopup] = useState(false);
+  const [inlineQuery, setInlineQuery] = useState('');
+  const [inlinePopupPosition, setInlinePopupPosition] = useState({ top: 0, left: 0 });
+  const [inlineSelectedIndex, setInlineSelectedIndex] = useState(0);
+  const [cursorPosition, setCursorPosition] = useState(0);
+  
   const menuRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const inlineMentionRef = useRef<InlineMentionPopupRef>(null);
 
   // Update model when models change
   useEffect(() => {
@@ -219,6 +250,9 @@ export function FloatingSelectionMenu({
     setPrompt('');
     setError(null);
     setPendingEdit(null);
+    setSelectedContext([]);
+    setShowInlinePopup(false);
+    setInlineQuery('');
   };
 
   const handleSubmit = async () => {
@@ -228,11 +262,19 @@ export function FloatingSelectionMenu({
     setError(null);
     
     try {
+      // Build mentions array from selected context
+      const mentions = selectedContext.map(c => ({
+        type: c.type,
+        id: c.id,
+        name: c.name,
+      }));
+      
       const result = await generateInlineEdit(prompt, {
         selectedText: selection.text,
         fullContent: editor?.getHTML() || '',
         clientId,
         model: selectedModel,
+        mentions: mentions.length > 0 ? mentions : undefined,
       });
       
       if (!result.error && result.content) {
@@ -278,8 +320,99 @@ export function FloatingSelectionMenu({
     // Keep prompt so user can modify and retry
   };
 
+  // Calculate caret position for inline popup
+  const getCaretCoordinates = useCallback(() => {
+    if (!textareaRef.current || !menuRef.current) return { top: 0, left: 0 };
+    
+    const menuRect = menuRef.current.getBoundingClientRect();
+    
+    // Position popup above the menu
+    return {
+      top: menuRect.top - 10,
+      left: menuRect.left + 16,
+    };
+  }, []);
+
+  // Handle input change with @ detection
+  const handleInputChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const newValue = e.target.value;
+    const newCursorPos = e.target.selectionStart || 0;
+    setPrompt(newValue);
+    setCursorPosition(newCursorPos);
+    setError(null);
+    
+    // Detect @ for inline popup
+    const textBeforeCursor = newValue.slice(0, newCursorPos);
+    const atMatch = textBeforeCursor.match(/@(\w*)$/);
+    
+    if (atMatch) {
+      setInlineQuery(atMatch[1] || '');
+      setShowInlinePopup(true);
+      setInlineSelectedIndex(0);
+      setInlinePopupPosition(getCaretCoordinates());
+    } else {
+      setShowInlinePopup(false);
+      setInlineQuery('');
+    }
+  }, [getCaretCoordinates]);
+
+  // Handle context selection from inline popup
+  const handleSelectContext = useCallback((item: ContextItem) => {
+    // Avoid duplicates
+    if (!selectedContext.find(c => c.type === item.type && c.id === item.id)) {
+      setSelectedContext(prev => [...prev, item]);
+    }
+    
+    // Remove @query from input if inline popup was used
+    if (showInlinePopup) {
+      const textBeforeCursor = prompt.slice(0, cursorPosition);
+      const textAfterCursor = prompt.slice(cursorPosition);
+      const newText = textBeforeCursor.replace(/@\w*$/, '') + textAfterCursor;
+      setPrompt(newText);
+    }
+    
+    setShowInlinePopup(false);
+    setInlineQuery('');
+    
+    // Focus back on textarea
+    setTimeout(() => textareaRef.current?.focus(), 0);
+  }, [selectedContext, showInlinePopup, prompt, cursorPosition]);
+
+  // Remove context item
+  const handleRemoveContext = useCallback((id: string, type: ContextItemType) => {
+    setSelectedContext(prev => prev.filter(c => !(c.id === id && c.type === type)));
+  }, []);
+
   const handleKeyDownTextarea = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+    // Handle inline mention popup navigation
+    if (showInlinePopup) {
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        setInlineSelectedIndex(prev => prev + 1);
+        return;
+      }
+      
+      if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        setInlineSelectedIndex(prev => Math.max(0, prev - 1));
+        return;
+      }
+      
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        inlineMentionRef.current?.selectCurrent();
+        return;
+      }
+      
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        setShowInlinePopup(false);
+        setInlineQuery('');
+        return;
+      }
+    }
+    
+    if (e.key === 'Enter' && (e.metaKey || e.ctrlKey) && !showInlinePopup) {
       e.preventDefault();
       handleSubmit();
     }
@@ -387,15 +520,65 @@ export function FloatingSelectionMenu({
           {/* Prompt Input (hide when showing preview) */}
           {!pendingEdit && (
             <>
-              <Textarea
-                ref={textareaRef}
-                value={prompt}
-                onChange={(e) => setPrompt(e.target.value)}
-                onKeyDown={handleKeyDownTextarea}
-                placeholder="Describe the change... (⌘+Enter to submit)"
-                className="min-h-[60px] max-h-[100px] text-sm resize-none"
-                disabled={isLoading}
-              />
+              {/* Context Pills */}
+              {selectedContext.length > 0 && (
+                <div className="flex gap-1.5 flex-wrap pb-2 border-b border-border/30">
+                  {selectedContext.map((item) => (
+                    <span
+                      key={`${item.type}-${item.id}`}
+                      className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary"
+                    >
+                      <span className="opacity-60">@</span>
+                      {item.name.slice(0, 15)}{item.name.length > 15 ? '...' : ''}
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveContext(item.id, item.type)}
+                        className="ml-0.5 rounded-full p-0.5 hover:bg-primary/20"
+                      >
+                        <X className="h-2.5 w-2.5" />
+                      </button>
+                    </span>
+                  ))}
+                </div>
+              )}
+              
+              <div className="relative">
+                <Textarea
+                  ref={textareaRef}
+                  value={prompt}
+                  onChange={handleInputChange}
+                  onKeyDown={handleKeyDownTextarea}
+                  placeholder="Describe the change... @ for context (⌘+Enter)"
+                  className="min-h-[60px] max-h-[100px] text-sm resize-none pr-8"
+                  disabled={isLoading}
+                />
+                
+                {/* @ Button */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (textareaRef.current) {
+                      textareaRef.current.focus();
+                      const cursorPos = textareaRef.current.selectionStart || 0;
+                      const newValue = prompt.slice(0, cursorPos) + '@' + prompt.slice(cursorPos);
+                      setPrompt(newValue);
+                      setCursorPosition(cursorPos + 1);
+                      setInlineQuery('');
+                      setShowInlinePopup(true);
+                      setInlineSelectedIndex(0);
+                      setInlinePopupPosition(getCaretCoordinates());
+                      setTimeout(() => {
+                        textareaRef.current?.setSelectionRange(cursorPos + 1, cursorPos + 1);
+                      }, 0);
+                    }
+                  }}
+                  className="absolute right-2 top-2 text-muted-foreground hover:text-foreground transition-colors"
+                  title="Add context (@)"
+                  disabled={isLoading}
+                >
+                  <AtSign className="h-4 w-4" />
+                </button>
+              </div>
               
               {/* Model selector + Submit */}
               <div className="flex items-center gap-2">
@@ -438,6 +621,27 @@ export function FloatingSelectionMenu({
             </div>
           )}
         </div>
+      )}
+      
+      {/* Inline @ Mention Popup */}
+      {showInlinePopup && (
+        <InlineMentionPopup
+          ref={inlineMentionRef}
+          query={inlineQuery}
+          position={inlinePopupPosition}
+          selectedIndex={inlineSelectedIndex}
+          onSelectedIndexChange={setInlineSelectedIndex}
+          onSelect={handleSelectContext}
+          onClose={() => {
+            setShowInlinePopup(false);
+            setInlineQuery('');
+          }}
+          clients={clients}
+          projects={projects}
+          contentAssets={contentAssets}
+          journalEntries={journalEntries}
+          writingFrameworks={writingFrameworks}
+        />
       )}
     </div>
   );

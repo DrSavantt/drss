@@ -278,6 +278,12 @@ export function TiptapEditor({
             clientId={clientId}
             onAddToList={selectedText ? handleAddSelectionFromFloat : undefined}
             disabled={isGenerating}
+            // Context injection - entity data for @mentions
+            clients={clients}
+            projects={projects}
+            contentAssets={contentAssets}
+            journalEntries={journalEntries}
+            writingFrameworks={writingFrameworks}
           />
         )}
       </div>

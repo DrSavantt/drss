@@ -26,8 +26,7 @@ import { format } from 'date-fns'
 import { updateContentAsset, deleteContentAsset } from '@/app/actions/content'
 import { cn } from '@/lib/utils'
 import dynamic from 'next/dynamic'
-import { createClient } from '@/lib/supabase/client'
-import type { AIModel } from '@/components/editor/ai-prompt-bar'
+import { useAIBarContext } from '@/hooks/useAIBarContext'
 
 const TiptapEditor = dynamic(
   () => import('@/components/tiptap-editor').then(mod => ({ default: mod.TiptapEditor })),
@@ -78,69 +77,16 @@ export function ContentDetailClient({ content }: ContentDetailClientProps) {
   const [hasChanges, setHasChanges] = useState(false)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle')
-  const [aiModels, setAiModels] = useState<AIModel[]>([])
 
-  // Context data for AI bar
-  const [contextClients, setContextClients] = useState<Array<{ id: string; name: string }>>([])
-  const [contextProjects, setContextProjects] = useState<Array<{ id: string; name: string; client_id?: string | null }>>([])
-  const [contextContent, setContextContent] = useState<Array<{ id: string; title: string; asset_type?: string | null }>>([])
-  const [contextJournal, setContextJournal] = useState<Array<{ id: string; title: string | null; content: string }>>([])
-  const [contextFrameworks, setContextFrameworks] = useState<Array<{ id: string; name: string; category?: string | null }>>([])
-
-  // Fetch AI models and context data on mount
-  useEffect(() => {
-    async function fetchData() {
-      const supabase = createClient()
-      
-      const [
-        modelsRes,
-        clientsRes,
-        projectsRes,
-        contentRes,
-        journalRes,
-        frameworksRes
-      ] = await Promise.all([
-        supabase
-          .from('ai_models')
-          .select('id, model_name, display_name, max_tokens')
-          .eq('is_active', true)
-          .order('display_name'),
-        supabase
-          .from('clients')
-          .select('id, name')
-          .order('name'),
-        supabase
-          .from('projects')
-          .select('id, name, client_id')
-          .order('name'),
-        supabase
-          .from('content_assets')
-          .select('id, title, asset_type')
-          .is('deleted_at', null)
-          .order('created_at', { ascending: false })
-          .limit(100),
-        supabase
-          .from('journal_entries')
-          .select('id, title, content')
-          .is('deleted_at', null)
-          .order('updated_at', { ascending: false })
-          .limit(100),
-        supabase
-          .from('marketing_frameworks')
-          .select('id, name, category')
-          .order('name'),
-      ])
-      
-      if (modelsRes.data) setAiModels(modelsRes.data)
-      if (clientsRes.data) setContextClients(clientsRes.data)
-      if (projectsRes.data) setContextProjects(projectsRes.data)
-      if (contentRes.data) setContextContent(contentRes.data)
-      if (journalRes.data) setContextJournal(journalRes.data)
-      if (frameworksRes.data) setContextFrameworks(frameworksRes.data)
-    }
-    
-    fetchData()
-  }, [])
+  // AI bar context (centralized fetch - ensures deleted items are filtered)
+  const {
+    clients: contextClients,
+    projects: contextProjects,
+    contentAssets: contextContent,
+    journalEntries: contextJournal,
+    writingFrameworks: contextFrameworks,
+    models: aiModels,
+  } = useAIBarContext()
 
   // Track changes
   useEffect(() => {
@@ -350,10 +296,7 @@ export function ContentDetailClient({ content }: ContentDetailClientProps) {
                   projects={contextProjects}
                   contentAssets={contextContent}
                   journalEntries={contextJournal}
-                  writingFrameworks={contextFrameworks.map(f => ({
-                    ...f,
-                    category: f.category ?? undefined
-                  }))}
+                  writingFrameworks={contextFrameworks}
                 />
               </CardContent>
             </Card>

@@ -10,6 +10,7 @@ import {
   AI_PRICING,
   AIModelId
 } from '@/lib/ai/pricing';
+import { buildContextFromMentions, type ContextMention } from './context-injection';
 
 export interface GenerateContentParams {
   clientId: string;
@@ -429,118 +430,17 @@ export async function generateInlineEdit(
     // Build context for the AI
     let systemPrompt = `You are an expert copywriter and content editor. Your task is to help improve, edit, or generate content based on the user's request.`;
 
-    // Build context from mentions
+    // Build context from mentions using shared function
     let mentionContextText = '';
     if (context.mentions && context.mentions.length > 0) {
-      const contextParts: string[] = [];
-      
-      for (const mention of context.mentions) {
-        if (mention.type === 'client') {
-          const { data: client } = await supabase
-            .from('clients')
-            .select('name, brand_data, intake_responses')
-            .eq('id', mention.id)
-            .single();
-          if (client) {
-            let clientContext = `## Client: ${client.name}`;
-            if (client.brand_data) {
-              clientContext += `\n### Brand Data\n${JSON.stringify(client.brand_data, null, 2)}`;
-            }
-            if (client.intake_responses) {
-              clientContext += `\n### Intake Responses\n${JSON.stringify(client.intake_responses, null, 2)}`;
-            }
-            contextParts.push(clientContext);
-          }
-        } else if (mention.type === 'project') {
-          const { data: project } = await supabase
-            .from('projects')
-            .select('name, description, status, client_id')
-            .eq('id', mention.id)
-            .single();
-          if (project) {
-            let projectContext = `## Project: ${project.name}\nStatus: ${project.status || 'Unknown'}\n${project.description || 'No description'}`;
-            
-            // Auto-fetch client brand data if project has a client
-            // and that client wasn't already mentioned
-            if (project.client_id) {
-              const alreadyHasClient = context.mentions?.some(
-                m => m.type === 'client' && m.id === project.client_id
-              );
-              
-              if (!alreadyHasClient) {
-                const { data: client } = await supabase
-                  .from('clients')
-                  .select('name, brand_data, intake_responses, industry, website')
-                  .eq('id', project.client_id)
-                  .single();
-                
-                if (client) {
-                  projectContext += `\n\n### Client Context (from project): ${client.name}`;
-                  if (client.industry) projectContext += `\nIndustry: ${client.industry}`;
-                  if (client.website) projectContext += `\nWebsite: ${client.website}`;
-                  if (client.brand_data) {
-                    projectContext += `\n#### Brand Data\n\`\`\`json\n${JSON.stringify(client.brand_data, null, 2)}\n\`\`\``;
-                  }
-                  if (client.intake_responses) {
-                    projectContext += `\n#### Intake Responses\n\`\`\`json\n${JSON.stringify(client.intake_responses, null, 2)}\n\`\`\``;
-                  }
-                }
-              }
-            }
-            
-            contextParts.push(projectContext);
-          }
-        } else if (mention.type === 'content') {
-          const { data: content } = await supabase
-            .from('content_assets')
-            .select('title, content, content_json, asset_type')
-            .eq('id', mention.id)
-            .single();
-          if (content) {
-            // Try to get text content from content_json or fall back to content field
-            let textContent = content.content || '';
-            if (!textContent && content.content_json) {
-              // Extract text from TipTap JSON
-              try {
-                const extractText = (node: unknown): string => {
-                  if (!node || typeof node !== 'object') return '';
-                  const n = node as { type?: string; text?: string; content?: unknown[] };
-                  if (n.type === 'text' && n.text) return n.text;
-                  if (n.content && Array.isArray(n.content)) {
-                    return n.content.map(extractText).join(' ');
-                  }
-                  return '';
-                };
-                textContent = extractText(content.content_json);
-              } catch {
-                textContent = JSON.stringify(content.content_json);
-              }
-            }
-            contextParts.push(`## Content: ${content.title}\nType: ${content.asset_type || 'Unknown'}\n${textContent}`);
-          }
-        } else if (mention.type === 'capture') {
-          const { data: entry } = await supabase
-            .from('journal_entries')
-            .select('title, content')
-            .eq('id', mention.id)
-            .single();
-          if (entry) {
-            contextParts.push(`## Journal Entry: ${entry.title || 'Untitled'}\n${entry.content}`);
-          }
-        } else if (mention.type === 'framework' || mention.type === 'writing-framework') {
-          const { data: framework } = await supabase
-            .from('marketing_frameworks')
-            .select('name, content, description')
-            .eq('id', mention.id)
-            .single();
-          if (framework) {
-            contextParts.push(`## Framework: ${framework.name}\n${framework.content || framework.description || 'No content'}`);
-          }
+      try {
+        const builtContext = await buildContextFromMentions(context.mentions as ContextMention[]);
+        if (builtContext.text) {
+          mentionContextText = `\n\n${builtContext.text}`;
         }
-      }
-      
-      if (contextParts.length > 0) {
-        mentionContextText = `\n\n# CONTEXT FROM MENTIONS\n\n${contextParts.join('\n\n---\n\n')}`;
+        // Note: builtContext.images could be used for vision API if needed in future
+      } catch (err) {
+        console.error('Failed to build context from mentions:', err);
       }
     }
 

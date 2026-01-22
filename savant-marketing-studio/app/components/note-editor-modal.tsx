@@ -7,8 +7,7 @@ import { getClientProjects } from '@/app/actions/content'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
 import { VisuallyHidden } from '@/components/ui/visually-hidden'
 import { AnimatedButton } from '@/components/animated-button'
-import { createClient } from '@/lib/supabase/client'
-import type { AIModel } from '@/components/editor/ai-prompt-bar'
+import { useAIBarContext } from '@/hooks/useAIBarContext'
 
 const TiptapEditor = dynamic(
   () => import('@/components/tiptap-editor').then(mod => ({ default: mod.TiptapEditor })),
@@ -64,92 +63,16 @@ export function NoteEditorModal({
   const [projects, setProjects] = useState<Project[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [aiModels, setAiModels] = useState<AIModel[]>([])
   
-  // Context data for @mentions in AI prompt bar
-  const [contextClients, setContextClients] = useState<Array<{ id: string; name: string }>>([])
-  const [contextProjects, setContextProjects] = useState<Array<{ id: string; name: string; clientName?: string | null }>>([])
-  const [contextContent, setContextContent] = useState<Array<{ id: string; title: string; contentType?: string | null; clientName?: string | null }>>([])
-  const [contextJournal, setContextJournal] = useState<Array<{ id: string; title: string | null; content: string; tags?: string[] | null }>>([])
-  const [contextFrameworks, setContextFrameworks] = useState<Array<{ id: string; name: string; category?: string }>>([])
-
-  // Fetch AI models and context data for @mentions on mount
-  useEffect(() => {
-    async function fetchData() {
-      const supabase = createClient()
-      
-      // Fetch all data in parallel
-      const [
-        modelsRes,
-        clientsRes,
-        projectsRes,
-        contentRes,
-        journalRes,
-        frameworksRes
-      ] = await Promise.all([
-        supabase
-          .from('ai_models')
-          .select('id, model_name, display_name, max_tokens')
-          .eq('is_active', true)
-          .order('display_name'),
-        supabase
-          .from('clients')
-          .select('id, name')
-          .is('deleted_at', null)
-          .order('name'),
-        supabase
-          .from('projects')
-          .select('id, name, clients(name)')
-          .is('deleted_at', null)
-          .order('name'),
-        supabase
-          .from('content_assets')
-          .select('id, title, asset_type, clients(name)')
-          .is('deleted_at', null)
-          .order('created_at', { ascending: false })
-          .limit(100),
-        supabase
-          .from('journal_entries')
-          .select('id, title, content, tags')
-          .is('deleted_at', null)
-          .order('updated_at', { ascending: false })
-          .limit(100),
-        supabase
-          .from('marketing_frameworks')
-          .select('id, name, category')
-          .order('name'),
-      ])
-
-      if (modelsRes.data) setAiModels(modelsRes.data)
-      if (clientsRes.data) setContextClients(clientsRes.data)
-      if (projectsRes.data) {
-        setContextProjects(projectsRes.data.map((p) => ({
-          id: p.id,
-          name: p.name,
-          clientName: (p.clients as unknown as { name: string } | null)?.name || null
-        })))
-      }
-      if (contentRes.data) {
-        setContextContent(contentRes.data.map((c) => ({
-          id: c.id,
-          title: c.title,
-          contentType: c.asset_type || null,
-          clientName: (c.clients as unknown as { name: string } | null)?.name || null
-        })))
-      }
-      if (journalRes.data) {
-        setContextJournal(journalRes.data.map((j) => ({
-          id: j.id,
-          title: j.title,
-          content: j.content || '',
-          tags: j.tags
-        })))
-      }
-      if (frameworksRes.data) setContextFrameworks(frameworksRes.data)
-    }
-
-    fetchData()
-  }, [])
+  // AI bar context (centralized fetch - ensures deleted items are filtered)
+  const {
+    clients: contextClients,
+    projects: contextProjects,
+    contentAssets: contextContent,
+    journalEntries: contextJournal,
+    writingFrameworks: contextFrameworks,
+    models: aiModels,
+  } = useAIBarContext()
 
   useEffect(() => {
     async function loadProjects() {

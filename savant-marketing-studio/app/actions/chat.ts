@@ -3,10 +3,10 @@
 import { createClient } from '@/lib/supabase/server';
 import { AIOrchestrator } from '@/lib/ai/orchestrator';
 import { getModelIdFromName } from '@/lib/ai/model-lookup';
-import { extractFileContent } from '@/lib/ai/file-processor';
 import { revalidatePath } from 'next/cache';
 import { logActivity } from '@/lib/activity-log';
 import type { Database, Json } from '@/types/database';
+import { buildContextFromMentions, type ContextMention } from './context-injection';
 
 // ============================================================================
 // TYPE DEFINITIONS
@@ -93,239 +93,8 @@ interface ActionResult<T = unknown> {
 // HELPER FUNCTIONS
 // ============================================================================
 
-/**
- * Extract plain text from TipTap JSON content structure
- */
-function extractTextFromTipTap(json: unknown): string {
-  if (!json || typeof json !== 'object') return '';
-  
-  const doc = json as { content?: Array<{ type?: string; content?: Array<{ text?: string; type?: string }> }> };
-  if (!doc.content) return '';
-  
-  const extractFromNode = (node: unknown): string => {
-    if (!node || typeof node !== 'object') return '';
-    const n = node as { type?: string; text?: string; content?: unknown[] };
-    
-    // Direct text node
-    if (n.text) return n.text;
-    
-    // Recursively extract from children
-    if (n.content && Array.isArray(n.content)) {
-      return n.content.map(extractFromNode).join(n.type === 'paragraph' ? '\n' : '');
-    }
-    
-    return '';
-  };
-  
-  return doc.content
-    .map(extractFromNode)
-    .filter(Boolean)
-    .join('\n\n')
-    .trim();
-}
-
-/**
- * Build context text from mentions to inject into the AI prompt
- * Fetches full data for each mentioned item and formats it for Claude
- */
-async function buildContextFromMentions(
-  supabase: NonNullable<Awaited<ReturnType<typeof createClient>>>,
-  mentions: NonNullable<SendMessageInput['mentions']>
-): Promise<{ text: string | null; images: Array<{ base64: string; mediaType: string }> }> {
-  if (!mentions.length) return { text: null, images: [] };
-
-  const contextParts: string[] = [];
-  const images: Array<{ base64: string; mediaType: string }> = [];
-
-  // Group mentions by type
-  const clientIds = mentions.filter(m => m.type === 'client').map(m => m.id);
-  const projectIds = mentions.filter(m => m.type === 'project').map(m => m.id);
-  const contentIds = mentions.filter(m => m.type === 'content').map(m => m.id);
-  const captureIds = mentions.filter(m => m.type === 'capture').map(m => m.id);
-  const frameworkIds = mentions
-    .filter(m => m.type === 'writing-framework' || m.type === 'framework')
-    .map(m => m.id);
-
-  // Fetch and format clients
-  if (clientIds.length) {
-    const { data: clients } = await supabase
-      .from('clients')
-      .select('id, name, brand_data, intake_responses, industry, website')
-      .in('id', clientIds);
-
-    if (clients?.length) {
-      contextParts.push(`## Referenced Clients\n${clients.map(c => {
-        const parts = [`### ${c.name}`];
-        if (c.industry) parts.push(`Industry: ${c.industry}`);
-        if (c.website) parts.push(`Website: ${c.website}`);
-        if (c.brand_data) {
-          parts.push(`Brand Info:\n\`\`\`json\n${JSON.stringify(c.brand_data, null, 2)}\n\`\`\``);
-        }
-        if (c.intake_responses) {
-          parts.push(`Questionnaire Responses:\n\`\`\`json\n${JSON.stringify(c.intake_responses, null, 2)}\n\`\`\``);
-        }
-        return parts.join('\n');
-      }).join('\n\n')}`);
-    }
-  }
-
-  // Fetch and format projects
-  if (projectIds.length) {
-    const { data: projects } = await supabase
-      .from('projects')
-      .select('id, name, description, status, metadata, client_id')
-      .in('id', projectIds);
-
-    if (projects?.length) {
-      // Collect unique client IDs from projects that weren't explicitly @mentioned
-      const projectClientIds = [...new Set(
-        projects
-          .map(p => p.client_id)
-          .filter((cid): cid is string => cid !== null && !clientIds.includes(cid))
-      )];
-
-      // Fetch those clients' brand data
-      let projectClients: Array<{
-        id: string;
-        name: string;
-        brand_data: unknown;
-        intake_responses: unknown;
-        industry: string | null;
-        website: string | null;
-      }> = [];
-      if (projectClientIds.length) {
-        const { data } = await supabase
-          .from('clients')
-          .select('id, name, brand_data, intake_responses, industry, website')
-          .in('id', projectClientIds);
-        projectClients = data || [];
-      }
-
-      // Create a lookup map for client data
-      const clientLookup = new Map(projectClients.map(c => [c.id, c]));
-
-      contextParts.push(`## Referenced Projects\n${projects.map(p => {
-        const parts = [`### ${p.name}`];
-        if (p.description) parts.push(`Description: ${p.description}`);
-        if (p.status) parts.push(`Status: ${p.status}`);
-        
-        // Include client brand context for this project
-        const client = p.client_id ? clientLookup.get(p.client_id) : null;
-        if (client) {
-          parts.push(`\n**Client: ${client.name}**`);
-          if (client.industry) parts.push(`Industry: ${client.industry}`);
-          if (client.brand_data) {
-            parts.push(`Brand Info:\n\`\`\`json\n${JSON.stringify(client.brand_data, null, 2)}\n\`\`\``);
-          }
-          if (client.intake_responses) {
-            parts.push(`Client Questionnaire Responses:\n\`\`\`json\n${JSON.stringify(client.intake_responses, null, 2)}\n\`\`\``);
-          }
-        }
-        
-        if (p.metadata) {
-          parts.push(`Project Metadata:\n\`\`\`json\n${JSON.stringify(p.metadata, null, 2)}\n\`\`\``);
-        }
-        return parts.join('\n');
-      }).join('\n\n')}`);
-    }
-  }
-
-  // Fetch and format content assets
-  if (contentIds.length) {
-    const { data: contents } = await supabase
-      .from('content_assets')
-      .select('id, title, content_json, asset_type, metadata, file_url, file_type')
-      .in('id', contentIds);
-
-    if (contents?.length) {
-      const contentParts: string[] = [];
-
-      for (const c of contents) {
-        const parts = [`### ${c.title}`];
-        parts.push(`Type: ${c.asset_type}`);
-        
-        // Handle TipTap editor content
-        if (c.content_json) {
-          const text = extractTextFromTipTap(c.content_json);
-          if (text) parts.push(`Content:\n${text}`);
-        }
-        // Handle uploaded files
-        else if (c.file_url) {
-          const extracted = await extractFileContent(c.file_url, c.file_type);
-          
-          if (extracted.isImage && extracted.base64 && extracted.mediaType) {
-            // Store image for multi-modal message
-            images.push({ base64: extracted.base64, mediaType: extracted.mediaType });
-            parts.push(`[Image attached - Claude can see this image]`);
-          } else if (extracted.text) {
-            parts.push(`Content:\n${extracted.text}`);
-          }
-        }
-        
-        if (c.metadata && Object.keys(c.metadata).length > 0) {
-          parts.push(`Metadata:\n\`\`\`json\n${JSON.stringify(c.metadata, null, 2)}\n\`\`\``);
-        }
-        
-        contentParts.push(parts.join('\n'));
-      }
-
-      if (contentParts.length) {
-        contextParts.push(`## Referenced Content\n${contentParts.join('\n\n')}`);
-      }
-
-      // Images are now returned and passed to Claude's vision API
-    }
-  }
-
-  // Fetch and format captures (journal entries)
-  if (captureIds.length) {
-    const { data: captures } = await supabase
-      .from('journal_entries')
-      .select('id, title, content, tags')
-      .in('id', captureIds);
-
-    if (captures?.length) {
-      contextParts.push(`## Referenced Captures\n${captures.map(c => {
-        const parts = [`### ${c.title || 'Untitled'}`];
-        parts.push(c.content);
-        if (c.tags?.length) {
-          parts.push(`Tags: ${c.tags.join(', ')}`);
-        }
-        return parts.join('\n');
-      }).join('\n\n')}`);
-    }
-  }
-
-  // Fetch and format frameworks
-  if (frameworkIds.length) {
-    const { data: frameworks } = await supabase
-      .from('marketing_frameworks')
-      .select('id, name, content, description, category')
-      .in('id', frameworkIds);
-
-    if (frameworks?.length) {
-      contextParts.push(`## Referenced Frameworks\n${frameworks.map(f => {
-        const parts = [`### ${f.name}`];
-        if (f.category) parts.push(`Category: ${f.category}`);
-        if (f.description) parts.push(`Description: ${f.description}`);
-        if (f.content) parts.push(`Framework:\n${f.content}`);
-        return parts.join('\n');
-      }).join('\n\n')}`);
-    }
-  }
-
-  if (contextParts.length === 0) {
-    return { text: null, images };
-  }
-
-  return {
-    text: `# CONTEXT FOR THIS MESSAGE
-The user has attached the following context. Use this information to inform your response.
-
-${contextParts.join('\n\n---\n\n')}`,
-    images,
-  };
-}
+// Note: buildContextFromMentions is now imported from ./context-injection
+// This centralizes the context building logic for consistency across AI features
 
 /**
  * Build system prompt from client context, content type, and writing frameworks
@@ -1167,14 +936,21 @@ export async function sendMessage(
       }
     });
 
-    // Build context from mentions if present
+    // Build context from mentions if present using shared function
     let userMessageContent = data.content;
     let contextImages: Array<{ base64: string; mediaType: string }> = [];
     if (data.mentions?.length) {
-      const { text: contextText, images } = await buildContextFromMentions(supabase, data.mentions);
-      contextImages = images;
-      if (contextText) {
-        userMessageContent = `${contextText}\n\n---\n\nUSER REQUEST:\n${data.content}`;
+      // Convert mentions to ContextMention format for the shared function
+      const contextMentions: ContextMention[] = data.mentions.map(m => ({
+        type: m.type as ContextMention['type'],
+        id: m.id,
+        name: m.name,
+      }));
+      
+      const builtContext = await buildContextFromMentions(contextMentions);
+      contextImages = builtContext.images;
+      if (builtContext.text) {
+        userMessageContent = `${builtContext.text}\n\n---\n\nUSER REQUEST:\n${data.content}`;
       }
     }
 
