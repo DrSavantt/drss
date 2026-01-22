@@ -1,11 +1,13 @@
 'use client'
 
-import { useState, useEffect, useMemo, useTransition } from 'react'
-import { Plus, Search, BookOpen, Loader2 } from 'lucide-react'
+import { useState, useEffect, useMemo } from 'react'
+import { Plus, Search, Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { Textarea } from '@/components/ui/textarea'
 import { PageCard, PageCardSkeleton, type PageCardData } from './page-card'
-import { getRootPagesWithPreview } from '@/app/actions/journal-pages'
+import { getRootPagesWithPreview, createQuickCapture } from '@/app/actions/journal-pages'
+import { toast } from 'sonner'
 
 // ============================================================================
 // TYPES
@@ -37,6 +39,46 @@ export function PageLibrary({
   const [loading, setLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState('')
   const [error, setError] = useState<string | null>(null)
+  
+  // Quick capture state
+  const [captureContent, setCaptureContent] = useState('')
+  const [isSaving, setIsSaving] = useState(false)
+
+  // Quick capture handler
+  const handleQuickCapture = async () => {
+    const content = captureContent.trim()
+    if (!content || isSaving) return
+    
+    setIsSaving(true)
+    try {
+      const result = await createQuickCapture(content)
+      setCaptureContent('')
+      
+      // Refresh pages list
+      const rootPages = await getRootPagesWithPreview()
+      setPages(rootPages)
+      
+      toast.success('Capture saved', {
+        description: result.title,
+        action: {
+          label: 'Open',
+          onClick: () => onSelectPage(result.id)
+        }
+      })
+    } catch (err) {
+      console.error('Failed to create capture:', err)
+      toast.error('Failed to save capture')
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault()
+      handleQuickCapture()
+    }
+  }
 
   // Fetch pages on mount
   useEffect(() => {
@@ -197,6 +239,36 @@ export function PageLibrary({
             </>
           )}
         </Button>
+      </div>
+
+      {/* Quick Capture Input */}
+      <div className="mb-6">
+        <div className="relative">
+          <Textarea
+            value={captureContent}
+            onChange={(e) => setCaptureContent(e.target.value)}
+            onKeyDown={handleKeyDown}
+            placeholder="✏️ Quick capture... (Enter to save, Shift+Enter for new line)"
+            disabled={isSaving}
+            className="min-h-[70px] max-h-[150px] resize-none pr-12"
+            rows={2}
+          />
+          {isSaving && (
+            <div className="absolute right-3 top-3">
+              <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+            </div>
+          )}
+          {captureContent.length > 0 && !isSaving && (
+            <div className="absolute right-3 top-3 text-xs text-muted-foreground">
+              ↵
+            </div>
+          )}
+        </div>
+        {captureContent.length > 100 && (
+          <div className="text-right text-xs text-muted-foreground mt-1">
+            {captureContent.length} characters
+          </div>
+        )}
       </div>
 
       {/* Search */}

@@ -355,6 +355,63 @@ export async function getPageBreadcrumbs(pageId: string): Promise<PageBreadcrumb
 // ============================================================================
 
 /**
+ * Create a quick capture (fast note entry)
+ * Extracts title from first line (up to 50 chars) or uses "Quick Capture"
+ */
+export async function createQuickCapture(content: string): Promise<{ id: string; title: string }> {
+  const supabase = await createClient()
+  
+  if (!supabase) {
+    throw new Error('Database connection not configured')
+  }
+  
+  const { data: { user }, error: authError } = await supabase.auth.getUser()
+  if (authError || !user) {
+    throw new Error('Not authenticated')
+  }
+
+  // Extract title from first line (up to 50 chars) or use "Quick Capture"
+  const firstLine = content.split('\n')[0].trim()
+  const title = firstLine.length > 0 
+    ? firstLine.slice(0, 50) + (firstLine.length > 50 ? '...' : '')
+    : 'Quick Capture'
+
+  // Get next sort order for root pages
+  const { data: lastPage } = await supabase
+    .from('journal_entries')
+    .select('sort_order')
+    .eq('user_id', user.id)
+    .is('parent_id', null)
+    .is('deleted_at', null)
+    .order('sort_order', { ascending: false })
+    .limit(1)
+    .single()
+
+  const nextSortOrder = (lastPage?.sort_order ?? -1) + 1
+
+  const { data, error } = await supabase
+    .from('journal_entries')
+    .insert({
+      user_id: user.id,
+      title,
+      content: `<p>${content.replace(/\n/g, '</p><p>')}</p>`,
+      icon: '📝',
+      parent_id: null,
+      sort_order: nextSortOrder,
+    })
+    .select('id, title')
+    .single()
+
+  if (error) {
+    console.error('Failed to create quick capture:', error)
+    throw new Error('Failed to save capture')
+  }
+
+  revalidatePath('/dashboard/journal')
+  return data
+}
+
+/**
  * Create a new page
  */
 export async function createPage(
