@@ -350,7 +350,10 @@ export function ContentDetailClient({ content }: ContentDetailClientProps) {
                   projects={contextProjects}
                   contentAssets={contextContent}
                   journalEntries={contextJournal}
-                  writingFrameworks={contextFrameworks}
+                  writingFrameworks={contextFrameworks.map(f => ({
+                    ...f,
+                    category: f.category ?? undefined
+                  }))}
                 />
               </CardContent>
             </Card>

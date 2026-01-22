@@ -146,7 +146,8 @@ export function PageView({
       if (clientsRes.data) setContextClients(clientsRes.data)
       if (projectsRes.data) {
         // Map projects to include clientName
-        setContextProjects(projectsRes.data.map((p: { id: string; name: string; clients?: { name: string } | null }) => ({
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        setContextProjects(projectsRes.data.map((p: any) => ({
           id: p.id,
           name: p.name,
           clientName: p.clients?.name || null,
