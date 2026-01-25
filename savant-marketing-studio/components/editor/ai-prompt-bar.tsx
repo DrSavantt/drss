@@ -16,6 +16,7 @@ import { Button } from '@/components/ui/button'
 import { MultiEditPreview } from './multi-edit-preview'
 import { ContextPickerModal, type ContextItem, type ContextItemType } from '@/components/ai-chat/context-picker-modal'
 import { InlineMentionPopup, type InlineMentionPopupRef } from '@/components/ai-chat/inline-mention-popup'
+import { FrameworkSuggestions } from '@/components/ai-chat/framework-suggestions'
 
 // Rough token estimation: ~4 characters = 1 token
 function estimateTokens(text: string): number {
@@ -777,6 +778,15 @@ export function AIPromptBar({
           onAcceptOne={handleAcceptOne}
           onRejectOne={handleRejectOne}
           isLoading={isLoading}
+        />
+      )}
+      
+      {/* Framework Suggestions - only show when not in edit preview mode */}
+      {!pendingEdits && (
+        <FrameworkSuggestions
+          userMessage={value}
+          onSelectFramework={handleSelectContext}
+          disabled={isLoading}
         />
       )}
       

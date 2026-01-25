@@ -7,6 +7,7 @@ import { revalidatePath } from 'next/cache';
 import { logActivity } from '@/lib/activity-log';
 import type { Database, Json } from '@/types/database';
 import { buildContextFromMentions, type ContextMention } from './context-injection';
+import { searchFrameworks } from '@/lib/ai/rag';
 
 // ============================================================================
 // TYPE DEFINITIONS
@@ -936,9 +937,45 @@ export async function sendMessage(
       }
     });
 
-    // Build context from mentions if present using shared function
+    // ═══════════════════════════════════════════════════════════════════════
+    // AUTOMATIC RAG RETRIEVAL - Search for relevant frameworks
+    // ═══════════════════════════════════════════════════════════════════════
+    let ragContext = '';
+    let retrievedFrameworkIds: string[] = [];
+
+    // Only run RAG for substantive messages (skip greetings, short replies)
+    const shouldRunRag = data.content.length > 20 && 
+      !data.content.match(/^(hi|hello|hey|thanks|thank you|ok|okay|yes|no|sure|got it|sounds good)\.?$/i);
+
+    if (shouldRunRag) {
+      try {
+        // Search frameworks with 0.6 similarity threshold, top 5 results
+        const ragResults = await searchFrameworks(data.content, 0.6, 5);
+        
+        if (ragResults.length > 0) {
+          // Extract unique framework IDs for logging
+          retrievedFrameworkIds = [...new Set(ragResults.map(r => r.framework_id))];
+          
+          // Build context block from retrieved chunks
+          const frameworkChunks = ragResults.map((chunk) => 
+            `### Relevance: ${(chunk.similarity * 100).toFixed(0)}%\n${chunk.content}`
+          ).join('\n\n---\n\n');
+          
+          ragContext = `## Relevant Marketing Frameworks\n\nUse these proven frameworks to inform your response:\n\n${frameworkChunks}\n\n---\n\n`;
+          
+          console.log(`[RAG] Retrieved ${ragResults.length} chunks from ${retrievedFrameworkIds.length} frameworks for query: "${data.content.slice(0, 50)}..."`);
+        }
+      } catch (ragError) {
+        // Don't fail the whole request if RAG fails - just log and continue
+        console.error('[RAG] Framework search failed:', ragError);
+      }
+    }
+
+    // Build context from @mentions using shared function
     let userMessageContent = data.content;
     let contextImages: Array<{ base64: string; mediaType: string }> = [];
+    let mentionContext = '';
+    
     if (data.mentions?.length) {
       // Convert mentions to ContextMention format for the shared function
       const contextMentions: ContextMention[] = data.mentions.map(m => ({
@@ -949,9 +986,12 @@ export async function sendMessage(
       
       const builtContext = await buildContextFromMentions(contextMentions);
       contextImages = builtContext.images;
-      if (builtContext.text) {
-        userMessageContent = `${builtContext.text}\n\n---\n\nUSER REQUEST:\n${data.content}`;
-      }
+      mentionContext = builtContext.text;
+    }
+
+    // Combine RAG context + mention context + user request
+    if (ragContext || mentionContext) {
+      userMessageContent = `${ragContext}${mentionContext}${mentionContext ? '\n\n---\n\n' : ''}USER REQUEST:\n${data.content}`;
     }
 
     // Add new user message with context
@@ -976,7 +1016,11 @@ export async function sendMessage(
         model_id: modelId,
         task_type: 'chat_message',
         message_role: 'user',
-        input_data: { content: data.content, mentions: data.mentions || [] } as Json,
+        input_data: { 
+          content: data.content, 
+          mentions: data.mentions || [],
+          retrieved_framework_ids: retrievedFrameworkIds.length > 0 ? retrievedFrameworkIds : undefined,
+        } as Json,
         output_data: null,
         status: 'success',
         input_tokens: null,

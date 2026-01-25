@@ -1,5 +1,5 @@
 import { createClient } from '@/lib/supabase/server';
-import { generateEmbedding } from './embeddings';
+import { generateEmbedding, generateQueryEmbedding } from './embeddings';
 
 interface FrameworkChunk {
   id: number;
@@ -11,6 +11,7 @@ interface FrameworkChunk {
 /**
  * Search marketing frameworks using vector similarity
  * Returns relevant framework chunks based on semantic similarity to query
+ * Uses Gemini gemini-embedding-001 with RETRIEVAL_QUERY task type for optimal search
  */
 export async function searchFrameworks(
   query: string,
@@ -24,8 +25,8 @@ export async function searchFrameworks(
   }
 
   try {
-    // Generate embedding for query
-    const queryEmbedding = await generateEmbedding(query);
+    // Generate embedding for query (uses query-optimized task type)
+    const queryEmbedding = await generateQueryEmbedding(query);
     
     if (!queryEmbedding) {
       console.warn('Could not generate embedding for query');
@@ -121,7 +122,6 @@ export async function addFramework(
         content: chunk,
         chunk_index: i,
         embedding,
-        metadata: { name, category },
       });
     }
 

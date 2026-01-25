@@ -12,7 +12,17 @@ import { cn } from "@/lib/utils"
 // EXACT v0 CODE - Only data fetching added, UI unchanged
 // ============================================================================
 
-const categories = ["All", "Copywriting", "Email", "Ads", "Funnel", "Landing Page", "Social"]
+const categories = [
+  "All",
+  "Strategy",
+  "Formulas", 
+  "Templates",
+  "Story",
+  "Hooks",
+  "Prompts",
+  "Copywriting",
+  "Content Types",
+]
 
 interface Framework {
   id: string
@@ -169,6 +179,15 @@ function formatCategory(dbCategory: string | null): string {
   if (!dbCategory) return 'Copywriting'
   
   const categoryMap: Record<string, string> = {
+    // New categories (primary)
+    'strategy_framework': 'Strategy',
+    'copywriting_formula': 'Formulas',
+    'structure_template': 'Templates',
+    'story_framework': 'Story',
+    'hook_type': 'Hooks',
+    'prompt_template': 'Prompts',
+    'content-type': 'Content Types',
+    // Legacy categories (for backwards compatibility)
     'copywriting': 'Copywriting',
     'email': 'Email',
     'ads': 'Ads',
@@ -177,6 +196,6 @@ function formatCategory(dbCategory: string | null): string {
     'social': 'Social',
   }
   
-  return categoryMap[dbCategory.toLowerCase()] || 'Copywriting'
+  return categoryMap[dbCategory.toLowerCase()] || dbCategory
 }
 

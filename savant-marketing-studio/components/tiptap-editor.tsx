@@ -115,12 +115,25 @@ export function TiptapEditor({
   // Replace selection at specific position - for multi-selection support
   const replaceSelection = useCallback((from: number, to: number, newText: string) => {
     if (editor) {
+      const deletedSize = to - from
+      const docSizeBefore = editor.state.doc.content.size
+      
       editor.chain()
         .focus()
         .setTextSelection({ from, to })
         .deleteSelection()
         .insertContent(newText)
         .run()
+      
+      // Calculate and select the newly inserted content
+      const docSizeAfter = editor.state.doc.content.size
+      const insertedSize = docSizeAfter - docSizeBefore + deletedSize
+      
+      if (insertedSize > 0) {
+        editor.chain()
+          .setTextSelection({ from, to: from + insertedSize })
+          .run()
+      }
     }
   }, [editor])
 
@@ -325,6 +338,15 @@ export function TiptapEditor({
               setIsGenerating(true)
               
               try {
+                // Track position before insertion for post-insert selection
+                const insertPos = selectedText && selectionRange 
+                  ? selectionRange.from 
+                  : editor.state.selection.from > 0 
+                    ? editor.state.selection.from 
+                    : editor.state.doc.content.size
+                
+                const docSizeBefore = editor.state.doc.content.size
+                
                 // Fallback for single response (when not using multi-selection targeted replacement)
                 if (selectedText && selectedText.length > 0 && selectionRange) {
                   // Replace selected text with AI response
@@ -341,7 +363,19 @@ export function TiptapEditor({
                   }
                 }
                 
-                // Clear selection after insertion
+                // Calculate inserted content size and select it
+                const docSizeAfter = editor.state.doc.content.size
+                const deletedSize = selectedText?.length || 0
+                const insertedSize = docSizeAfter - docSizeBefore + deletedSize
+                
+                if (insertedSize > 0) {
+                  // Select the newly inserted content so user can see what was added
+                  editor.chain()
+                    .setTextSelection({ from: insertPos, to: insertPos + insertedSize })
+                    .run()
+                }
+                
+                // Clear selection state (but keep editor selection on new content)
                 setSelectedText('')
                 setSelectionRange(null)
               } catch (error) {

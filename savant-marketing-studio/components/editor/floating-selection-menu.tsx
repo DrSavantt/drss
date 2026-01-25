@@ -298,14 +298,29 @@ export function FloatingSelectionMenu({
   const handleAccept = () => {
     if (!pendingEdit || !editor) return;
     
+    const { from, to, suggested } = pendingEdit;
+    const deletedSize = to - from;
+    const docSizeBefore = editor.state.doc.content.size;
+    
     // Replace the selection with the suggested text
     editor
       .chain()
       .focus()
-      .setTextSelection({ from: pendingEdit.from, to: pendingEdit.to })
+      .setTextSelection({ from, to })
       .deleteSelection()
-      .insertContent(pendingEdit.suggested)
+      .insertContent(suggested)
       .run();
+    
+    // Calculate and select the newly inserted content
+    const docSizeAfter = editor.state.doc.content.size;
+    const insertedSize = docSizeAfter - docSizeBefore + deletedSize;
+    
+    if (insertedSize > 0) {
+      // Select the newly inserted content so user can see what was added
+      editor.chain()
+        .setTextSelection({ from, to: from + insertedSize })
+        .run();
+    }
     
     // Reset state
     setPendingEdit(null);

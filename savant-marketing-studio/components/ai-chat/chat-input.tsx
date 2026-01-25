@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button"
 import { ArrowUp, X, Brain, Plus, AlertTriangle } from "lucide-react"
 import { ContextPickerModal, type ContextItem } from "./context-picker-modal"
 import { InlineMentionPopup, type InlineMentionPopupRef } from "./inline-mention-popup"
+import { FrameworkSuggestions } from "./framework-suggestions"
 
 interface ChatInputProps {
   onSend: (content: string, context: ContextItem[], useExtendedThinking: boolean) => void
@@ -216,9 +217,26 @@ export function ChatInput({
     }
   }
 
+  // Handle framework suggestion selection
+  const handleFrameworkSelect = (item: ContextItem) => {
+    setSelectedContext(prev => {
+      if (prev.some(p => p.id === item.id && p.type === item.type)) {
+        return prev // Already exists
+      }
+      return [...prev, item]
+    })
+  }
+
   return (
     <>
       <div className="relative">
+        {/* Framework Suggestions - RAG-powered semantic search */}
+        <FrameworkSuggestions
+          userMessage={value}
+          onSelectFramework={handleFrameworkSelect}
+          disabled={disabled}
+        />
+
         {/* Context Pills - horizontal scroll on mobile, wrap on desktop */}
         {selectedContext.length > 0 && (
           <div className="mb-2 flex gap-2 overflow-x-auto scrollbar-hide max-w-full pb-1 md:flex-wrap md:overflow-visible">

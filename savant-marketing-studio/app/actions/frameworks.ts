@@ -268,9 +268,9 @@ async function generateFrameworkEmbeddings(frameworkId: string, content: string)
   const supabase = await createClient();
   if (!supabase) return;
   
-  // Check if OpenAI key exists
-  if (!process.env.OPENAI_API_KEY) {
-    console.warn('OPENAI_API_KEY not set - skipping embedding generation');
+  // Check if Google AI key exists (Gemini embeddings)
+  if (!process.env.GOOGLE_AI_API_KEY) {
+    console.warn('GOOGLE_AI_API_KEY not set - skipping embedding generation');
     return;
   }
 
@@ -342,6 +342,81 @@ function chunkText(text: string, maxChunkSize: number = 1000, overlap: number = 
   }
 
   return chunks;
+}
+
+// ============================================================================
+// RAG-BASED SEMANTIC SEARCH
+// ============================================================================
+
+export interface FrameworkSearchResult {
+  id: string;
+  name: string;
+  category: string | null;
+  description: string | null;
+  similarity: number;
+}
+
+/**
+ * Search frameworks using RAG semantic similarity
+ * Returns unique frameworks with their best similarity score
+ */
+export async function searchFrameworksByQuery(
+  query: string,
+  limit: number = 5
+): Promise<FrameworkSearchResult[]> {
+  const supabase = await createClient();
+  if (!supabase) return [];
+
+  // Import the RAG search function
+  const { searchFrameworks } = await import('@/lib/ai/rag');
+  
+  try {
+    // Get matching chunks (lower threshold for suggestions)
+    const chunks = await searchFrameworks(query, 0.5, limit * 2);
+    
+    if (!chunks || chunks.length === 0) {
+      return [];
+    }
+
+    // Get unique framework IDs with best similarity score
+    const frameworkScores = new Map<string, number>();
+    for (const chunk of chunks) {
+      const existing = frameworkScores.get(chunk.framework_id);
+      if (!existing || chunk.similarity > existing) {
+        frameworkScores.set(chunk.framework_id, chunk.similarity);
+      }
+    }
+
+    // Fetch framework details
+    const frameworkIds = Array.from(frameworkScores.keys());
+    const { data: frameworks, error } = await supabase
+      .from('marketing_frameworks')
+      .select('id, name, category, description')
+      .in('id', frameworkIds)
+      .is('deleted_at', null);
+
+    if (error || !frameworks) {
+      console.error('Failed to fetch framework details:', error);
+      return [];
+    }
+
+    // Combine with similarity scores and sort by score
+    const results: FrameworkSearchResult[] = frameworks
+      .map(f => ({
+        id: f.id,
+        name: f.name,
+        category: f.category,
+        description: f.description,
+        similarity: frameworkScores.get(f.id) || 0,
+      }))
+      .sort((a, b) => b.similarity - a.similarity)
+      .slice(0, limit);
+
+    return results;
+  } catch (error) {
+    console.error('Framework search failed:', error);
+    return [];
+  }
 }
 
 // Get framework categories for dropdown

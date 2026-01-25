@@ -6,7 +6,8 @@
     "dev": "next dev --turbopack",
     "build": "next build --turbopack",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "embed-frameworks": "tsx --env-file=.env.local scripts/generate-framework-embeddings.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.71.2",

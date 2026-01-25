@@ -9,5 +9,11 @@ export { ClaudeProvider } from './providers/claude';
 export { GeminiProvider } from './providers/gemini';
 
 export { searchFrameworks, getFrameworksByCategory, addFramework } from './rag';
-export { generateEmbedding, generateEmbeddings } from './embeddings';
+export { 
+  generateEmbedding, 
+  generateEmbeddings, 
+  generateQueryEmbedding,
+  getEmbeddingDimensions,
+  getEmbeddingModel,
+} from './embeddings';
 
