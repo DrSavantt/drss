@@ -52,11 +52,12 @@ async function generateEmbedding(text: string): Promise<number[] | null> {
   try {
     const model = genAI.getGenerativeModel({ model: EMBEDDING_MODEL });
     
+    // Note: outputDimensionality is supported by the API but not in SDK types
     const result = await model.embedContent({
       content: { parts: [{ text }], role: 'user' },
       taskType: TaskType.RETRIEVAL_DOCUMENT,
       outputDimensionality: EMBEDDING_DIMENSIONS,
-    });
+    } as Parameters<typeof model.embedContent>[0]);
     
     return result.embedding.values;
   } catch (error) {
