@@ -31,7 +31,14 @@ import {
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { sanitizeHtml } from "@/lib/utils/sanitize-html"
-import { performDeepResearch, generateResearchPlan, saveResearchToContent, getResearchHistory, deleteResearchFromContent, type ResearchResult } from "@/app/actions/research"
+import { performDeepResearch, generateResearchPlan, saveResearchToContent, getResearchHistory, deleteResearchFromContent, getResearchPromptTemplates, type ResearchResult } from "@/app/actions/research"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import { createGoogleDoc } from "@/app/actions/google-docs"
 import { getClientsForDropdown } from "@/app/actions/ai"
 import { reassignContentToClient } from "@/app/actions/content"
@@ -98,6 +105,10 @@ export default function DeepResearchPage() {
   const [selectedClientId, setSelectedClientId] = useState<string>('')
   const [savedAssetId, setSavedAssetId] = useState<string | null>(null)
   
+  // Prompt template state
+  const [templates, setTemplates] = useState<{ id: string; name: string; content: string }[]>([])
+  const [selectedTemplateId, setSelectedTemplateId] = useState<string>('none')
+  
   // Track intervals and timeouts for cleanup
   const intervalsRef = useRef<{ progress?: NodeJS.Timeout; update?: NodeJS.Timeout }>({})
   const timeoutRef = useRef<NodeJS.Timeout | null>(null)
@@ -119,6 +130,8 @@ export default function DeepResearchPage() {
     refreshHistory()
     // Fetch clients for dropdown
     getClientsForDropdown().then(setClients).catch(console.error)
+    // Fetch prompt templates for dropdown
+    getResearchPromptTemplates().then(setTemplates).catch(console.error)
   }, [refreshHistory])
   
   // Cleanup on unmount
@@ -198,6 +211,7 @@ export default function DeepResearchPage() {
         depth: mode,
         useWebSearch: true,
         clientId: selectedClientId || undefined,
+        promptTemplateId: selectedTemplateId === 'none' ? undefined : selectedTemplateId,
       })
 
       clearInterval(progressInterval)
@@ -261,6 +275,7 @@ export default function DeepResearchPage() {
     setSelectedHistoryId(null)
     setSelectedClientId('')
     setSavedAssetId(null)
+    setSelectedTemplateId('none')
   }
   
   // Save research to content library
@@ -448,6 +463,9 @@ export default function DeepResearchPage() {
               clients={clients}
               selectedClientId={selectedClientId}
               setSelectedClientId={setSelectedClientId}
+              templates={templates}
+              selectedTemplateId={selectedTemplateId}
+              setSelectedTemplateId={setSelectedTemplateId}
             />
           )}
 
@@ -497,7 +515,7 @@ export default function DeepResearchPage() {
 }
 
 // IDLE STATE - Chat Input
-function IdleState({ query, setQuery, mode, setMode, onSubmit, clients, selectedClientId, setSelectedClientId }: {
+function IdleState({ query, setQuery, mode, setMode, onSubmit, clients, selectedClientId, setSelectedClientId, templates, selectedTemplateId, setSelectedTemplateId }: {
   query: string
   setQuery: (q: string) => void
   mode: ResearchMode
@@ -506,6 +524,9 @@ function IdleState({ query, setQuery, mode, setMode, onSubmit, clients, selected
   clients: ClientDropdownItem[]
   selectedClientId: string
   setSelectedClientId: (id: string) => void
+  templates: { id: string; name: string; content: string }[]
+  selectedTemplateId: string
+  setSelectedTemplateId: (id: string) => void
 }) {
   const [showTools, setShowTools] = useState(false)
 
@@ -549,6 +570,29 @@ function IdleState({ query, setQuery, mode, setMode, onSubmit, clients, selected
             </option>
           ))}
         </select>
+      </div>
+
+      {/* Prompt Template Selector */}
+      <div className="mb-4">
+        <label className="block text-sm font-medium text-muted-foreground mb-2">
+          Research Template (optional)
+        </label>
+        <Select
+          value={selectedTemplateId}
+          onValueChange={setSelectedTemplateId}
+        >
+          <SelectTrigger className="w-full rounded-xl">
+            <SelectValue placeholder="General Research (No Template)" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="none">General Research (No Template)</SelectItem>
+            {templates.map((template) => (
+              <SelectItem key={template.id} value={template.id}>
+                {template.name.replace(' Prompt', '')}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
 
       {/* Chat Input */}

@@ -37,11 +37,15 @@ export interface ClientContext {
  * Perform REAL web research using Gemini's grounding feature
  * This actually searches the web and cites sources
  * Now supports client context for personalized research
+ * @param promptTemplate - Optional custom prompt template content
+ * @param frameworkContext - Optional RAG framework context to inform analysis
  */
 export async function performWebResearch(
   query: string,
   depth: 'quick' | 'standard' | 'comprehensive' = 'standard',
-  clientContext?: ClientContext
+  clientContext?: ClientContext,
+  promptTemplate?: string,
+  frameworkContext?: string
 ): Promise<WebResearchResult> {
   const apiKey = process.env.GOOGLE_AI_API_KEY;
   
@@ -85,8 +89,8 @@ export async function performWebResearch(
     model: modelName,
   });
 
-  // Build research prompt based on depth (with optional client context)
-  const researchPrompt = buildResearchPrompt(query, depth, clientContext);
+  // Build research prompt based on depth (with optional client context, template, and framework context)
+  const researchPrompt = buildResearchPrompt(query, depth, clientContext, promptTemplate, frameworkContext);
 
   try {
     // googleSearch tool enables real web search (formerly googleSearchRetrieval)
@@ -164,12 +168,48 @@ export async function performWebResearch(
 
 /**
  * Build research prompt based on depth, with optional client context for personalization
+ * @param promptTemplate - Optional custom prompt template (replaces default structure)
+ * @param frameworkContext - Optional RAG framework context to inform analysis
  */
 function buildResearchPrompt(
   query: string, 
   depth: 'quick' | 'standard' | 'comprehensive',
-  clientContext?: ClientContext
+  clientContext?: ClientContext,
+  promptTemplate?: string,
+  frameworkContext?: string
 ): string {
+  
+  // If custom template provided, use it as the base
+  if (promptTemplate) {
+    let prompt = promptTemplate;
+    
+    // Replace placeholder variables if they exist in template
+    prompt = prompt.replace(/\{topic\}/gi, query);
+    prompt = prompt.replace(/\{query\}/gi, query);
+    
+    // Add client context if available
+    if (clientContext) {
+      const contextLines = [
+        `Business Name: ${clientContext.name}`,
+        clientContext.industry ? `Industry: ${clientContext.industry}` : null,
+        clientContext.targetAudience ? `Target Audience: ${clientContext.targetAudience}` : null,
+        clientContext.brandVoice ? `Brand Voice/Tone: ${clientContext.brandVoice}` : null,
+        clientContext.goals ? `Business Goals: ${clientContext.goals}` : null,
+        clientContext.additionalContext ? `Additional Context: ${clientContext.additionalContext}` : null,
+      ].filter(Boolean).join('\n');
+      
+      prompt += `\n\n## Client Context\n${contextLines}`;
+    }
+    
+    // Add framework context if available
+    if (frameworkContext) {
+      prompt += `\n\n## Relevant Marketing Frameworks\nUse these frameworks to inform your analysis:\n${frameworkContext}`;
+    }
+    
+    return prompt;
+  }
+  
+  // Original logic for when no template provided
   const depthInstructions = {
     quick: `
 Provide a concise overview with:
@@ -225,7 +265,8 @@ IMPORTANT: Frame all findings, recommendations, and strategies specifically for 
 `;
   }
 
-  return `
+  // Build the default prompt
+  let prompt = `
 # Research Topic: ${query}
 
 ${depthInstructions[depth]}
@@ -234,6 +275,13 @@ Please search for current, reliable information and provide a well-researched re
 Cite your sources with [Source Name](URL) format throughout the response.
 Focus on recent information (last 2 years) when possible.
 `;
+
+  // Add framework context if available (for default prompts too)
+  if (frameworkContext) {
+    prompt += `\n\n## Relevant Marketing Frameworks\nUse these frameworks to inform your analysis:\n${frameworkContext}`;
+  }
+
+  return prompt;
 }
 
 /**

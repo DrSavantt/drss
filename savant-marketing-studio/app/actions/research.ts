@@ -1,7 +1,7 @@
 'use server';
 
 import { GoogleGenerativeAI } from '@google/generative-ai';
-import { searchFrameworks } from '@/lib/ai/rag';
+import { searchFrameworks, getFrameworksByCategory } from '@/lib/ai/rag';
 import { performWebResearch, WebSource, ClientContext } from '@/lib/ai/web-research';
 import { createClient } from '@/lib/supabase/server';
 import { revalidatePath } from 'next/cache';
@@ -22,6 +22,7 @@ export interface ResearchParams {
   clientId?: string;
   depth?: 'quick' | 'standard' | 'comprehensive';
   useWebSearch?: boolean; // NEW: Enable real web search via Gemini grounding
+  promptTemplateId?: string; // NEW: Optional prompt template from frameworks
 }
 
 export interface ResearchResult {
@@ -40,6 +41,18 @@ export interface ResearchResult {
     hasIntakeData: boolean;
     hasBrandData: boolean;
   };
+}
+
+/**
+ * Get available prompt templates for research
+ * Returns frameworks with category 'prompt_template'
+ */
+export async function getResearchPromptTemplates(): Promise<{
+  id: string;
+  name: string;
+  content: string;
+}[]> {
+  return await getFrameworksByCategory('prompt_template');
 }
 
 /**
@@ -166,7 +179,7 @@ Be specific and actionable. Focus on what's most important for this topic.`;
  * NEW: Can use real web search via Gemini grounding
  */
 export async function performDeepResearch(params: ResearchParams): Promise<ResearchResult> {
-  const { topic, clientId, depth = 'standard', useWebSearch = true } = params;
+  const { topic, clientId, depth = 'standard', useWebSearch = true, promptTemplateId } = params;
 
   const supabase = await createClient();
   if (!supabase) throw new Error('Supabase not configured');
@@ -235,6 +248,18 @@ export async function performDeepResearch(params: ResearchParams): Promise<Resea
     console.error('RAG search failed (continuing without framework context):', error);
   }
 
+  // PHASE 2.5: Fetch prompt template if specified
+  let promptTemplate: string | undefined;
+  if (promptTemplateId) {
+    try {
+      const templates = await getFrameworksByCategory('prompt_template');
+      const selected = templates.find(t => t.id === promptTemplateId);
+      promptTemplate = selected?.content;
+    } catch (error) {
+      console.error('Failed to fetch prompt template (continuing without):', error);
+    }
+  }
+
   // PHASE 3: Execute research - WEB SEARCH or AI-only
   let result: any;
   let webSources: WebSource[] | undefined;
@@ -245,7 +270,13 @@ export async function performDeepResearch(params: ResearchParams): Promise<Resea
   if (shouldUseWebSearch) {
     // Use REAL web search via Gemini grounding
     try {
-      const webResult = await performWebResearch(topic, depth, clientContextForResearch);
+      const webResult = await performWebResearch(
+        topic, 
+        depth, 
+        clientContextForResearch,
+        promptTemplate,      // NEW: template content
+        frameworkContext     // NEW: RAG framework context (bug fix - was built but never passed!)
+      );
       
       // Enhance web research with client context header if available
       let enhancedContent = webResult.content;
