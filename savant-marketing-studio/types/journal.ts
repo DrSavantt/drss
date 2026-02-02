@@ -1,26 +1,12 @@
 /**
  * Journal System Types
  * 
- * Types for journal entries, chats, folders, and nested pages (Notion-style).
+ * Types for journal entries, chats, and nested pages (Notion-style).
  */
 
 // ============================================================================
 // BASE TYPES (matching database schema)
 // ============================================================================
-
-/**
- * Journal folder from database
- */
-export interface JournalFolder {
-  id: string
-  user_id: string
-  name: string
-  color: string | null
-  position: number | null
-  parent_id: string | null  // NULL = root folder
-  created_at: string | null
-  updated_at: string | null
-}
 
 /**
  * Journal chat from database
@@ -65,67 +51,7 @@ export interface JournalEntry {
 }
 
 // ============================================================================
-// TREE TYPES (for UI rendering)
-// ============================================================================
-
-/**
- * Folder tree node for hierarchical UI rendering
- * Extends JournalFolder with computed fields for tree display
- */
-export interface JournalFolderTreeNode extends JournalFolder {
-  /** Child folders */
-  children: JournalFolderTreeNode[]
-  /** Number of chats directly in this folder */
-  chat_count: number
-  /** Depth in tree (0 = root) */
-  depth: number
-  /** Whether folder is expanded in UI */
-  isExpanded?: boolean
-}
-
-/**
- * Breadcrumb item for folder navigation
- */
-export interface FolderBreadcrumb {
-  id: string
-  name: string
-}
-
-/**
- * Result from get_folder_path() database function
- */
-export interface FolderPathResult {
-  id: string
-  name: string
-  depth: number
-}
-
-/**
- * Result from get_folder_descendants() database function
- */
-export interface FolderDescendantResult {
-  id: string
-  name: string
-  parent_id: string | null
-  depth: number
-}
-
-/**
- * Result from get_folder_tree() database function
- */
-export interface FolderTreeResult {
-  id: string
-  name: string
-  color: string | null
-  sort_position: number | null  // Aliased from "position" in DB (reserved word)
-  parent_id: string | null
-  created_at: string | null
-  updated_at: string | null
-  chat_count: number
-}
-
-// ============================================================================
-// NESTED PAGES TYPES (Notion-style)
+// PAGE TYPES (Notion-style nested pages)
 // ============================================================================
 
 /**
@@ -245,81 +171,8 @@ export interface MovePageInput {
 }
 
 // ============================================================================
-// FORM/ACTION TYPES
-// ============================================================================
-
-/**
- * Input for creating a new folder
- */
-export interface CreateFolderInput {
-  name: string
-  color?: string
-  parentId?: string | null
-}
-
-/**
- * Input for updating a folder
- */
-export interface UpdateFolderInput {
-  name?: string
-  color?: string
-  position?: number
-}
-
-/**
- * Input for moving a folder to a new parent
- */
-export interface MoveFolderInput {
-  folderId: string
-  newParentId: string | null  // null = move to root
-}
-
-/**
- * Input for moving a chat to a folder
- */
-export interface MoveChatInput {
-  chatId: string
-  folderId: string | null  // null = remove from folder
-}
-
-// ============================================================================
-// UI STATE TYPES
-// ============================================================================
-
-/**
- * Folder expansion state for tree UI
- * Maps folder ID to expanded state
- */
-export type FolderExpansionState = Record<string, boolean>
-
-/**
- * Drag and drop data for folder/chat reordering
- */
-export interface DragDropData {
-  type: 'folder' | 'chat'
-  id: string
-  sourceParentId: string | null
-}
-
-/**
- * Drop target info
- */
-export interface DropTarget {
-  type: 'folder' | 'root'
-  id: string | null
-  position: 'before' | 'after' | 'inside'
-}
-
-// ============================================================================
 // HELPER TYPES
 // ============================================================================
-
-/**
- * Folder with its chats loaded
- */
-export interface FolderWithChats extends JournalFolder {
-  chats: JournalChat[]
-}
 
 /**
  * Chat with its entries loaded
@@ -328,37 +181,12 @@ export interface ChatWithEntries extends JournalChat {
   entries: JournalEntry[]
 }
 
-/**
- * Full folder tree node with chats
- */
-export interface FolderTreeNodeWithChats extends JournalFolderTreeNode {
-  chats: JournalChat[]
-}
-
 // ============================================================================
 // CONSTANTS
 // ============================================================================
 
-/** Maximum allowed folder nesting depth */
-export const MAX_FOLDER_DEPTH = 10
-
 /** Maximum allowed page nesting depth */
 export const MAX_PAGE_DEPTH = 10
-
-/** Default folder colors */
-export const FOLDER_COLORS = [
-  '#EF4444', // red
-  '#F97316', // orange
-  '#EAB308', // yellow
-  '#22C55E', // green
-  '#06B6D4', // cyan
-  '#3B82F6', // blue
-  '#8B5CF6', // violet
-  '#EC4899', // pink
-  '#6B7280', // gray
-] as const
-
-export type FolderColor = typeof FOLDER_COLORS[number]
 
 /** Common page icons (emoji) */
 export const PAGE_ICONS = [
