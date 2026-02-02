@@ -215,10 +215,6 @@ export async function getHelp(questionId: string): Promise<HelpContent | null> {
  * Returns global configuration (per-client overrides feature removed).
  */
 export async function getSectionsForClient(clientId: string): Promise<SectionConfig[]> {
-  console.log('=== getSectionsForClient CALLED ===')
-  console.log('clientId:', clientId)
-  console.log('timestamp:', new Date().toISOString())
-  
   const supabase = await createClient()
   
   if (!supabase) {
@@ -236,13 +232,6 @@ export async function getSectionsForClient(clientId: string): Promise<SectionCon
     console.error('[getSectionsForClient] Error fetching sections:', sectionsError)
     throw sectionsError
   }
-  
-  console.log('=== getSectionsForClient RESULT ===')
-  console.log('Sections received:', sections?.map(s => ({ 
-    id: s.id, 
-    title: s.title, 
-    sort_order: s.sort_order 
-  })))
   
   return sections || []
 }
@@ -331,12 +320,8 @@ export async function reorderSections(orderedIds: number[]) {
   fetch('http://127.0.0.1:7243/ingest/de6f83dd-b5e0-4c9a-99d4-d76568bc937c',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'questionnaire-config.ts:reorderSections:complete',message:'All updates complete',data:{},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H4'})}).catch(()=>{});
   // #endregion
   
-  console.log('=== reorderSections: Calling revalidatePath ===')
-  console.log('Revalidating: /dashboard/settings/questionnaire')
   revalidatePath('/dashboard/settings/questionnaire')
-  console.log('Revalidating: /form (layout)')
   revalidatePath('/form', 'layout') // Revalidate all form pages to reflect new order
-  console.log('=== reorderSections: Complete ===')
 }
 
 export async function addSection(section: Omit<SectionConfig, 'id' | 'sort_order' | 'created_at' | 'updated_at'>) {
@@ -371,7 +356,6 @@ export async function addSection(section: Omit<SectionConfig, 'id' | 'sort_order
 }
 
 export async function deleteSection(id: number) {
-  console.log('deleteSection called:', id)
   const supabase = getServiceClient()
   
   // This will cascade delete questions in the section

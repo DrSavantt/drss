@@ -28,6 +28,9 @@ import {
   BookOpen,
   PanelLeftClose,
   PanelLeft,
+  ChevronsUpDown,
+  X,
+  HelpCircle,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { sanitizeHtml } from "@/lib/utils/sanitize-html"
@@ -39,6 +42,17 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { Checkbox } from "@/components/ui/checkbox"
+import { Badge } from "@/components/ui/badge"
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
+import { Button } from "@/components/ui/button"
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
 import { createGoogleDoc } from "@/app/actions/google-docs"
 import { getClientsForDropdown } from "@/app/actions/ai"
 import { reassignContentToClient } from "@/app/actions/content"
@@ -107,7 +121,8 @@ export default function DeepResearchPage() {
   
   // Prompt template state
   const [templates, setTemplates] = useState<{ id: string; name: string; content: string }[]>([])
-  const [selectedTemplateId, setSelectedTemplateId] = useState<string>('none')
+  const [selectedTemplateIds, setSelectedTemplateIds] = useState<string[]>([])
+  const [previewTemplate, setPreviewTemplate] = useState<{ name: string; content: string } | null>(null)
   
   // Track intervals and timeouts for cleanup
   const intervalsRef = useRef<{ progress?: NodeJS.Timeout; update?: NodeJS.Timeout }>({})
@@ -143,13 +158,48 @@ export default function DeepResearchPage() {
     }
   }, [])
 
+  // Load from localStorage on mount
+  useEffect(() => {
+    const saved = localStorage.getItem('researchDraft')
+    if (saved) {
+      try {
+        const draft = JSON.parse(saved)
+        if (draft.query) setQuery(draft.query)
+        if (draft.selectedClientId) setSelectedClientId(draft.selectedClientId)
+        if (draft.selectedTemplateIds) setSelectedTemplateIds(draft.selectedTemplateIds)
+        if (draft.mode) setMode(draft.mode)
+      } catch (e) {
+        console.error('[Research] Failed to load draft:', e)
+      }
+    }
+  }, [])
+
+  // Save to localStorage when state changes
+  useEffect(() => {
+    // Only save if we're in idle or plan-ready phase (not during research)
+    if (phase === 'idle' || phase === 'plan-ready') {
+      const draft = {
+        query,
+        selectedClientId,
+        selectedTemplateIds,
+        mode,
+      }
+      localStorage.setItem('researchDraft', JSON.stringify(draft))
+    }
+  }, [query, selectedClientId, selectedTemplateIds, mode, phase])
+
   const handleStartPlanning = async () => {
     if (!query.trim()) return
     
     setPhase('planning')
     
     try {
-      const planResult = await generateResearchPlan(query, mode)
+      const planResult = await generateResearchPlan(
+        query, 
+        mode,
+        selectedTemplateIds.length > 0 ? selectedTemplateIds : undefined,
+        selectedClientId || undefined
+      )
       setPlan(planResult)
       setPhase('plan-ready')
     } catch (error) {
@@ -211,7 +261,7 @@ export default function DeepResearchPage() {
         depth: mode,
         useWebSearch: true,
         clientId: selectedClientId || undefined,
-        promptTemplateId: selectedTemplateId === 'none' ? undefined : selectedTemplateId,
+        promptTemplateIds: selectedTemplateIds.length > 0 ? selectedTemplateIds : undefined,
       })
 
       clearInterval(progressInterval)
@@ -265,17 +315,22 @@ export default function DeepResearchPage() {
   }
 
   const handleNewResearch = () => {
+    // Clear localStorage draft when starting fresh
+    localStorage.removeItem('researchDraft')
+    
     setPhase('idle')
     setQuery('')
     setPlan(null)
     setResult(null)
     setLiveUpdates([])
     setProgress(0)
+    setSelectedClientId('')
+    setSelectedTemplateIds([])
     setSaved(false)
     setSelectedHistoryId(null)
     setSelectedClientId('')
     setSavedAssetId(null)
-    setSelectedTemplateId('none')
+    setSelectedTemplateIds([])
   }
   
   // Save research to content library
@@ -464,8 +519,10 @@ export default function DeepResearchPage() {
               selectedClientId={selectedClientId}
               setSelectedClientId={setSelectedClientId}
               templates={templates}
-              selectedTemplateId={selectedTemplateId}
-              setSelectedTemplateId={setSelectedTemplateId}
+              selectedTemplateIds={selectedTemplateIds}
+              setSelectedTemplateIds={setSelectedTemplateIds}
+              previewTemplate={previewTemplate}
+              setPreviewTemplate={setPreviewTemplate}
             />
           )}
 
@@ -515,7 +572,7 @@ export default function DeepResearchPage() {
 }
 
 // IDLE STATE - Chat Input
-function IdleState({ query, setQuery, mode, setMode, onSubmit, clients, selectedClientId, setSelectedClientId, templates, selectedTemplateId, setSelectedTemplateId }: {
+function IdleState({ query, setQuery, mode, setMode, onSubmit, clients, selectedClientId, setSelectedClientId, templates, selectedTemplateIds, setSelectedTemplateIds, previewTemplate, setPreviewTemplate }: {
   query: string
   setQuery: (q: string) => void
   mode: ResearchMode
@@ -525,8 +582,10 @@ function IdleState({ query, setQuery, mode, setMode, onSubmit, clients, selected
   selectedClientId: string
   setSelectedClientId: (id: string) => void
   templates: { id: string; name: string; content: string }[]
-  selectedTemplateId: string
-  setSelectedTemplateId: (id: string) => void
+  selectedTemplateIds: string[]
+  setSelectedTemplateIds: (ids: string[]) => void
+  previewTemplate: { name: string; content: string } | null
+  setPreviewTemplate: (template: { name: string; content: string } | null) => void
 }) {
   const [showTools, setShowTools] = useState(false)
 
@@ -572,27 +631,134 @@ function IdleState({ query, setQuery, mode, setMode, onSubmit, clients, selected
         </select>
       </div>
 
-      {/* Prompt Template Selector */}
-      <div className="mb-4">
-        <label className="block text-sm font-medium text-muted-foreground mb-2">
-          Research Template (optional)
+      {/* Research Template Multi-Select */}
+      <div className="mb-4 space-y-2">
+        <label className="text-sm font-medium text-muted-foreground">
+          Research Templates (optional)
         </label>
-        <Select
-          value={selectedTemplateId}
-          onValueChange={setSelectedTemplateId}
-        >
-          <SelectTrigger className="w-full rounded-xl">
-            <SelectValue placeholder="General Research (No Template)" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="none">General Research (No Template)</SelectItem>
-            {templates.map((template) => (
-              <SelectItem key={template.id} value={template.id}>
-                {template.name.replace(' Prompt', '')}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button
+              variant="outline"
+              role="combobox"
+              className="w-full justify-between h-auto min-h-10 font-normal rounded-xl"
+            >
+              {selectedTemplateIds.length === 0 ? (
+                <span className="text-muted-foreground">Select templates...</span>
+              ) : (
+                <div className="flex flex-wrap gap-1 py-1">
+                  {selectedTemplateIds.map((id) => {
+                    const template = templates.find((t) => t.id === id);
+                    if (!template) return null;
+                    return (
+                      <Badge
+                        key={id}
+                        variant="secondary"
+                        className="text-xs"
+                      >
+                        {template.name.replace(' Prompt', '').replace(' Research', '')}
+                        <span
+                          role="button"
+                          tabIndex={0}
+                          className="ml-1 hover:text-destructive cursor-pointer"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setSelectedTemplateIds(selectedTemplateIds.filter(t => t !== id));
+                          }}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter' || e.key === ' ') {
+                              e.stopPropagation();
+                              setSelectedTemplateIds(selectedTemplateIds.filter(t => t !== id));
+                            }
+                          }}
+                        >
+                          <X className="h-3 w-3" />
+                        </span>
+                      </Badge>
+                    );
+                  })}
+                </div>
+              )}
+              <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-[400px] p-2" align="start">
+            <div className="space-y-1 max-h-64 overflow-y-auto">
+              {templates.map((template) => {
+                const isSelected = selectedTemplateIds.includes(template.id);
+                
+                return (
+                  <div
+                    key={template.id}
+                    className={cn(
+                      "flex items-center gap-3 p-2 rounded-md cursor-pointer transition-colors",
+                      "hover:bg-accent",
+                      isSelected && "bg-accent"
+                    )}
+                    onClick={() => {
+                      setSelectedTemplateIds(
+                        isSelected
+                          ? selectedTemplateIds.filter(id => id !== template.id)
+                          : [...selectedTemplateIds, template.id]
+                      );
+                    }}
+                  >
+                    <Checkbox
+                      checked={isSelected}
+                      className="pointer-events-none"
+                    />
+                    <span className="flex-1 text-sm">
+                      {template.name.replace(' Prompt', '')}
+                    </span>
+                    
+                    {/* Info Button - Opens Dialog */}
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setPreviewTemplate({ name: template.name, content: template.content });
+                      }}
+                      className="p-1 rounded hover:bg-background"
+                      title="View full template"
+                    >
+                      <HelpCircle className="h-4 w-4 text-muted-foreground hover:text-foreground transition-colors" />
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+            
+            {selectedTemplateIds.length > 0 && (
+              <>
+                <div className="border-t my-2" />
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="w-full text-xs text-muted-foreground"
+                  onClick={() => setSelectedTemplateIds([])}
+                >
+                  Clear all ({selectedTemplateIds.length} selected)
+                </Button>
+              </>
+            )}
+          </PopoverContent>
+        </Popover>
+        
+        {/* Template Preview Dialog */}
+        <Dialog open={!!previewTemplate} onOpenChange={(open) => !open && setPreviewTemplate(null)}>
+          <DialogContent className="max-w-2xl max-h-[80vh] overflow-hidden flex flex-col">
+            <DialogHeader>
+              <DialogTitle>{previewTemplate?.name}</DialogTitle>
+            </DialogHeader>
+            <div className="flex-1 overflow-y-auto pr-2">
+              <div className="prose prose-sm dark:prose-invert max-w-none">
+                <pre className="whitespace-pre-wrap text-sm font-mono bg-muted text-foreground p-4 rounded-lg overflow-x-auto">
+                  {previewTemplate?.content}
+                </pre>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
 
       {/* Chat Input */}

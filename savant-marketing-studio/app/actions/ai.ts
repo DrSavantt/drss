@@ -1,7 +1,8 @@
 'use server';
 
 import { AIOrchestrator, TaskComplexity } from '@/lib/ai/orchestrator';
-import { searchFrameworks } from '@/lib/ai/rag';
+import { getFrameworkContext } from '@/lib/ai/rag';
+import { extractClientContext, type ClientContext } from '@/lib/client-context';
 import { createClient } from '@/lib/supabase/server';
 import { revalidatePath } from 'next/cache';
 import { 
@@ -56,22 +57,51 @@ export async function generateContent(params: GenerateContentParams): Promise<Ge
     throw new Error('Client not found');
   }
 
-  // Search frameworks for relevant context (RAG)
-  let frameworkContext = '';
-  try {
-    const frameworkChunks = await searchFrameworks(customPrompt, 0.7, 5);
-    frameworkContext = frameworkChunks
-      .map(chunk => chunk.content)
-      .join('\n\n');
-  } catch (error) {
-    console.error('RAG search failed (continuing without framework context):', error);
+  // Build client context for placeholder replacement
+  let clientContextData: ClientContext | undefined;
+  if (client) {
+    clientContextData = extractClientContext(
+      client.name,
+      client.intake_responses as Record<string, unknown> | null,
+      client.brand_data as Record<string, unknown> | null
+    );
   }
 
-  // Build context-aware prompt
+  // Get framework context with category filtering and placeholder replacement
+  let frameworkContext = '';
+  try {
+    const { context } = await getFrameworkContext(customPrompt, {
+      purpose: 'content_generation',
+      clientContext: clientContextData,
+      maxFrameworks: 5,
+      threshold: 0.7
+    });
+    frameworkContext = context;
+  } catch (error) {
+    console.error('[RAG] Framework retrieval failed:', error);
+  }
+
+  // Build context-aware prompt with extracted client data (cleaner than raw JSON)
+  let clientContextSection = '';
+  if (clientContextData) {
+    const contextParts: string[] = [];
+    if (clientContextData.industry) contextParts.push(`Industry: ${clientContextData.industry}`);
+    if (clientContextData.targetAudience) contextParts.push(`Target Audience: ${clientContextData.targetAudience}`);
+    if (clientContextData.demographics) contextParts.push(`Demographics: ${clientContextData.demographics}`);
+    if (clientContextData.brandVoice) contextParts.push(`Brand Voice: ${clientContextData.brandVoice}`);
+    if (clientContextData.goals) contextParts.push(`Goals: ${clientContextData.goals}`);
+    if (clientContextData.problems) contextParts.push(`Problems: ${clientContextData.problems}`);
+    if (clientContextData.solution) contextParts.push(`Solution: ${clientContextData.solution}`);
+    if (clientContextData.uniqueValue) contextParts.push(`Unique Value: ${clientContextData.uniqueValue}`);
+    
+    if (contextParts.length > 0) {
+      clientContextSection = `CLIENT BRAND CONTEXT:\n${contextParts.join('\n')}`;
+    }
+  }
+
   const systemPrompt = `You are a professional copywriter generating ${contentType} content for "${client.name}".
 
-${client.brand_data ? `CLIENT BRAND CONTEXT:
-${JSON.stringify(client.brand_data, null, 2)}` : ''}
+${clientContextSection}
 
 ${frameworkContext ? `RELEVANT FRAMEWORKS:
 ${frameworkContext}` : ''}
@@ -444,9 +474,12 @@ export async function generateInlineEdit(
       }
     }
 
-    // Add client context if requested and available (and not already added via mentions)
+    // Build client context for placeholder replacement and prompt injection
+    let clientContextData: ClientContext | undefined;
     const clientAlreadyInMentions = context.mentions?.some(m => m.type === 'client' && m.id === context.clientId);
-    if (context.includeClientContext && context.clientId && !clientAlreadyInMentions) {
+    
+    // Fetch client data if we have a clientId (needed for both context display and framework placeholders)
+    if (context.clientId && !clientAlreadyInMentions) {
       const { data: client } = await supabase
         .from('clients')
         .select('name, brand_data, intake_responses')
@@ -454,29 +487,59 @@ export async function generateInlineEdit(
         .single();
 
       if (client) {
-        systemPrompt += `\n\nCLIENT BRAND CONTEXT for "${client.name}":`;
+        // Extract structured client context for placeholder replacement
+        clientContextData = extractClientContext(
+          client.name,
+          client.intake_responses as Record<string, unknown> | null,
+          client.brand_data as Record<string, unknown> | null
+        );
         
-        if (client.brand_data) {
-          systemPrompt += `\n${JSON.stringify(client.brand_data, null, 2)}`;
-        }
-        
-        if (client.intake_responses) {
-          systemPrompt += `\n\nClient Questionnaire Responses:\n${JSON.stringify(client.intake_responses, null, 2)}`;
+        // Add client context to prompt if requested
+        if (context.includeClientContext) {
+          systemPrompt += `\n\nCLIENT BRAND CONTEXT for "${client.name}":`;
+          
+          // Use extracted context fields instead of raw JSON for cleaner output
+          if (clientContextData.industry) {
+            systemPrompt += `\nIndustry: ${clientContextData.industry}`;
+          }
+          if (clientContextData.targetAudience) {
+            systemPrompt += `\nTarget Audience: ${clientContextData.targetAudience}`;
+          }
+          if (clientContextData.demographics) {
+            systemPrompt += `\nDemographics: ${clientContextData.demographics}`;
+          }
+          if (clientContextData.brandVoice) {
+            systemPrompt += `\nBrand Voice: ${clientContextData.brandVoice}`;
+          }
+          if (clientContextData.goals) {
+            systemPrompt += `\nGoals: ${clientContextData.goals}`;
+          }
+          if (clientContextData.problems) {
+            systemPrompt += `\nProblems: ${clientContextData.problems}`;
+          }
+          if (clientContextData.solution) {
+            systemPrompt += `\nSolution: ${clientContextData.solution}`;
+          }
+          if (clientContextData.uniqueValue) {
+            systemPrompt += `\nUnique Value: ${clientContextData.uniqueValue}`;
+          }
         }
       }
     }
 
-    // Add framework context if requested
-    if (context.frameworkId) {
-      try {
-        const frameworkChunks = await searchFrameworks(prompt, 0.7, 3);
-        if (frameworkChunks.length > 0) {
-          systemPrompt += `\n\nRELEVANT COPYWRITING FRAMEWORKS:\n`;
-          systemPrompt += frameworkChunks.map(chunk => chunk.content).join('\n\n');
-        }
-      } catch (error) {
-        console.error('Framework search failed:', error);
+    // Always retrieve relevant frameworks for content generation (unified pattern)
+    try {
+      const { context: fwContext } = await getFrameworkContext(prompt, {
+        purpose: 'content_generation',
+        clientContext: clientContextData,
+        maxFrameworks: 3,
+        threshold: 0.7
+      });
+      if (fwContext) {
+        systemPrompt += '\n\n' + fwContext;
       }
+    } catch (error) {
+      console.error('[RAG] Framework retrieval failed:', error);
     }
 
     // Add mention context to system prompt

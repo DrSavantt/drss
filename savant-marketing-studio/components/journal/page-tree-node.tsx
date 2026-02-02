@@ -103,14 +103,6 @@ export function PageTreeNode({
     }
   }
 
-  // Handle expand/collapse click (on chevron)
-  const handleToggleClick = (e: React.MouseEvent) => {
-    e.stopPropagation()
-    if (hasChildren) {
-      onToggleExpand(page.id)
-    }
-  }
-
   // Handle page name click (select page)
   const handleSelectClick = () => {
     onSelectPage(page.id)
@@ -139,7 +131,6 @@ export function PageTreeNode({
                 "flex h-6 w-6 shrink-0 items-center justify-center rounded hover:bg-accent",
                 !hasChildren && "invisible"
               )}
-              onClick={handleToggleClick}
               tabIndex={-1}
               aria-label={isExpanded ? 'Collapse page' : 'Expand page'}
             >

@@ -64,25 +64,15 @@ export default async function PublicFormPage({ params }: PageProps) {
   
   // Fetch questionnaire config WITH CLIENT-SPECIFIC OVERRIDES APPLIED
   // This ensures disabled sections/questions for this client are excluded
-  console.log('=== PUBLIC FORM: Fetching sections ===')
-  console.log('Token:', token)
-  console.log('Client ID:', client.id)
-  
   const [sections, questions] = await Promise.all([
     getSectionsForClient(client.id),
     getQuestionsForClient(client.id)
   ])
   
-  console.log('=== PUBLIC FORM: Raw sections from DB ===')
-  console.log(sections.map(s => ({ id: s.id, title: s.title, sort_order: s.sort_order })))
-  
   // Filter to enabled only (after overrides are applied)
   const enabledSections = sections
     .filter(s => s.enabled)
     .sort((a, b) => a.sort_order - b.sort_order)
-  
-  console.log('=== PUBLIC FORM: Enabled sections after sort ===')
-  console.log(enabledSections.map(s => ({ id: s.id, title: s.title, sort_order: s.sort_order })))
   
   const enabledQuestions = questions
     .filter(q => q.enabled)

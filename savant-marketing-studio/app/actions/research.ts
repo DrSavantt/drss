@@ -1,11 +1,29 @@
 'use server';
 
 import { GoogleGenerativeAI } from '@google/generative-ai';
-import { searchFrameworks, getFrameworksByCategory } from '@/lib/ai/rag';
-import { performWebResearch, WebSource, ClientContext } from '@/lib/ai/web-research';
+import { getRelevantFrameworks, formatFrameworksForPrompt, getFrameworksByCategory } from '@/lib/ai/rag';
+import { performWebResearch, WebSource } from '@/lib/ai/web-research';
+import { extractClientContext, ClientContext } from '@/lib/client-context';
 import { createClient } from '@/lib/supabase/server';
 import { revalidatePath } from 'next/cache';
 import { getModelIdFromName, getDefaultModelId } from '@/lib/ai/model-lookup';
+
+/**
+ * Safely convert a value to a string for prompt injection.
+ * Handles objects, arrays, null, undefined.
+ */
+function stringifyForPrompt(value: unknown): string | undefined {
+  if (value === null || value === undefined) {
+    return undefined;
+  }
+  if (typeof value === 'string') {
+    return value;
+  }
+  if (typeof value === 'object') {
+    return JSON.stringify(value, null, 2);
+  }
+  return String(value);
+}
 
 // Research phases for progress tracking
 export type ResearchPhase = 
@@ -22,7 +40,7 @@ export interface ResearchParams {
   clientId?: string;
   depth?: 'quick' | 'standard' | 'comprehensive';
   useWebSearch?: boolean; // NEW: Enable real web search via Gemini grounding
-  promptTemplateId?: string; // NEW: Optional prompt template from frameworks
+  promptTemplateIds?: string[]; // NEW: Optional prompt templates from frameworks (supports multi-select)
 }
 
 export interface ResearchResult {
@@ -57,16 +75,59 @@ export async function getResearchPromptTemplates(): Promise<{
 
 /**
  * Generate a research plan before execution (Gemini-style)
+ * Now supports templates and client context for more targeted plans
  */
 export async function generateResearchPlan(
   topic: string,
-  mode: 'quick' | 'standard' | 'comprehensive'
+  mode: 'quick' | 'standard' | 'comprehensive',
+  templateIds?: string[],
+  clientId?: string
 ): Promise<{ items: string[]; estimatedTime: string; estimatedSources: string }> {
   const supabase = await createClient();
   if (!supabase) throw new Error('Supabase not configured');
 
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error('User not authenticated');
+
+  // Fetch selected templates if provided
+  let templateContext = '';
+  if (templateIds && templateIds.length > 0) {
+    const allTemplates = await getFrameworksByCategory('prompt_template');
+    const selectedTemplates = allTemplates.filter(t => templateIds.includes(t.id));
+    
+    if (selectedTemplates.length > 0) {
+      templateContext = selectedTemplates
+        .map(t => `### ${t.name}\n${t.content}`)
+        .join('\n\n---\n\n');
+    }
+  }
+
+  // Fetch client context if provided
+  let clientContext = '';
+  if (clientId) {
+    const { data: client } = await supabase
+      .from('clients')
+      .select('name, intake_responses, brand_data')
+      .eq('id', clientId)
+      .single();
+    
+    if (client) {
+      const intake = client.intake_responses as Record<string, any> || {};
+      const brand = client.brand_data as Record<string, any> || {};
+      
+      // Build readable client context (not raw JSON dump)
+      const contextParts = [
+        `**Client:** ${client.name}`,
+        intake.industry ? `**Industry:** ${intake.industry}` : null,
+        intake.target_audience ? `**Target Audience:** ${intake.target_audience}` : null,
+        intake.business_goals ? `**Business Goals:** ${intake.business_goals}` : null,
+        brand.voice ? `**Brand Voice:** ${brand.voice}` : null,
+        intake.unique_value_proposition ? `**Value Proposition:** ${intake.unique_value_proposition}` : null,
+      ].filter(Boolean).join('\n');
+      
+      clientContext = contextParts;
+    }
+  }
 
   // Mode-specific configuration
   const modeConfig = {
@@ -90,11 +151,33 @@ export async function generateResearchPlan(
     },
   }[mode];
 
-  const planPrompt = `You are a research planning assistant. Create a focused research plan for this topic.
+  // Build enhanced prompt with context
+  let planPrompt = `You are a research planning assistant. Create a focused research plan for this topic.
 
 Topic: ${topic}
 Research Mode: ${mode}
+`;
 
+  if (clientContext) {
+    planPrompt += `
+## Client Context
+This research is for a specific client. Tailor the research plan to their needs:
+
+${clientContext}
+`;
+  }
+
+  if (templateContext) {
+    planPrompt += `
+## Research Templates to Follow
+Structure the research according to these templates. Use them to inform what questions to research:
+
+${templateContext}
+`;
+  }
+
+  planPrompt += `
+## Instructions
 Generate EXACTLY ${modeConfig.itemCount} specific subtopics or angles to research. Each should be a complete sentence describing what you'll investigate.
 
 ${modeConfig.instruction}
@@ -104,7 +187,7 @@ Format your response as a numbered list:
 2. [Second subtopic]
 etc.
 
-Be specific and actionable. Focus on what's most important for this topic.`;
+Be specific and actionable. Focus on what's most important for this topic${clientContext ? ' and this specific client' : ''}.`;
 
   // Use Gemini directly for plan generation (no Claude/orchestrator)
   const apiKey = process.env.GOOGLE_AI_API_KEY;
@@ -119,18 +202,20 @@ Be specific and actionable. Focus on what's most important for this topic.`;
     contents: [{ role: 'user', parts: [{ text: planPrompt }] }],
     generationConfig: {
       temperature: 0.7,
-      maxOutputTokens: 1024,
+      maxOutputTokens: 2048,
     }
   });
 
   const planText = geminiResult.response.text();
 
   // Parse the response into plan items
-  const lines = planText
-    .split('\n')
-    .map(line => line.trim())
-    .filter(line => /^\d+\./.test(line)) // Lines starting with numbers
-    .map(line => line.replace(/^\d+\.\s*/, '')); // Remove numbers
+  const allLines = planText.split('\n').map(line => line.trim());
+  
+  const numberedLines = allLines.filter(line => /^\d+\./.test(line));
+  
+  const lines = numberedLines
+    .map(line => line.replace(/^\d+\.\s*/, '')) // Remove numbers
+    .map(line => line.replace(/\*\*/g, '').trim()); // Strip markdown bold markers
 
   const items = lines.slice(0, modeConfig.itemCount); // Mode-specific count
 
@@ -179,7 +264,7 @@ Be specific and actionable. Focus on what's most important for this topic.`;
  * NEW: Can use real web search via Gemini grounding
  */
 export async function performDeepResearch(params: ResearchParams): Promise<ResearchResult> {
-  const { topic, clientId, depth = 'standard', useWebSearch = true, promptTemplateId } = params;
+  const { topic, clientId, depth = 'standard', useWebSearch = true, promptTemplateIds } = params;
 
   const supabase = await createClient();
   if (!supabase) throw new Error('Supabase not configured');
@@ -205,58 +290,65 @@ export async function performDeepResearch(params: ResearchParams): Promise<Resea
     if (client) {
       clientData = client;
       
-      // Extract context from intake_responses and brand_data for research prompt
-      const intake = (client.intake_responses as Record<string, any>) || {};
-      const brand = (client.brand_data as Record<string, any>) || {};
-      
       clientContext = {
         name: client.name,
         hasIntakeData: !!client.intake_responses,
         hasBrandData: !!client.brand_data,
       };
       
-      // Build rich context for research prompt personalization
-      clientContextForResearch = {
-        name: client.name,
-        industry: intake.industry || intake.business_type || brand.industry || undefined,
-        targetAudience: intake.target_audience || intake.ideal_customer || brand.target_audience || undefined,
-        brandVoice: intake.brand_voice || intake.communication_style || brand.voice || undefined,
-        goals: intake.business_goals || intake.objectives || brand.goals || undefined,
-        additionalContext: intake.unique_value_proposition || intake.differentiators || brand.positioning || undefined,
-      };
+      // Extract client context using proper nested field navigation
+      // This correctly navigates intake_responses.sections.* structure
+      clientContextForResearch = extractClientContext(
+        client.name,
+        client.intake_responses as Record<string, any> | null,
+        client.brand_data as Record<string, any> | null
+      );
     }
   }
 
   // PHASE 2: Search frameworks for relevant context (RAG)
+  // Now uses getRelevantFrameworks() to get FULL framework content, not chunks
   let frameworkContext = '';
   const frameworksUsed: string[] = [];
   
   try {
-    const matchCount = depth === 'comprehensive' ? 10 : depth === 'standard' ? 5 : 3;
-    const frameworkChunks = await searchFrameworks(topic, 0.65, matchCount);
+    // Determine how many frameworks to fetch based on depth
+    const frameworkCount = depth === 'comprehensive' ? 5 : depth === 'standard' ? 3 : 2;
     
-    if (frameworkChunks.length > 0) {
-      frameworkContext = frameworkChunks
-        .map(chunk => chunk.content)
-        .join('\n\n---\n\n');
+    // Get FULL framework content (not chunks) using RAG search
+    const relevantFrameworks = await getRelevantFrameworks(topic, 0.65, frameworkCount);
+    
+    if (relevantFrameworks.length > 0) {
+      // Format with placeholders filled using client context
+      // This replaces [DEMOGRAPHIC], [TARGET AUDIENCE], etc. with actual client data
+      frameworkContext = formatFrameworksForPrompt(relevantFrameworks, clientContextForResearch);
       
-      // Get unique framework IDs
-      const uniqueIds = [...new Set(frameworkChunks.map(c => c.framework_id))];
-      frameworksUsed.push(...uniqueIds);
+      // Track which frameworks were used
+      frameworksUsed.push(...relevantFrameworks.map(f => f.id));
     }
   } catch (error) {
     console.error('RAG search failed (continuing without framework context):', error);
   }
 
-  // PHASE 2.5: Fetch prompt template if specified
+  // PHASE 2.5: Fetch and combine prompt templates if selected
   let promptTemplate: string | undefined;
-  if (promptTemplateId) {
+  if (promptTemplateIds && promptTemplateIds.length > 0) {
     try {
-      const templates = await getFrameworksByCategory('prompt_template');
-      const selected = templates.find(t => t.id === promptTemplateId);
-      promptTemplate = selected?.content;
+      const allTemplates = await getFrameworksByCategory('prompt_template');
+      const selectedTemplates = allTemplates.filter(t => promptTemplateIds.includes(t.id));
+      
+      if (selectedTemplates.length === 1) {
+        // Single template - use as-is
+        promptTemplate = selectedTemplates[0].content;
+      } else if (selectedTemplates.length > 1) {
+        // Multiple templates - combine with headers
+        promptTemplate = `# Combined Research Framework\n\nThis research uses multiple templates:\n\n` +
+          selectedTemplates
+            .map(t => `## ${t.name}\n\n${t.content}`)
+            .join('\n\n---\n\n');
+      }
     } catch (error) {
-      console.error('Failed to fetch prompt template (continuing without):', error);
+      console.error('Failed to fetch prompt templates (continuing without):', error);
     }
   }
 

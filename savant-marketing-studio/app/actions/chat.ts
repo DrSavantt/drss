@@ -7,7 +7,8 @@ import { revalidatePath } from 'next/cache';
 import { logActivity } from '@/lib/activity-log';
 import type { Database, Json } from '@/types/database';
 import { buildContextFromMentions, type ContextMention } from './context-injection';
-import { searchFrameworks } from '@/lib/ai/rag';
+import { getFrameworkContext } from '@/lib/ai/rag';
+import { extractClientContext, type ClientContext } from '@/lib/client-context';
 
 // ============================================================================
 // TYPE DEFINITIONS
@@ -938,7 +939,7 @@ export async function sendMessage(
     });
 
     // ═══════════════════════════════════════════════════════════════════════
-    // AUTOMATIC RAG RETRIEVAL - Search for relevant frameworks
+    // AUTOMATIC RAG RETRIEVAL - Get relevant frameworks with full content
     // ═══════════════════════════════════════════════════════════════════════
     let ragContext = '';
     let retrievedFrameworkIds: string[] = [];
@@ -949,25 +950,42 @@ export async function sendMessage(
 
     if (shouldRunRag) {
       try {
-        // Search frameworks with 0.6 similarity threshold, top 5 results
-        const ragResults = await searchFrameworks(data.content, 0.6, 5);
+        // Build client context if a client is associated with this conversation
+        let clientContextData: ClientContext | undefined;
         
-        if (ragResults.length > 0) {
-          // Extract unique framework IDs for logging
-          retrievedFrameworkIds = [...new Set(ragResults.map(r => r.framework_id))];
+        if (conversation.client_id) {
+          const { data: clientData } = await supabase
+            .from('clients')
+            .select('name, intake_responses, brand_data')
+            .eq('id', conversation.client_id)
+            .single();
           
-          // Build context block from retrieved chunks
-          const frameworkChunks = ragResults.map((chunk) => 
-            `### Relevance: ${(chunk.similarity * 100).toFixed(0)}%\n${chunk.content}`
-          ).join('\n\n---\n\n');
-          
-          ragContext = `## Relevant Marketing Frameworks\n\nUse these proven frameworks to inform your response:\n\n${frameworkChunks}\n\n---\n\n`;
-          
-          console.log(`[RAG] Retrieved ${ragResults.length} chunks from ${retrievedFrameworkIds.length} frameworks for query: "${data.content.slice(0, 50)}..."`);
+          if (clientData) {
+            clientContextData = extractClientContext(
+              clientData.name,
+              clientData.intake_responses as Record<string, unknown> | null,
+              clientData.brand_data as Record<string, unknown> | null
+            );
+          }
         }
+
+        // Get framework context with category filtering for content generation
+        // Uses full framework content (not chunks) with placeholder replacement
+        const { context, frameworkIds } = await getFrameworkContext(
+          data.content, // user's message as search query
+          {
+            purpose: 'content_generation', // AI Chat is for generating content
+            clientContext: clientContextData,
+            maxFrameworks: 5,
+            threshold: 0.6
+          }
+        );
+        
+        ragContext = context;
+        retrievedFrameworkIds = frameworkIds;
       } catch (ragError) {
         // Don't fail the whole request if RAG fails - just log and continue
-        console.error('[RAG] Framework search failed:', ragError);
+        console.error('[RAG] Framework context retrieval failed:', ragError);
       }
     }
 

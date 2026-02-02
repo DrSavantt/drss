@@ -4,6 +4,7 @@
  */
 
 import { GoogleGenerativeAI } from '@google/generative-ai';
+import { ClientContext } from '@/lib/client-context';
 
 export interface WebSource {
   title: string;
@@ -20,18 +21,8 @@ export interface WebResearchResult {
   groundingSupport?: number; // How much of the response is grounded in search results (0-1)
 }
 
-/**
- * Client context for personalized research
- * Extracted from client's intake_responses and brand_data
- */
-export interface ClientContext {
-  name: string;
-  industry?: string;
-  targetAudience?: string;
-  brandVoice?: string;
-  goals?: string;
-  additionalContext?: string;
-}
+// ClientContext is imported from @/lib/client-context (single source of truth)
+// Uses fields: name, industry, targetAudience, brandVoice, goals, uniqueValue, problems, solution, demographics
 
 /**
  * Perform REAL web research using Gemini's grounding feature
@@ -95,6 +86,23 @@ export async function performWebResearch(
   try {
     // googleSearch tool enables real web search (formerly googleSearchRetrieval)
     
+    // Enable thinking mode for comprehensive research only
+    // Note: thinkingConfig is not in SDK types yet, using type assertion
+    const useThinking = depth === 'comprehensive';
+    
+    // Build generation config with optional thinking mode
+    const generationConfig = {
+      temperature: 0.7,
+      maxOutputTokens: maxTokens,
+      // Add thinking for comprehensive mode (Gemini 3 Pro)
+      // thinkingBudget: -1 means dynamic/automatic thinking
+      ...(useThinking && {
+        thinkingConfig: {
+          thinkingBudget: -1,  // -1 = dynamic, 0 = disable, or specific token count
+        }
+      })
+    };
+    
     let result;
     try {
       result = await model.generateContent({
@@ -105,10 +113,7 @@ export async function performWebResearch(
         tools: [{
           googleSearch: {}
         }] as any,  // Type assertion - SDK types don't include googleSearch yet
-        generationConfig: {
-          temperature: 0.7,
-          maxOutputTokens: maxTokens,
-        }
+        generationConfig: generationConfig as any,  // Type assertion for thinkingConfig
       });
     } catch (geminiError) {
       console.error('[WebResearch] Gemini API call FAILED:', {
@@ -178,7 +183,6 @@ function buildResearchPrompt(
   promptTemplate?: string,
   frameworkContext?: string
 ): string {
-  
   // If custom template provided, use it as the base
   if (promptTemplate) {
     let prompt = promptTemplate;
@@ -193,9 +197,12 @@ function buildResearchPrompt(
         `Business Name: ${clientContext.name}`,
         clientContext.industry ? `Industry: ${clientContext.industry}` : null,
         clientContext.targetAudience ? `Target Audience: ${clientContext.targetAudience}` : null,
+        clientContext.demographics ? `Demographics: ${clientContext.demographics}` : null,
         clientContext.brandVoice ? `Brand Voice/Tone: ${clientContext.brandVoice}` : null,
         clientContext.goals ? `Business Goals: ${clientContext.goals}` : null,
-        clientContext.additionalContext ? `Additional Context: ${clientContext.additionalContext}` : null,
+        clientContext.problems ? `Problems They Solve: ${clientContext.problems}` : null,
+        clientContext.solution ? `Solution/Methodology: ${clientContext.solution}` : null,
+        clientContext.uniqueValue ? `Unique Value: ${clientContext.uniqueValue}` : null,
       ].filter(Boolean).join('\n');
       
       prompt += `\n\n## Client Context\n${contextLines}`;
@@ -252,9 +259,12 @@ Cite all sources. Be extremely thorough. Include counterarguments where relevant
       `Business Name: ${clientContext.name}`,
       clientContext.industry ? `Industry: ${clientContext.industry}` : null,
       clientContext.targetAudience ? `Target Audience: ${clientContext.targetAudience}` : null,
+      clientContext.demographics ? `Demographics: ${clientContext.demographics}` : null,
       clientContext.brandVoice ? `Brand Voice/Tone: ${clientContext.brandVoice}` : null,
       clientContext.goals ? `Business Goals: ${clientContext.goals}` : null,
-      clientContext.additionalContext ? `Additional Context: ${clientContext.additionalContext}` : null,
+      clientContext.problems ? `Problems They Solve: ${clientContext.problems}` : null,
+      clientContext.solution ? `Solution/Methodology: ${clientContext.solution}` : null,
+      clientContext.uniqueValue ? `Unique Value: ${clientContext.uniqueValue}` : null,
     ].filter(Boolean).join('\n');
 
     clientSection = `
