@@ -38,6 +38,7 @@ export interface JournalEntry {
   mentioned_clients: string[] | null
   mentioned_projects: string[] | null
   mentioned_content: string[] | null
+  mentioned_pages: string[] | null  // Referenced journal pages via @mentions
   tags: string[] | null
   is_pinned: boolean | null
   is_converted: boolean | null
@@ -133,6 +134,7 @@ export interface JournalPage {
   mentioned_clients: string[] | null
   mentioned_projects: string[] | null
   mentioned_content: string[] | null
+  mentioned_pages: string[] | null  // Referenced journal pages via @mentions
   is_pinned: boolean | null
   is_converted: boolean | null
   converted_to_content_id: string | null

@@ -70,27 +70,28 @@ export async function createJournalEntry(
   mentionedClients: string[],
   mentionedProjects: string[],
   mentionedContent: string[],
-  tags: string[]
-) {
+  tags: string[],
+  mentionedPages: string[] = []
+): Promise<{ success: boolean; data?: any; error?: string }> {
   const supabase = await createClient()
 
   if (!supabase) {
-    throw new Error('Database connection not configured')
+    return { success: false, error: 'Database connection not configured' }
   }
 
   // Get current user - REQUIRED for user_id
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) {
-    throw new Error('Not authenticated')
+    return { success: false, error: 'Not authenticated' }
   }
 
   // Validate required fields
   if (!content || !content.trim()) {
-    throw new Error('Content is required')
+    return { success: false, error: 'Content is required' }
   }
 
   if (!chatId) {
-    throw new Error('Chat ID is required')
+    return { success: false, error: 'Chat ID is required' }
   }
 
   const { data, error } = await supabase
@@ -102,15 +103,21 @@ export async function createJournalEntry(
       mentioned_clients: mentionedClients || [],
       mentioned_projects: mentionedProjects || [],
       mentioned_content: mentionedContent || [],
+      mentioned_pages: mentionedPages || [],
       tags: tags || []
     })
     .select()
+    .single()
 
   if (error) {
-    throw error
+    console.error('Failed to create journal entry:', error)
+    return { success: false, error: error.message }
   }
 
   revalidatePath('/dashboard/journal')
+  revalidatePath('/dashboard')
+
+  return { success: true, data }
 }
 
 export async function deleteJournalEntry(id: string) {
@@ -716,7 +723,8 @@ export async function updateJournalEntry(
   mentionedClients: string[] = [],
   mentionedProjects: string[] = [],
   mentionedContent: string[] = [],
-  tags: string[] = []
+  tags: string[] = [],
+  mentionedPages: string[] = []
 ) {
   const supabase = await createClient()
 
@@ -737,6 +745,7 @@ export async function updateJournalEntry(
       mentioned_clients: mentionedClients,
       mentioned_projects: mentionedProjects,
       mentioned_content: mentionedContent,
+      mentioned_pages: mentionedPages,
       tags,
       updated_at: new Date().toISOString(),
     })

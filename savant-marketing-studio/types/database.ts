@@ -630,6 +630,7 @@ export type Database = {
           is_pinned: boolean | null
           mentioned_clients: string[] | null
           mentioned_content: string[] | null
+          mentioned_pages: string[] | null
           mentioned_projects: string[] | null
           parent_id: string | null
           sort_order: number | null
@@ -652,6 +653,7 @@ export type Database = {
           is_pinned?: boolean | null
           mentioned_clients?: string[] | null
           mentioned_content?: string[] | null
+          mentioned_pages?: string[] | null
           mentioned_projects?: string[] | null
           parent_id?: string | null
           sort_order?: number | null
@@ -674,6 +676,7 @@ export type Database = {
           is_pinned?: boolean | null
           mentioned_clients?: string[] | null
           mentioned_content?: string[] | null
+          mentioned_pages?: string[] | null
           mentioned_projects?: string[] | null
           parent_id?: string | null
           sort_order?: number | null

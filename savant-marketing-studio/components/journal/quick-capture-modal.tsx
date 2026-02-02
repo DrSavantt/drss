@@ -359,28 +359,33 @@ export function QuickCaptureModal({
         ...linkedEntities.filter(e => e.type === "content").map(e => e.id)
       ]))
 
-      // Note: pageIds are tracked but createJournalEntry doesn't support mentioned_pages yet
-      // This will need to be added in a follow-up update
-      // const pageIds = Array.from(new Set([
-      //   ...mentionIds.pageIds,
-      //   ...linkedEntities.filter(e => e.type === "page").map(e => e.id)
-      // ]))
+      const pageIds = Array.from(new Set([
+        ...mentionIds.pageIds,
+        ...linkedEntities.filter(e => e.type === "page").map(e => e.id)
+      ]))
 
       // Create entry via server action
-      await createJournalEntry(
+      const result = await createJournalEntry(
         content.trim(),
         inboxId,
         clientIds,
         projectIds,
         contentIds,
-        tags
+        tags,
+        pageIds
       )
+
+      if (!result.success) {
+        toast.error(result.error || "Failed to save capture")
+        return
+      }
 
       toast.success("Captured!")
       
-      // Note: createJournalEntry doesn't return the entry, so we can't pass it to onSuccess
-      // If needed, this can be updated when the action is modified to return data
-      onSuccess?.({} as JournalEntry)
+      // Pass created entry to onSuccess callback
+      if (result.data) {
+        onSuccess?.(result.data as JournalEntry)
+      }
       onClose()
     } catch (error) {
       console.error("Failed to create journal entry:", error)

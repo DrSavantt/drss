@@ -311,6 +311,7 @@ export async function getPage(pageId: string): Promise<JournalPage | null> {
     mentioned_clients: page.mentioned_clients,
     mentioned_projects: page.mentioned_projects,
     mentioned_content: page.mentioned_content,
+    mentioned_pages: page.mentioned_pages || null,
     is_pinned: page.is_pinned,
     is_converted: page.is_converted,
     converted_to_content_id: page.converted_to_content_id,
