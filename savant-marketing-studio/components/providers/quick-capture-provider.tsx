@@ -2,7 +2,6 @@
 
 import { createContext, useContext, useState, useEffect, useCallback } from "react"
 import { QuickCaptureModal } from "@/components/journal/quick-capture-modal"
-import type { JournalEntry } from "@/types/journal"
 
 interface QuickCaptureContextType {
   openQuickCapture: (defaultMentions?: {
@@ -27,7 +26,7 @@ export function useQuickCapture() {
 
 interface QuickCaptureProviderProps {
   children: React.ReactNode
-  onSuccess?: (entry: JournalEntry) => void
+  onSuccess?: (entry: { id: string; title: string }) => void
 }
 
 export function QuickCaptureProvider({ children, onSuccess }: QuickCaptureProviderProps) {
