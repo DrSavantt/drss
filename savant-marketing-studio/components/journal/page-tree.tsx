@@ -32,6 +32,8 @@ interface PageTreeProps {
   className?: string
   /** Callback for refreshing tree (optional) */
   onTreeRefresh?: () => void
+  /** Optional: Filter to only show pages with these IDs (and their parent chain) */
+  filteredPageIds?: string[] | null
 }
 
 // ============================================================================
@@ -110,6 +112,58 @@ function filterPages(
   }, [])
 }
 
+/** Filter pages by ID set (for tag filtering) - maintains tree structure */
+function filterPagesByIds(
+  nodes: JournalPageTreeNode[],
+  allowedIds: Set<string>
+): JournalPageTreeNode[] {
+  return nodes.reduce<JournalPageTreeNode[]>((acc, node) => {
+    const filteredChildren = filterPagesByIds(node.children, allowedIds)
+    
+    // Include this node if it's in the allowed set OR has children that are
+    if (allowedIds.has(node.id) || filteredChildren.length > 0) {
+      acc.push({
+        ...node,
+        children: filteredChildren,
+      })
+    }
+    return acc
+  }, [])
+}
+
+/** Get parent IDs that need to be expanded to show filtered pages */
+function getParentIdsToExpand(
+  nodes: JournalPageTreeNode[],
+  targetIds: Set<string>,
+  parentId: string | null = null
+): string[] {
+  const toExpand: string[] = []
+  
+  for (const node of nodes) {
+    // Check if any of this node's descendants are in the target set
+    const hasTargetDescendant = hasDescendantInSet(node.children, targetIds)
+    
+    if (hasTargetDescendant && node.children.length > 0) {
+      toExpand.push(node.id)
+      toExpand.push(...getParentIdsToExpand(node.children, targetIds, node.id))
+    }
+  }
+  
+  return toExpand
+}
+
+/** Check if any descendant is in the target set */
+function hasDescendantInSet(
+  nodes: JournalPageTreeNode[],
+  targetIds: Set<string>
+): boolean {
+  for (const node of nodes) {
+    if (targetIds.has(node.id)) return true
+    if (hasDescendantInSet(node.children, targetIds)) return true
+  }
+  return false
+}
+
 // ============================================================================
 // COMPONENT
 // ============================================================================
@@ -119,6 +173,7 @@ export function PageTree({
   onSelectPage,
   className,
   onTreeRefresh,
+  filteredPageIds,
 }: PageTreeProps) {
   const [pages, setPages] = useState<JournalPageTreeNode[]>([])
   const [expandedPages, setExpandedPages] = useState<Set<string>>(new Set())
@@ -277,7 +332,13 @@ export function PageTree({
     }
   }, [pages, expandedPages])
 
-  const displayedPages = filterPages(pages, searchQuery)
+  // Apply search filter first
+  const searchFilteredPages = filterPages(pages, searchQuery)
+  
+  // Then apply tag filter if present
+  const displayedPages = filteredPageIds 
+    ? filterPagesByIds(searchFilteredPages, new Set(filteredPageIds))
+    : searchFilteredPages
 
   // Expand all matching pages when searching
   useEffect(() => {
@@ -286,6 +347,17 @@ export function PageTree({
       setExpandedPages(new Set(allIds))
     }
   }, [searchQuery])
+  
+  // Auto-expand parents when tag filter is applied
+  useEffect(() => {
+    if (filteredPageIds && filteredPageIds.length > 0) {
+      const targetSet = new Set(filteredPageIds)
+      const parentsToExpand = getParentIdsToExpand(pages, targetSet)
+      if (parentsToExpand.length > 0) {
+        setExpandedPages(prev => new Set([...prev, ...parentsToExpand]))
+      }
+    }
+  }, [filteredPageIds, pages])
 
   // Find page to delete for dialog
   const pageToDelete = deletePageId ? findPageById(pages, deletePageId) : null
@@ -360,6 +432,10 @@ export function PageTree({
         ) : searchQuery ? (
           <div className="py-8 text-center text-sm text-muted-foreground">
             No pages match "{searchQuery}"
+          </div>
+        ) : filteredPageIds ? (
+          <div className="py-8 text-center text-sm text-muted-foreground">
+            No pages with this tag
           </div>
         ) : (
           <div className="py-8 text-center text-sm text-muted-foreground">

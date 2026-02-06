@@ -271,7 +271,7 @@ async function ProjectDetailLoader({ id }: { id: string }) {
       />
       
       {/* Content Assets Section */}
-      <ProjectContent projectId={project.id} content={contentItems} />
+      <ProjectContent projectId={project.id} clientId={project.client_id} content={contentItems} />
       
       {/* AI Generations Section */}
       <ProjectAIGenerations projectId={project.id} aiGenerations={aiGenerations} />

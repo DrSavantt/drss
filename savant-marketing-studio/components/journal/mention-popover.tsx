@@ -237,7 +237,7 @@ export function MentionPopover({
           exit={{ opacity: 0, y: 8, scale: 0.96 }}
           transition={{ duration: 0.15, ease: "easeOut" }}
           className={cn(
-            "mention-popup absolute z-50 w-72 bg-card border border-border rounded-lg shadow-xl overflow-hidden",
+            "mention-popup z-50 min-w-[400px] bg-card/95 backdrop-blur-sm border border-border rounded-xl shadow-2xl overflow-hidden",
             className
           )}
           style={
@@ -251,9 +251,9 @@ export function MentionPopover({
         >
           {/* Search Input (optional) */}
           {showSearchInput && (
-            <div className="px-3 py-2 border-b border-border bg-muted/50">
+            <div className="px-4 py-3 border-b border-border bg-muted/30">
               <div className="relative">
-                <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <input
                   ref={searchInputRef}
                   type="text"
@@ -261,7 +261,7 @@ export function MentionPopover({
                   onChange={(e) => onSearchChange(e.target.value)}
                   onKeyDown={handleKeyDown}
                   placeholder="Search..."
-                  className="w-full pl-7 pr-2 py-1.5 text-sm bg-background border border-border rounded-md focus:outline-none focus:ring-1 focus:ring-primary"
+                  className="w-full pl-8 pr-3 py-2 text-sm bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/50"
                   aria-label="Search mentions"
                 />
               </div>
@@ -270,20 +270,20 @@ export function MentionPopover({
 
           {/* Header (when no search input) */}
           {!showSearchInput && (
-            <div className="px-3 py-2 border-b border-border bg-muted/50">
-              <span className="text-xs text-muted-foreground">
+            <div className="px-4 py-2.5 border-b border-border bg-muted/30">
+              <span className="text-xs font-medium text-muted-foreground">
                 {searchQuery ? `Searching "${searchQuery}"` : "Link to..."}
               </span>
             </div>
           )}
 
           {/* Categories */}
-          <div className="max-h-64 overflow-y-auto">
+          <div className="max-h-[360px] overflow-y-auto">
             {/* Clients Section */}
             {filteredClients.length > 0 && (
               <div role="group" aria-label="Clients">
-                <div className="px-3 py-1.5 text-xs font-medium text-muted-foreground flex items-center gap-2 bg-background/50 sticky top-0">
-                  <Users className="w-3 h-3" />
+                <div className="px-4 py-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-2 bg-muted/50 sticky top-0 border-b border-border/50">
+                  <Users className="w-3.5 h-3.5" />
                   Clients
                 </div>
                 {filteredClients.map((client, idx) => {
@@ -297,13 +297,13 @@ export function MentionPopover({
                       onClick={() => onSelectClient(client)}
                       onMouseEnter={() => setSelectedIndex(globalIdx)}
                       className={cn(
-                        "w-full px-3 py-2 text-left text-sm flex items-center gap-2 transition-colors",
+                        "w-full px-4 py-2.5 text-left text-sm flex items-center gap-3 transition-colors",
                         selectedIndex === globalIdx
                           ? "bg-primary/10 text-primary"
-                          : "hover:bg-muted"
+                          : "hover:bg-muted/70"
                       )}
                     >
-                      <span className="w-2 h-2 rounded-full bg-cyan-400 flex-shrink-0" />
+                      <span className="w-2.5 h-2.5 rounded-full bg-cyan-400 flex-shrink-0" />
                       <span className="text-foreground truncate">{client.name}</span>
                     </button>
                   )
@@ -314,8 +314,8 @@ export function MentionPopover({
             {/* Projects Section */}
             {filteredProjects.length > 0 && (
               <div role="group" aria-label="Projects">
-                <div className="px-3 py-1.5 text-xs font-medium text-muted-foreground flex items-center gap-2 bg-background/50 sticky top-0">
-                  <FolderKanban className="w-3 h-3" />
+                <div className="px-4 py-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-2 bg-muted/50 sticky top-0 border-b border-border/50">
+                  <FolderKanban className="w-3.5 h-3.5" />
                   Projects
                 </div>
                 {filteredProjects.map((project, idx) => {
@@ -329,13 +329,13 @@ export function MentionPopover({
                       onClick={() => onSelectProject(project)}
                       onMouseEnter={() => setSelectedIndex(globalIdx)}
                       className={cn(
-                        "w-full px-3 py-2 text-left text-sm flex items-center gap-2 transition-colors",
+                        "w-full px-4 py-2.5 text-left text-sm flex items-center gap-3 transition-colors",
                         selectedIndex === globalIdx
                           ? "bg-primary/10 text-primary"
-                          : "hover:bg-muted"
+                          : "hover:bg-muted/70"
                       )}
                     >
-                      <span className="w-2 h-2 rounded-full bg-green-400 flex-shrink-0" />
+                      <span className="w-2.5 h-2.5 rounded-full bg-green-400 flex-shrink-0" />
                       <div className="flex items-center gap-2 flex-1 min-w-0">
                         <span className="text-foreground truncate">{project.name}</span>
                         {project.clientName && (
@@ -353,8 +353,8 @@ export function MentionPopover({
             {/* Content Section */}
             {filteredContent.length > 0 && (
               <div role="group" aria-label="Content">
-                <div className="px-3 py-1.5 text-xs font-medium text-muted-foreground flex items-center gap-2 bg-background/50 sticky top-0">
-                  <FileText className="w-3 h-3" />
+                <div className="px-4 py-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-2 bg-muted/50 sticky top-0 border-b border-border/50">
+                  <FileText className="w-3.5 h-3.5" />
                   Content
                 </div>
                 {filteredContent.map((content, idx) => {
@@ -368,13 +368,13 @@ export function MentionPopover({
                       onClick={() => onSelectContent(content)}
                       onMouseEnter={() => setSelectedIndex(globalIdx)}
                       className={cn(
-                        "w-full px-3 py-2 text-left text-sm flex items-center gap-2 transition-colors",
+                        "w-full px-4 py-2.5 text-left text-sm flex items-center gap-3 transition-colors",
                         selectedIndex === globalIdx
                           ? "bg-primary/10 text-primary"
-                          : "hover:bg-muted"
+                          : "hover:bg-muted/70"
                       )}
                     >
-                      <span className="w-2 h-2 rounded-full bg-purple-400 flex-shrink-0" />
+                      <span className="w-2.5 h-2.5 rounded-full bg-purple-400 flex-shrink-0" />
                       <div className="flex items-center gap-2 flex-1 min-w-0">
                         <span className="text-foreground truncate">{content.title}</span>
                         {content.clientName && (
@@ -392,9 +392,9 @@ export function MentionPopover({
             {/* Journal Pages Section */}
             {filteredPages.length > 0 && onSelectJournalPage && (
               <div role="group" aria-label="Journal Pages">
-                <div className="px-3 py-1.5 text-xs font-medium text-muted-foreground flex items-center gap-2 bg-background/50 sticky top-0">
-                  <BookOpen className="w-3 h-3" />
-                  Journal Pages
+                <div className="px-4 py-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-2 bg-muted/50 sticky top-0 border-b border-border/50">
+                  <BookOpen className="w-3.5 h-3.5" />
+                  Pages
                 </div>
                 {filteredPages.map((page, idx) => {
                   const globalIdx = getItemGlobalIndex("page", idx)
@@ -407,16 +407,16 @@ export function MentionPopover({
                       onClick={() => onSelectJournalPage(page)}
                       onMouseEnter={() => setSelectedIndex(globalIdx)}
                       className={cn(
-                        "w-full px-3 py-2 text-left text-sm flex items-center gap-2 transition-colors",
+                        "w-full px-4 py-2.5 text-left text-sm flex items-center gap-3 transition-colors",
                         selectedIndex === globalIdx
                           ? "bg-primary/10 text-primary"
-                          : "hover:bg-muted"
+                          : "hover:bg-muted/70"
                       )}
                     >
                       {page.icon ? (
                         <span className="w-4 h-4 flex-shrink-0 text-center">{page.icon}</span>
                       ) : (
-                        <span className="w-2 h-2 rounded-full bg-amber-400 flex-shrink-0" />
+                        <span className="w-2.5 h-2.5 rounded-full bg-amber-400 flex-shrink-0" />
                       )}
                       <span className="text-foreground truncate">{page.title}</span>
                     </button>
@@ -428,29 +428,29 @@ export function MentionPopover({
 
           {/* Empty State */}
           {!hasResults && searchQuery && (
-            <div className="px-3 py-6 text-sm text-muted-foreground text-center">
+            <div className="px-4 py-8 text-sm text-muted-foreground text-center">
               No matches found for "{searchQuery}"
             </div>
           )}
 
           {/* Empty State - No search */}
           {!hasResults && !searchQuery && (
-            <div className="px-3 py-6 text-sm text-muted-foreground text-center">
+            <div className="px-4 py-8 text-sm text-muted-foreground text-center">
               No items available
             </div>
           )}
 
           {/* Keyboard hints */}
           {hasResults && (
-            <div className="px-3 py-1.5 border-t border-border bg-muted/30 flex items-center justify-between text-[10px] text-muted-foreground">
+            <div className="px-4 py-2 border-t border-border bg-muted/20 flex items-center justify-between text-[11px] text-muted-foreground">
               <span>
-                <kbd className="px-1 py-0.5 bg-muted rounded text-[10px]">↑↓</kbd> navigate
+                <kbd className="px-1.5 py-0.5 bg-muted border border-border rounded text-[10px]">↑↓</kbd> navigate
               </span>
               <span>
-                <kbd className="px-1 py-0.5 bg-muted rounded text-[10px]">↵</kbd> select
+                <kbd className="px-1.5 py-0.5 bg-muted border border-border rounded text-[10px]">↵</kbd> select
               </span>
               <span>
-                <kbd className="px-1 py-0.5 bg-muted rounded text-[10px]">esc</kbd> close
+                <kbd className="px-1.5 py-0.5 bg-muted border border-border rounded text-[10px]">esc</kbd> close
               </span>
             </div>
           )}

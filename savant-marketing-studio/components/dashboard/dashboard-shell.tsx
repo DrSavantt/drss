@@ -5,6 +5,7 @@ import { ErrorBoundary } from '@/components/error-boundary'
 import { PerfMonitor } from '@/components/perf-monitor'
 import { SidebarProvider } from '@/contexts/sidebar-context'
 import { InstallPrompt } from '@/components/pwa/install-prompt'
+import { QuickCaptureProvider } from '@/components/providers/quick-capture-provider'
 
 interface User {
   id: string
@@ -37,9 +38,11 @@ export function DashboardShell({ user, children }: DashboardShellProps) {
   return (
     <ErrorBoundary>
       <SidebarProvider>
-        <AppShell user={user}>
-          {children}
-        </AppShell>
+        <QuickCaptureProvider>
+          <AppShell user={user}>
+            {children}
+          </AppShell>
+        </QuickCaptureProvider>
       </SidebarProvider>
       
       {/* Performance monitor for development */}

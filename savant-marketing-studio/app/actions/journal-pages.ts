@@ -6,6 +6,7 @@ import type {
   JournalPageTreeNode, 
   PageBreadcrumb, 
   JournalPage,
+  JournalEntry,
   PageTreeResult,
   PagePathResult
 } from '@/types/journal'
@@ -304,6 +305,7 @@ export async function getPage(pageId: string): Promise<JournalPage | null> {
     user_id: page.user_id,
     title: page.title || 'Untitled',
     icon: page.icon,
+    entry_type: page.entry_type || 'page',
     content: page.content,
     parent_id: page.parent_id,
     sort_order: page.sort_order || 0,
@@ -358,17 +360,32 @@ export async function getPageBreadcrumbs(pageId: string): Promise<PageBreadcrumb
 /**
  * Create a quick capture (fast note entry)
  * Extracts title from first line (up to 50 chars) or uses "Quick Capture"
+ * Supports mentions and tags for cross-referencing
  */
-export async function createQuickCapture(content: string): Promise<{ id: string; title: string }> {
+export async function createQuickCapture(
+  content: string,
+  options?: {
+    mentionedClients?: string[]
+    mentionedProjects?: string[]
+    mentionedContent?: string[]
+    mentionedPages?: string[]
+    tags?: string[]
+    parentId?: string | null
+  }
+): Promise<{ success: boolean; data?: { id: string; title: string }; error?: string }> {
   const supabase = await createClient()
   
   if (!supabase) {
-    throw new Error('Database connection not configured')
+    return { success: false, error: 'Database connection not configured' }
   }
   
   const { data: { user }, error: authError } = await supabase.auth.getUser()
   if (authError || !user) {
-    throw new Error('Not authenticated')
+    return { success: false, error: 'Not authenticated' }
+  }
+
+  if (!content || !content.trim()) {
+    return { success: false, error: 'Content is required' }
   }
 
   // Extract title from first line (up to 50 chars) or use "Quick Capture"
@@ -377,17 +394,24 @@ export async function createQuickCapture(content: string): Promise<{ id: string;
     ? firstLine.slice(0, 50) + (firstLine.length > 50 ? '...' : '')
     : 'Quick Capture'
 
-  // Get next sort order for root pages
-  const { data: lastPage } = await supabase
+  const parentId = options?.parentId ?? null
+
+  // Get next sort order for sibling pages
+  let sortOrderQuery = supabase
     .from('journal_entries')
     .select('sort_order')
     .eq('user_id', user.id)
-    .is('parent_id', null)
     .is('deleted_at', null)
     .order('sort_order', { ascending: false })
     .limit(1)
-    .single()
+  
+  if (parentId) {
+    sortOrderQuery = sortOrderQuery.eq('parent_id', parentId)
+  } else {
+    sortOrderQuery = sortOrderQuery.is('parent_id', null)
+  }
 
+  const { data: lastPage } = await sortOrderQuery.single()
   const nextSortOrder = (lastPage?.sort_order ?? -1) + 1
 
   const { data, error } = await supabase
@@ -397,19 +421,180 @@ export async function createQuickCapture(content: string): Promise<{ id: string;
       title,
       content: `<p>${content.replace(/\n/g, '</p><p>')}</p>`,
       icon: '📝',
-      parent_id: null,
+      entry_type: 'capture',
+      parent_id: parentId,
       sort_order: nextSortOrder,
+      mentioned_clients: options?.mentionedClients || [],
+      mentioned_projects: options?.mentionedProjects || [],
+      mentioned_content: options?.mentionedContent || [],
+      mentioned_pages: options?.mentionedPages || [],
+      tags: options?.tags || [],
     })
     .select('id, title')
     .single()
 
   if (error) {
     console.error('Failed to create quick capture:', error)
-    throw new Error('Failed to save capture')
+    return { success: false, error: 'Failed to save capture' }
   }
 
   revalidatePath('/dashboard/journal')
-  return data
+  revalidatePath('/dashboard')
+  return { success: true, data }
+}
+
+// ============================================================================
+// JOURNAL ENTRY QUERIES (for cross-referencing)
+// ============================================================================
+
+/**
+ * Get journal entries that mention a specific project
+ */
+export async function getJournalEntriesByProject(projectId: string) {
+  const supabase = await createClient()
+
+  if (!supabase) {
+    return []
+  }
+
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) {
+    return []
+  }
+
+  const { data, error } = await supabase
+    .from('journal_entries')
+    .select('id, title, content, tags, created_at, mentioned_projects')
+    .eq('user_id', user.id)
+    .is('deleted_at', null)
+    .contains('mentioned_projects', [projectId])
+    .order('created_at', { ascending: false })
+    .limit(10)
+
+  if (error) {
+    console.error('Error fetching journal entries by project:', error)
+    return []
+  }
+
+  return data || []
+}
+
+/**
+ * Get journal entries that mention a specific client
+ */
+export async function getJournalEntriesByClient(clientId: string) {
+  const supabase = await createClient()
+
+  if (!supabase) {
+    return []
+  }
+
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) {
+    return []
+  }
+
+  const { data, error } = await supabase
+    .from('journal_entries')
+    .select('id, title, content, tags, created_at, mentioned_clients')
+    .eq('user_id', user.id)
+    .is('deleted_at', null)
+    .contains('mentioned_clients', [clientId])
+    .order('created_at', { ascending: false })
+    .limit(10)
+
+  if (error) {
+    console.error('Error fetching journal entries by client:', error)
+    return []
+  }
+
+  return data || []
+}
+
+// ============================================================================
+// ARCHIVE FUNCTIONS
+// ============================================================================
+
+/**
+ * Get archived (soft-deleted) journal entries
+ */
+export async function getArchivedJournalEntries() {
+  const supabase = await createClient()
+  if (!supabase) return []
+
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) {
+    return []
+  }
+
+  const { data, error } = await supabase
+    .from('journal_entries')
+    .select('id, title, content, deleted_at')
+    .eq('user_id', user.id)
+    .not('deleted_at', 'is', null)
+    .order('deleted_at', { ascending: false })
+
+  if (error) {
+    console.error('Failed to fetch archived journal entries:', error)
+    return []
+  }
+
+  return data || []
+}
+
+/**
+ * Restore a soft-deleted journal entry
+ */
+export async function restoreJournalEntry(id: string) {
+  const supabase = await createClient()
+  if (!supabase) return { error: 'Database not configured' }
+
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) {
+    return { error: 'Not authenticated' }
+  }
+
+  const { error } = await supabase
+    .from('journal_entries')
+    .update({ deleted_at: null })
+    .eq('id', id)
+    .eq('user_id', user.id)
+
+  if (error) {
+    console.error('Failed to restore journal entry:', error)
+    return { error: 'Failed to restore journal entry' }
+  }
+
+  revalidatePath('/dashboard/journal')
+  revalidatePath('/dashboard/archive')
+  return { success: true }
+}
+
+/**
+ * Permanently delete a journal entry (irreversible)
+ */
+export async function permanentlyDeleteJournalEntry(id: string) {
+  const supabase = await createClient()
+  if (!supabase) return { error: 'Database not configured' }
+
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) {
+    return { error: 'Not authenticated' }
+  }
+
+  const { error } = await supabase
+    .from('journal_entries')
+    .delete()
+    .eq('id', id)
+    .eq('user_id', user.id)
+
+  if (error) {
+    console.error('Failed to permanently delete journal entry:', error)
+    return { error: 'Failed to permanently delete journal entry' }
+  }
+
+  revalidatePath('/dashboard/archive')
+  return { success: true }
 }
 
 /**
@@ -479,6 +664,7 @@ export async function createPage(
       title: title || 'Untitled',
       content: content || '',
       icon: icon || null,
+      entry_type: 'page',
       parent_id: parentId || null,
       sort_order: nextSortOrder
     })
@@ -1060,4 +1246,80 @@ export async function getPinnedPages(): Promise<JournalPageTreeNode[]> {
     depth: 0,
     isExpanded: false
   }))
+}
+
+// ============================================================================
+// CAPTURE FUNCTIONS
+// ============================================================================
+
+/**
+ * Get captures (entries with entry_type = 'capture')
+ * Returns most recent captures, ordered by created_at descending
+ */
+export async function getCaptures(limit: number = 50): Promise<JournalEntry[]> {
+  const supabase = await createClient()
+
+  if (!supabase) {
+    throw new Error('Database connection not configured')
+  }
+
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) {
+    throw new Error('Not authenticated')
+  }
+
+  const { data, error } = await supabase
+    .from('journal_entries')
+    .select('*')
+    .eq('user_id', user.id)
+    .eq('entry_type', 'capture')
+    .is('deleted_at', null)
+    .order('created_at', { ascending: false })
+    .limit(limit)
+
+  if (error) {
+    console.error('Error fetching captures:', error)
+    return []
+  }
+
+  return (data || []) as JournalEntry[]
+}
+
+/**
+ * Promote a capture to a full page
+ * Updates entry_type to 'page' and optionally sets a new title
+ */
+export async function promoteToPage(entryId: string, title?: string): Promise<void> {
+  const supabase = await createClient()
+
+  if (!supabase) {
+    throw new Error('Database connection not configured')
+  }
+
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) {
+    throw new Error('Not authenticated')
+  }
+
+  const updates: { entry_type: string; title?: string; updated_at: string } = {
+    entry_type: 'page',
+    updated_at: new Date().toISOString()
+  }
+
+  if (title) {
+    updates.title = title
+  }
+
+  const { error } = await supabase
+    .from('journal_entries')
+    .update(updates)
+    .eq('id', entryId)
+    .eq('user_id', user.id)
+
+  if (error) {
+    console.error('Error promoting capture to page:', error)
+    throw new Error('Failed to promote capture to page')
+  }
+
+  revalidatePath('/dashboard/journal')
 }

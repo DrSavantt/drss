@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback, useRef, useTransition } from 'react'
-import { Plus, Pencil, Check, X, Loader2, FileText, Smile } from 'lucide-react'
+import { Plus, Pencil, Check, X, Loader2, FileText, Smile, Hash } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent } from '@/components/ui/card'
@@ -13,7 +13,9 @@ import {
   updatePageContent, 
   createPage 
 } from '@/app/actions/journal-pages'
+import { getAllTags, addTagToPage, removeTagFromPage } from '@/app/actions/journal-tags'
 import type { JournalPage, JournalPageTreeNode } from '@/types/journal'
+import { toast } from 'sonner'
 import dynamic from 'next/dynamic'
 import {
   Popover,
@@ -92,6 +94,15 @@ export function PageView({
   
   // Transitions
   const [isPending, startTransition] = useTransition()
+  
+  // Tag editing state
+  const [isAddingTag, setIsAddingTag] = useState(false)
+  const [newTagValue, setNewTagValue] = useState('')
+  const [tagSuggestions, setTagSuggestions] = useState<string[]>([])
+  const [tagLoading, setTagLoading] = useState(false)
+  const [showSuggestions, setShowSuggestions] = useState(false)
+  const [selectedSuggestionIndex, setSelectedSuggestionIndex] = useState(0)
+  const tagInputRef = useRef<HTMLInputElement>(null)
   
   // AI bar context (centralized fetch - ensures deleted items are filtered)
   const {
@@ -231,6 +242,129 @@ export function PageView({
   // Navigate to child page
   const handleChildClick = (childId: string) => {
     onNavigate(childId)
+  }
+
+  // ============================================================================
+  // TAG HANDLERS
+  // ============================================================================
+  
+  // Fetch tag suggestions when starting to add a tag
+  const handleStartAddTag = async () => {
+    setIsAddingTag(true)
+    setNewTagValue('')
+    setSelectedSuggestionIndex(0)
+    
+    // Focus input after state update
+    setTimeout(() => tagInputRef.current?.focus(), 0)
+    
+    // Fetch existing tags for suggestions
+    try {
+      const tags = await getAllTags()
+      setTagSuggestions(tags)
+    } catch (err) {
+      console.error('Failed to fetch tag suggestions:', err)
+    }
+  }
+  
+  // Filter suggestions based on input
+  const filteredSuggestions = tagSuggestions.filter(tag => {
+    const normalizedInput = newTagValue.trim().toLowerCase()
+    if (!normalizedInput) return true // Show all when empty
+    return tag.toLowerCase().includes(normalizedInput) && 
+           !page?.tags?.includes(tag) // Don't show tags already on page
+  }).slice(0, 5) // Limit to 5 suggestions
+  
+  // Handle tag input change
+  const handleTagInputChange = (value: string) => {
+    setNewTagValue(value)
+    setSelectedSuggestionIndex(0)
+    setShowSuggestions(value.trim().length > 0 || tagSuggestions.length > 0)
+  }
+  
+  // Add tag to page
+  const handleAddTag = async (tagToAdd?: string) => {
+    const tag = tagToAdd || newTagValue.trim()
+    if (!tag || !page) return
+    
+    // Check if tag already exists on page
+    if (page.tags?.includes(tag.toLowerCase())) {
+      toast.error('Tag already exists on this page')
+      return
+    }
+    
+    setTagLoading(true)
+    try {
+      const result = await addTagToPage(page.id, tag)
+      if (result.success) {
+        // Update local state
+        setPage(prev => prev ? {
+          ...prev,
+          tags: [...(prev.tags || []), tag.toLowerCase()]
+        } : null)
+        setNewTagValue('')
+        setIsAddingTag(false)
+        onTreeRefresh?.() // Refresh sidebar tags
+      } else {
+        toast.error(result.error || 'Failed to add tag')
+      }
+    } catch (err) {
+      console.error('Failed to add tag:', err)
+      toast.error('Failed to add tag')
+    } finally {
+      setTagLoading(false)
+    }
+  }
+  
+  // Remove tag from page
+  const handleRemoveTag = async (tag: string) => {
+    if (!page) return
+    
+    setTagLoading(true)
+    try {
+      const result = await removeTagFromPage(page.id, tag)
+      if (result.success) {
+        // Update local state
+        setPage(prev => prev ? {
+          ...prev,
+          tags: (prev.tags || []).filter(t => t !== tag)
+        } : null)
+        onTreeRefresh?.() // Refresh sidebar tags
+      } else {
+        toast.error(result.error || 'Failed to remove tag')
+      }
+    } catch (err) {
+      console.error('Failed to remove tag:', err)
+      toast.error('Failed to remove tag')
+    } finally {
+      setTagLoading(false)
+    }
+  }
+  
+  // Handle tag input keyboard events
+  const handleTagInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Escape') {
+      setIsAddingTag(false)
+      setNewTagValue('')
+      setShowSuggestions(false)
+    } else if (e.key === 'Enter') {
+      e.preventDefault()
+      if (showSuggestions && filteredSuggestions.length > 0) {
+        handleAddTag(filteredSuggestions[selectedSuggestionIndex])
+      } else if (newTagValue.trim()) {
+        handleAddTag()
+      }
+    } else if (e.key === 'ArrowDown') {
+      e.preventDefault()
+      setSelectedSuggestionIndex(prev => 
+        Math.min(prev + 1, filteredSuggestions.length - 1)
+      )
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault()
+      setSelectedSuggestionIndex(prev => Math.max(prev - 1, 0))
+    } else if (e.key === 'Tab' && filteredSuggestions.length > 0) {
+      e.preventDefault()
+      handleAddTag(filteredSuggestions[selectedSuggestionIndex])
+    }
   }
 
   // Keyboard shortcut for save
@@ -391,6 +525,92 @@ export function PageView({
                   {page.title || 'Untitled'}
                 </h1>
                 <Pencil className="h-4 w-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+              </button>
+            )}
+          </div>
+
+          {/* Tags Section */}
+          <div className="mb-6 flex flex-wrap items-center gap-2">
+            {/* Existing tags */}
+            {page.tags && page.tags.length > 0 && page.tags.map((tag) => (
+              <span
+                key={tag}
+                className="inline-flex items-center gap-1 bg-muted text-muted-foreground rounded-full px-2.5 py-0.5 text-xs"
+              >
+                <Hash className="h-3 w-3" />
+                {tag}
+                <button
+                  type="button"
+                  onClick={() => handleRemoveTag(tag)}
+                  disabled={tagLoading}
+                  className="ml-0.5 p-0.5 rounded-full hover:bg-foreground/10 transition-colors disabled:opacity-50"
+                  aria-label={`Remove tag ${tag}`}
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              </span>
+            ))}
+            
+            {/* Add tag input or button */}
+            {isAddingTag ? (
+              <div className="relative">
+                <div className="flex items-center gap-1">
+                  <Hash className="h-3 w-3 text-muted-foreground" />
+                  <Input
+                    ref={tagInputRef}
+                    value={newTagValue}
+                    onChange={(e) => handleTagInputChange(e.target.value)}
+                    onKeyDown={handleTagInputKeyDown}
+                    onFocus={() => setShowSuggestions(true)}
+                    onBlur={() => {
+                      // Delay to allow clicking suggestions
+                      setTimeout(() => {
+                        setShowSuggestions(false)
+                        if (!newTagValue.trim()) {
+                          setIsAddingTag(false)
+                        }
+                      }, 150)
+                    }}
+                    placeholder="Type tag..."
+                    className="h-6 w-24 px-1 py-0 text-xs border-none shadow-none focus-visible:ring-1"
+                    disabled={tagLoading}
+                  />
+                  {tagLoading && <Loader2 className="h-3 w-3 animate-spin" />}
+                </div>
+                
+                {/* Suggestions dropdown */}
+                {showSuggestions && filteredSuggestions.length > 0 && (
+                  <div className="absolute top-full left-0 mt-1 z-50 w-40 bg-popover border border-border rounded-md shadow-md py-1">
+                    {filteredSuggestions.map((suggestion, index) => (
+                      <button
+                        key={suggestion}
+                        type="button"
+                        onMouseDown={(e) => {
+                          e.preventDefault() // Prevent blur
+                          handleAddTag(suggestion)
+                        }}
+                        className={cn(
+                          "w-full text-left px-2 py-1 text-xs flex items-center gap-1.5",
+                          index === selectedSuggestionIndex
+                            ? "bg-accent text-accent-foreground"
+                            : "hover:bg-accent/50"
+                        )}
+                      >
+                        <Hash className="h-3 w-3 text-muted-foreground" />
+                        {suggestion}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={handleStartAddTag}
+                className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors px-2 py-0.5 rounded-full hover:bg-muted"
+              >
+                <Plus className="h-3 w-3" />
+                Add tag
               </button>
             )}
           </div>

@@ -565,7 +565,13 @@ Guidelines:
         .map((s, i) => `Selection ${i + 1}: "${s.text}"`)
         .join('\n');
 
-      const userMessage = `Edit instruction: ${prompt}
+      // Include mention context in the user message (not just system prompt)
+      // This ensures Claude sees the @mentioned context prominently
+      const mentionContextSection = mentionContextText 
+        ? `\n\n${mentionContextText}\n\n---\n\n` 
+        : '';
+
+      const userMessage = `${mentionContextSection}Edit instruction: ${prompt}
 
 Selections to edit:
 ${selectionsPrompt}
@@ -651,7 +657,15 @@ Respond with ONLY a valid JSON object in this exact format (no markdown code blo
 4. Match any existing brand voice or tone if context is provided
 5. Be concise and direct`;
 
-      let userMessage = prompt;
+      // Include mention context in the user message (not just system prompt)
+      // This ensures Claude sees the @mentioned context prominently
+      let userMessage = '';
+      
+      if (mentionContextText) {
+        userMessage = `${mentionContextText}\n\n---\n\nUSER REQUEST:\n${prompt}`;
+      } else {
+        userMessage = prompt;
+      }
       
       if (context.selectedText) {
         userMessage += `\n\nSELECTED TEXT TO WORK WITH:\n${context.selectedText}`;

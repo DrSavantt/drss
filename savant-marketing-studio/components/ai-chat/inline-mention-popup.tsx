@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useRef, useMemo, forwardRef, useImperativeHandle } from "react"
-import { Users, FolderKanban, FileText, BookOpen, Layers } from "lucide-react"
+import { Users, FolderKanban, FileText, BookOpen, Layers, StickyNote } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { ContextItem, ContextItemType } from "./context-picker-modal"
 
@@ -25,6 +25,8 @@ interface InlineMentionPopupProps {
     mentionedContent?: Array<{ id: string; name: string }>
   }>
   writingFrameworks: Array<{ id: string; name: string; category?: string }>
+  // Optional: journal pages for Quick Capture and other use cases
+  journalPages?: Array<{ id: string; title: string; icon?: string }>
 }
 
 export interface InlineMentionPopupRef {
@@ -37,6 +39,7 @@ const TYPE_CONFIG: Record<ContextItemType, { label: string; icon: typeof Users }
   content: { label: "Content", icon: FileText },
   capture: { label: "Captures", icon: BookOpen },
   framework: { label: "Frameworks", icon: Layers },
+  page: { label: "Pages", icon: StickyNote },
 }
 
 export const InlineMentionPopup = forwardRef<InlineMentionPopupRef, InlineMentionPopupProps>(({
@@ -51,6 +54,7 @@ export const InlineMentionPopup = forwardRef<InlineMentionPopupRef, InlineMentio
   contentAssets,
   journalEntries,
   writingFrameworks,
+  journalPages = [],
 }, ref) => {
   const popupRef = useRef<HTMLDivElement>(null)
 
@@ -63,9 +67,10 @@ export const InlineMentionPopup = forwardRef<InlineMentionPopupRef, InlineMentio
     contentAssets.forEach(c => items.push({ type: "content", id: c.id, name: c.title, subtitle: c.contentType || undefined }))
     journalEntries.forEach(j => items.push({ type: "capture", id: j.id, name: j.title || j.content.slice(0, 40) + "..." }))
     writingFrameworks.forEach(f => items.push({ type: "framework", id: f.id, name: f.name, subtitle: f.category }))
+    journalPages.forEach(p => items.push({ type: "page", id: p.id, name: p.title, subtitle: p.icon || undefined }))
     
     return items
-  }, [clients, projects, contentAssets, journalEntries, writingFrameworks])
+  }, [clients, projects, contentAssets, journalEntries, writingFrameworks, journalPages])
 
   // Filter based on query
   const filteredItems = useMemo(() => {
@@ -85,6 +90,8 @@ export const InlineMentionPopup = forwardRef<InlineMentionPopupRef, InlineMentio
       "journal": "capture",
       "framework": "framework",
       "frameworks": "framework",
+      "page": "page",
+      "pages": "page",
     }
     
     // If query matches a type name, show all of that type
@@ -108,6 +115,7 @@ export const InlineMentionPopup = forwardRef<InlineMentionPopupRef, InlineMentio
       content: [],
       capture: [],
       framework: [],
+      page: [],
     }
     
     filteredItems.forEach(item => {
@@ -120,7 +128,7 @@ export const InlineMentionPopup = forwardRef<InlineMentionPopupRef, InlineMentio
   // Flat list for keyboard navigation
   const flatList = useMemo(() => {
     const list: ContextItem[] = []
-    const order: ContextItemType[] = ["client", "project", "content", "capture", "framework"]
+    const order: ContextItemType[] = ["client", "project", "content", "capture", "framework", "page"]
     
     order.forEach(type => {
       list.push(...groupedItems[type])
@@ -167,7 +175,7 @@ export const InlineMentionPopup = forwardRef<InlineMentionPopupRef, InlineMentio
     return (
       <div
         ref={popupRef}
-        className="fixed z-50 w-72 rounded-lg border border-border bg-popover p-3 shadow-lg"
+        className="fixed z-[100] w-72 rounded-lg border border-border bg-popover p-3 shadow-lg"
         style={{ bottom: `calc(100vh - ${position.top}px)`, left: position.left }}
       >
         <p className="text-sm text-muted-foreground">No results for "{query}"</p>
@@ -181,7 +189,7 @@ export const InlineMentionPopup = forwardRef<InlineMentionPopupRef, InlineMentio
   return (
     <div
       ref={popupRef}
-      className="fixed z-50 w-72 overflow-hidden rounded-lg border border-border bg-popover shadow-lg"
+      className="fixed z-[100] w-72 overflow-hidden rounded-lg border border-border bg-popover shadow-lg"
       style={{ 
         bottom: `calc(100vh - ${position.top}px)`, 
         left: position.left,
@@ -189,7 +197,7 @@ export const InlineMentionPopup = forwardRef<InlineMentionPopupRef, InlineMentio
       }}
     >
       <div className="overflow-y-auto" style={{ maxHeight: "300px" }}>
-        {(["client", "project", "content", "capture", "framework"] as ContextItemType[]).map(type => {
+        {(["client", "project", "content", "capture", "framework", "page"] as ContextItemType[]).map(type => {
           const items = groupedItems[type]
           if (items.length === 0) return null
           

@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { ChevronDown, ChevronUp, MessageSquare, Loader2, Plus } from 'lucide-react'
-import { getJournalEntriesByProject } from '@/app/actions/journal'
+import { getJournalEntriesByProject } from '@/app/actions/journal-pages'
 import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
 

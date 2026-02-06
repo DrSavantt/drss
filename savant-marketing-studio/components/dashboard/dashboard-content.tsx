@@ -24,7 +24,7 @@ import {
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { format, addDays, startOfWeek, isSameDay, isToday, formatDistanceToNow } from 'date-fns'
-import { createJournalEntry, getOrCreateInbox } from '@/app/actions/journal'
+import { createQuickCapture } from '@/app/actions/journal-pages'
 import Link from 'next/link'
 import { PulsingDot } from '@/components/dashboard/pulsing-dot'
 
@@ -246,16 +246,18 @@ export function DashboardContent({
 
     setSubmitting(true)
     try {
-      const inboxId = await getOrCreateInbox()
       const tags = (quickCapture.match(/#(\w+)/g) || []).map(tag => tag.slice(1))
-      await createJournalEntry(
-        quickCapture, 
-        inboxId, 
-        mentionedClientIds, 
-        mentionedProjectIds, 
-        mentionedContentIds, 
-        tags
-      )
+      const result = await createQuickCapture(quickCapture, {
+        mentionedClients: mentionedClientIds,
+        mentionedProjects: mentionedProjectIds,
+        mentionedContent: mentionedContentIds,
+        tags,
+      })
+      
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to save capture')
+      }
+      
       setQuickCapture('')
       setMentionedClientIds([])
       setMentionedProjectIds([])

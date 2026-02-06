@@ -2,7 +2,7 @@ import { getArchivedClients } from '@/app/actions/clients'
 import { getArchivedProjects } from '@/app/actions/projects'
 import { getArchivedContent } from '@/app/actions/content'
 import { getArchivedFrameworks } from '@/app/actions/frameworks'
-import { getArchivedJournalEntries } from '@/app/actions/journal'
+import { getArchivedJournalEntries } from '@/app/actions/journal-pages'
 import { getArchivedConversations } from '@/app/actions/chat'
 import { ArchiveList } from '@/components/archive/archive-list'
 

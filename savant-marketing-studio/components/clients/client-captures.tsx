@@ -9,7 +9,7 @@ import {
   CollapsibleContent, 
   CollapsibleTrigger 
 } from '@/components/ui/collapsible'
-import { cn } from '@/lib/utils'
+import { cn, stripHtml } from '@/lib/utils'
 import { 
   MessageSquare, 
   ChevronDown, 
@@ -20,7 +20,7 @@ import {
 } from 'lucide-react'
 import Link from 'next/link'
 import { formatDistanceToNow } from 'date-fns'
-import { getJournalEntriesByClient, createJournalEntry, getOrCreateInbox } from '@/app/actions/journal'
+import { getJournalEntriesByClient, createQuickCapture } from '@/app/actions/journal-pages'
 import { Badge } from '@/components/ui/badge'
 
 // ============================================================================
@@ -75,18 +75,14 @@ export function ClientCaptures({ clientId, clientName, className }: ClientCaptur
     
     setSubmitting(true)
     try {
-      // Get or create inbox for quick captures
-      const inboxId = await getOrCreateInbox()
+      // Create entry with client mention - saves to root level
+      const result = await createQuickCapture(newCapture.trim(), {
+        mentionedClients: [clientId],
+      })
       
-      // Create entry with client mention
-      await createJournalEntry(
-        newCapture.trim(),
-        inboxId,
-        [clientId], // mentioned_clients
-        [], // mentioned_projects
-        [], // mentioned_content
-        [] // tags
-      )
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to add capture')
+      }
       
       setNewCapture('')
       await fetchCaptures() // Refresh list
@@ -195,7 +191,7 @@ export function ClientCaptures({ clientId, clientName, className }: ClientCaptur
                     className="p-3 rounded-lg border border-border bg-card hover:bg-muted/30 transition-colors"
                   >
                     <p className="text-sm line-clamp-3 whitespace-pre-wrap mb-2">
-                      {entry.content}
+                      {stripHtml(entry.content || '')}
                     </p>
                     
                     <div className="flex items-center justify-between">

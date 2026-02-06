@@ -22,7 +22,7 @@ function groupBy<T>(items: T[], keyFn: (item: T) => string): Record<string, T[]>
 }
 
 // Simplified context item type
-export type ContextItemType = "client" | "project" | "content" | "capture" | "framework"
+export type ContextItemType = "client" | "project" | "content" | "capture" | "framework" | "page"
 
 // Mention link type for captures
 export interface MentionLink {
@@ -157,6 +157,7 @@ export function ContextPickerModal({
       content: contentAssets.length,
       capture: journalEntries.length,
       framework: writingFrameworks.length,
+      page: 0, // Pages are referenced through inline mentions, not context picker
     }
     return counts
   }, [clients, projects, contentAssets, journalEntries, writingFrameworks])

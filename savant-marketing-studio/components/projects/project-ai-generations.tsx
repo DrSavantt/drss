@@ -114,9 +114,9 @@ export function ProjectAIGenerations({ projectId, aiGenerations }: ProjectAIGene
           </Badge>
         </div>
         <Button asChild size="sm" variant="outline">
-          <Link href={`/dashboard/ai-studio?project_id=${projectId}`}>
+          <Link href={`/dashboard/ai/chat?project_id=${projectId}`}>
             <Sparkles className="h-4 w-4 mr-1" />
-            AI Studio
+            AI Chat
           </Link>
         </Button>
       </div>
@@ -127,9 +127,9 @@ export function ProjectAIGenerations({ projectId, aiGenerations }: ProjectAIGene
           <Bot className="h-12 w-12 mx-auto text-muted-foreground/50 mb-4" />
           <p className="text-muted-foreground mb-4">No AI generations for this project</p>
           <Button asChild variant="default" size="sm">
-            <Link href={`/dashboard/ai-studio?project_id=${projectId}`}>
+            <Link href={`/dashboard/ai/chat?project_id=${projectId}`}>
               <Sparkles className="h-4 w-4 mr-1" />
-              Go to AI Studio
+              Go to AI Chat
             </Link>
           </Button>
         </div>

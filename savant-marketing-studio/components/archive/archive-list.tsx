@@ -35,7 +35,7 @@ import { restoreClient, permanentlyDeleteClient } from '@/app/actions/clients'
 import { restoreProject, permanentlyDeleteProject } from '@/app/actions/projects'
 import { restoreContentAsset, permanentlyDeleteContentAsset } from '@/app/actions/content'
 import { restoreFramework, permanentlyDeleteFramework } from '@/app/actions/frameworks'
-import { restoreJournalEntry, permanentlyDeleteJournalEntry } from '@/app/actions/journal'
+import { restoreJournalEntry, permanentlyDeleteJournalEntry } from '@/app/actions/journal-pages'
 import { restoreConversation, permanentlyDeleteConversation } from '@/app/actions/chat'
 import { getContentTypeLabel } from '@/lib/content-types'
 

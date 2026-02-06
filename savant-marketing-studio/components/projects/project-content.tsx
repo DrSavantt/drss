@@ -17,6 +17,7 @@ interface ContentItem {
 
 interface ProjectContentProps {
   projectId: string
+  clientId: string | null
   content: ContentItem[]
 }
 
@@ -49,8 +50,13 @@ function getAssetTypeConfig(type: string | null) {
   };
 }
 
-export function ProjectContent({ projectId, content }: ProjectContentProps) {
+export function ProjectContent({ projectId, clientId, content }: ProjectContentProps) {
   const isEmpty = content.length === 0
+  
+  // Build content creation link - requires clientId
+  const contentNewLink = clientId 
+    ? `/dashboard/clients/${clientId}/content/new?project_id=${projectId}`
+    : null
   
   return (
     <section id="content-section" className="rounded-lg border bg-card">
@@ -62,12 +68,19 @@ export function ProjectContent({ projectId, content }: ProjectContentProps) {
             {content.length}
           </Badge>
         </div>
-        <Button asChild size="sm" variant="outline">
-          <Link href={`/dashboard/content/new?project_id=${projectId}`}>
+        {contentNewLink ? (
+          <Button asChild size="sm" variant="outline">
+            <Link href={contentNewLink}>
+              <Plus className="h-4 w-4 mr-1" />
+              Add Content
+            </Link>
+          </Button>
+        ) : (
+          <Button size="sm" variant="outline" disabled title="Assign a client to add content">
             <Plus className="h-4 w-4 mr-1" />
             Add Content
-          </Link>
-        </Button>
+          </Button>
+        )}
       </div>
       
       {/* Content list or empty state */}
@@ -75,12 +88,16 @@ export function ProjectContent({ projectId, content }: ProjectContentProps) {
         <div className="p-8 text-center">
           <FileText className="h-12 w-12 mx-auto text-muted-foreground/50 mb-4" />
           <p className="text-muted-foreground mb-4">No content linked to this project</p>
-          <Button asChild variant="default" size="sm">
-            <Link href={`/dashboard/content/new?project_id=${projectId}`}>
-              <Plus className="h-4 w-4 mr-1" />
-              Create Content
-            </Link>
-          </Button>
+          {contentNewLink ? (
+            <Button asChild variant="default" size="sm">
+              <Link href={contentNewLink}>
+                <Plus className="h-4 w-4 mr-1" />
+                Create Content
+              </Link>
+            </Button>
+          ) : (
+            <p className="text-sm text-muted-foreground">Assign a client to this project to create content</p>
+          )}
         </div>
       ) : (
         <ul className="divide-y">

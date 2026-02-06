@@ -624,6 +624,7 @@ export type Database = {
           converted_to_content_id: string | null
           created_at: string | null
           deleted_at: string | null
+          entry_type: string | null
           icon: string | null
           id: string
           is_converted: boolean | null
@@ -647,6 +648,7 @@ export type Database = {
           converted_to_content_id?: string | null
           created_at?: string | null
           deleted_at?: string | null
+          entry_type?: string | null
           icon?: string | null
           id?: string
           is_converted?: boolean | null
@@ -670,6 +672,7 @@ export type Database = {
           converted_to_content_id?: string | null
           created_at?: string | null
           deleted_at?: string | null
+          entry_type?: string | null
           icon?: string | null
           id?: string
           is_converted?: boolean | null

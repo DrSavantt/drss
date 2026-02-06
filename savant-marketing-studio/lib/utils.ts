@@ -9,6 +9,13 @@ export function cn(...inputs: ClassValue[]) {
  * Debounce function - delays execution until after wait milliseconds have elapsed
  * since the last time the debounced function was invoked
  */
+/**
+ * Strip HTML tags from a string, returning plain text
+ */
+export function stripHtml(html: string): string {
+  return html.replace(/<[^>]*>/g, '').trim()
+}
+
 export function debounce<T extends (...args: any[]) => any>(
   func: T,
   wait: number

@@ -33,6 +33,7 @@ export interface JournalEntry {
   title: string  // Page title (backfilled from content for existing entries)
   content: string
   icon: string | null  // Emoji icon for the page
+  entry_type: 'capture' | 'page'  // Distinguishes captures from pages
   parent_id: string | null  // Parent page ID (null = root page)
   sort_order: number  // Sort order among siblings
   mentioned_clients: string[] | null
@@ -127,6 +128,7 @@ export interface JournalPage {
   user_id: string
   title: string
   icon: string | null
+  entry_type: 'capture' | 'page'  // Distinguishes captures from pages
   content: string
   parent_id: string | null
   sort_order: number

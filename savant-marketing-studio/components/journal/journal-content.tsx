@@ -2,7 +2,7 @@
 
 import type React from "react"
 import { useState, useEffect, useRef, useCallback, useTransition } from "react"
-import { Plus, Hash, Menu } from "lucide-react"
+import { Plus, Hash, Menu, X, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet"
@@ -11,6 +11,7 @@ import { PageTree } from "./page-tree"
 import { PageView } from "./page-view"
 import { PageLibrary } from "./page-library"
 import { createPage } from "@/app/actions/journal-pages"
+import { getAllTags, getPagesByTag } from "@/app/actions/journal-tags"
 
 // ============================================================================
 // TYPES
@@ -20,9 +21,6 @@ interface JournalContentProps {
   /** Initial page ID to display (from URL params) */
   initialPageId?: string | null
 }
-
-// All available tags for filtering
-const allTags = ["AIDA", "PAS", "voice", "ideas", "research", "followup"]
 
 // ============================================================================
 // MAIN COMPONENT
@@ -43,6 +41,13 @@ export function JournalContent({
   // Transitions
   const [isPending, startTransition] = useTransition()
   
+  // Tag filtering state
+  const [allTags, setAllTags] = useState<string[]>([])
+  const [activeTag, setActiveTag] = useState<string | null>(null)
+  const [filteredPageIds, setFilteredPageIds] = useState<string[] | null>(null)
+  const [tagsLoading, setTagsLoading] = useState(true)
+  const [filterLoading, setFilterLoading] = useState(false)
+  
   // Track mounted state
   const isMountedRef = useRef(true)
   useEffect(() => {
@@ -50,6 +55,59 @@ export function JournalContent({
     return () => {
       isMountedRef.current = false
     }
+  }, [])
+  
+  // Fetch all tags on mount
+  useEffect(() => {
+    async function fetchTags() {
+      try {
+        const tags = await getAllTags()
+        if (isMountedRef.current) {
+          setAllTags(tags)
+        }
+      } catch (error) {
+        console.error('Failed to fetch tags:', error)
+      } finally {
+        if (isMountedRef.current) {
+          setTagsLoading(false)
+        }
+      }
+    }
+    fetchTags()
+  }, [treeKey]) // Re-fetch when tree refreshes (tags may have changed)
+  
+  // Handle tag click for filtering
+  const handleTagClick = useCallback(async (tag: string) => {
+    if (activeTag === tag) {
+      // Toggle off - clear filter
+      setActiveTag(null)
+      setFilteredPageIds(null)
+      return
+    }
+    
+    setFilterLoading(true)
+    setActiveTag(tag)
+    
+    try {
+      const pageIds = await getPagesByTag(tag)
+      if (isMountedRef.current) {
+        setFilteredPageIds(pageIds)
+      }
+    } catch (error) {
+      console.error('Failed to filter by tag:', error)
+      setActiveTag(null)
+      setFilteredPageIds(null)
+    } finally {
+      if (isMountedRef.current) {
+        setFilterLoading(false)
+      }
+    }
+  }, [activeTag])
+  
+  // Clear tag filter
+  const handleClearFilter = useCallback(() => {
+    setActiveTag(null)
+    setFilteredPageIds(null)
   }, [])
 
   // Handle page selection
@@ -89,6 +147,7 @@ export function JournalContent({
           selectedPageId={selectedPageId}
           onSelectPage={handleSelectPage}
           onTreeRefresh={handleTreeRefresh}
+          filteredPageIds={filteredPageIds}
         />
       </div>
 
@@ -96,19 +155,52 @@ export function JournalContent({
       <div className="border-t border-border">
         <Card className="border-0 rounded-none bg-transparent">
           <CardHeader className="pb-2 px-3 pt-3">
-            <CardTitle className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Tags</CardTitle>
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Tags</CardTitle>
+              {filterLoading && <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />}
+            </div>
           </CardHeader>
           <CardContent className="px-3 pb-3">
-            <div className="flex flex-wrap gap-1.5">
-              {allTags.map((tag) => (
+            {/* Active filter indicator */}
+            {activeTag && (
+              <div className="mb-2">
                 <button
-                  key={tag}
-                  className="flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground transition-colors hover:bg-primary/10 hover:text-primary"
+                  onClick={handleClearFilter}
+                  className="flex items-center gap-1.5 text-xs text-primary hover:text-primary/80 transition-colors"
                 >
-                  <Hash className="h-3 w-3" />
-                  {tag}
+                  <X className="h-3 w-3" />
+                  Clear filter: #{activeTag}
                 </button>
-              ))}
+              </div>
+            )}
+            
+            <div className="flex flex-wrap gap-1.5">
+              {tagsLoading ? (
+                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                  <Loader2 className="h-3 w-3 animate-spin" />
+                  Loading tags...
+                </div>
+              ) : allTags.length === 0 ? (
+                <p className="text-xs text-muted-foreground">No tags yet</p>
+              ) : (
+                allTags.map((tag) => (
+                  <button
+                    key={tag}
+                    onClick={() => handleTagClick(tag)}
+                    disabled={filterLoading}
+                    className={cn(
+                      "flex items-center gap-1 rounded-full px-2 py-0.5 text-xs transition-colors",
+                      activeTag === tag
+                        ? "bg-primary text-primary-foreground"
+                        : "bg-muted text-muted-foreground hover:bg-primary/10 hover:text-primary",
+                      filterLoading && "opacity-50 cursor-not-allowed"
+                    )}
+                  >
+                    <Hash className="h-3 w-3" />
+                    {tag}
+                  </button>
+                ))
+              )}
             </div>
           </CardContent>
         </Card>
