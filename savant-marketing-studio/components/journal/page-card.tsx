@@ -2,6 +2,7 @@
 
 import { FileText } from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/card'
+import { Checkbox } from '@/components/ui/checkbox'
 import { cn } from '@/lib/utils'
 
 // ============================================================================
@@ -20,6 +21,10 @@ export interface PageCardData {
 interface PageCardProps {
   page: PageCardData
   onSelect: (pageId: string) => void
+  isSelected?: boolean
+  onToggleSelect?: () => void
+  isSelectionMode?: boolean
+  isDisabled?: boolean
   className?: string
 }
 
@@ -55,25 +60,68 @@ function formatRelativeTime(dateString: string | null): string {
 // COMPONENT
 // ============================================================================
 
-export function PageCard({ page, onSelect, className }: PageCardProps) {
+export function PageCard({
+  page,
+  onSelect,
+  isSelected = false,
+  onToggleSelect,
+  isSelectionMode = false,
+  isDisabled = false,
+  className,
+}: PageCardProps) {
   return (
     <Card
       className={cn(
-        "group cursor-pointer transition-all duration-200",
-        "hover:shadow-md hover:border-primary/20 hover:-translate-y-0.5",
-        "bg-card border-border",
+        "group transition-all duration-200 bg-card border-border",
+        isDisabled
+          ? "opacity-50 cursor-default"
+          : isSelected
+            ? "cursor-pointer shadow-md border-primary ring-2 ring-primary/50 bg-primary/5"
+            : "cursor-pointer hover:shadow-md hover:border-primary/20 hover:-translate-y-0.5",
         className
       )}
-      onClick={() => onSelect(page.id)}
+      onClick={() => {
+        if (isDisabled) return
+        if (isSelectionMode && onToggleSelect) {
+          onToggleSelect()
+        } else {
+          onSelect(page.id)
+        }
+      }}
     >
-      <CardContent className="p-4">
+      <CardContent className="p-4 relative">
+        {/* Checkbox — shown on hover or when in selection mode */}
+        {!isDisabled && onToggleSelect && (
+          <div
+            className={cn(
+              "absolute top-3 right-3 z-10 p-1 rounded transition-all duration-150",
+              isSelectionMode || isSelected
+                ? "opacity-100"
+                : "opacity-0 group-hover:opacity-70"
+            )}
+            onClick={(e) => {
+              e.stopPropagation()
+              onToggleSelect()
+            }}
+          >
+            <Checkbox
+              checked={isSelected}
+              onCheckedChange={() => onToggleSelect()}
+              className="size-4"
+            />
+          </div>
+        )}
+
         {/* Icon */}
         <div className="text-3xl mb-3">
           {page.icon || '📄'}
         </div>
         
         {/* Title */}
-        <h3 className="font-semibold text-foreground truncate mb-2 group-hover:text-primary transition-colors">
+        <h3 className={cn(
+          "font-semibold text-foreground truncate mb-2 transition-colors",
+          !isDisabled && "group-hover:text-primary"
+        )}>
           {page.title || 'Untitled'}
         </h3>
         

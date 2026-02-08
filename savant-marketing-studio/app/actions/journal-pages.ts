@@ -1323,3 +1323,319 @@ export async function promoteToPage(entryId: string, title?: string): Promise<vo
 
   revalidatePath('/dashboard/journal')
 }
+
+// ============================================================================
+// BULK ACTIONS
+// ============================================================================
+
+/**
+ * Strip HTML tags from a string and return plain text (for auto-title generation)
+ */
+function stripHtmlForTitle(html: string): string {
+  return html.replace(/<[^>]*>/g, '').trim()
+}
+
+/**
+ * Bulk soft-delete captures/entries by setting deleted_at
+ */
+export async function bulkDeleteCaptures(ids: string[]): Promise<{ success: boolean; deleted?: number; error?: string }> {
+  const supabase = await createClient()
+
+  if (!supabase) {
+    return { success: false, error: 'Database connection not configured' }
+  }
+
+  const { data: { user }, error: authError } = await supabase.auth.getUser()
+  if (authError || !user) {
+    return { success: false, error: 'Not authenticated' }
+  }
+
+  if (!ids || ids.length === 0) {
+    return { success: false, error: 'No IDs provided' }
+  }
+
+  const { data, error } = await supabase
+    .from('journal_entries')
+    .update({ deleted_at: new Date().toISOString() })
+    .in('id', ids)
+    .eq('user_id', user.id)
+    .is('deleted_at', null)
+    .select('id')
+
+  if (error) {
+    console.error('Error bulk deleting captures:', error)
+    return { success: false, error: 'Failed to delete captures' }
+  }
+
+  revalidatePath('/dashboard/journal')
+  return { success: true, deleted: data?.length ?? 0 }
+}
+
+/**
+ * Bulk promote captures to pages
+ * Auto-generates title from first 60 chars of content (HTML stripped)
+ */
+export async function bulkPromoteToPages(ids: string[]): Promise<{ success: boolean; promoted?: number; error?: string }> {
+  const supabase = await createClient()
+
+  if (!supabase) {
+    return { success: false, error: 'Database connection not configured' }
+  }
+
+  const { data: { user }, error: authError } = await supabase.auth.getUser()
+  if (authError || !user) {
+    return { success: false, error: 'Not authenticated' }
+  }
+
+  if (!ids || ids.length === 0) {
+    return { success: false, error: 'No IDs provided' }
+  }
+
+  // Fetch current entries to generate titles from content
+  const { data: entries, error: fetchError } = await supabase
+    .from('journal_entries')
+    .select('id, content')
+    .in('id', ids)
+    .eq('user_id', user.id)
+    .eq('entry_type', 'capture')
+    .is('deleted_at', null)
+
+  if (fetchError) {
+    console.error('Error fetching captures for promotion:', fetchError)
+    return { success: false, error: 'Failed to fetch captures' }
+  }
+
+  if (!entries || entries.length === 0) {
+    return { success: false, error: 'No matching captures found' }
+  }
+
+  let promoted = 0
+
+  for (const entry of entries) {
+    const plainText = stripHtmlForTitle(entry.content || '')
+    const autoTitle = plainText.length > 0
+      ? plainText.slice(0, 60) + (plainText.length > 60 ? '...' : '')
+      : 'Untitled'
+
+    const { error: updateError } = await supabase
+      .from('journal_entries')
+      .update({
+        entry_type: 'page',
+        title: autoTitle,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', entry.id)
+      .eq('user_id', user.id)
+
+    if (!updateError) {
+      promoted++
+    }
+  }
+
+  revalidatePath('/dashboard/journal')
+  return { success: true, promoted }
+}
+
+/**
+ * Bulk pin captures/entries
+ */
+export async function bulkPinCaptures(ids: string[]): Promise<{ success: boolean; pinned?: number; error?: string }> {
+  const supabase = await createClient()
+
+  if (!supabase) {
+    return { success: false, error: 'Database connection not configured' }
+  }
+
+  const { data: { user }, error: authError } = await supabase.auth.getUser()
+  if (authError || !user) {
+    return { success: false, error: 'Not authenticated' }
+  }
+
+  if (!ids || ids.length === 0) {
+    return { success: false, error: 'No IDs provided' }
+  }
+
+  const { data, error } = await supabase
+    .from('journal_entries')
+    .update({ is_pinned: true })
+    .in('id', ids)
+    .eq('user_id', user.id)
+    .is('deleted_at', null)
+    .select('id')
+
+  if (error) {
+    console.error('Error bulk pinning captures:', error)
+    return { success: false, error: 'Failed to pin captures' }
+  }
+
+  revalidatePath('/dashboard/journal')
+  return { success: true, pinned: data?.length ?? 0 }
+}
+
+/**
+ * Bulk unpin captures/entries
+ */
+export async function bulkUnpinCaptures(ids: string[]): Promise<{ success: boolean; unpinned?: number; error?: string }> {
+  const supabase = await createClient()
+
+  if (!supabase) {
+    return { success: false, error: 'Database connection not configured' }
+  }
+
+  const { data: { user }, error: authError } = await supabase.auth.getUser()
+  if (authError || !user) {
+    return { success: false, error: 'Not authenticated' }
+  }
+
+  if (!ids || ids.length === 0) {
+    return { success: false, error: 'No IDs provided' }
+  }
+
+  const { data, error } = await supabase
+    .from('journal_entries')
+    .update({ is_pinned: false })
+    .in('id', ids)
+    .eq('user_id', user.id)
+    .is('deleted_at', null)
+    .select('id')
+
+  if (error) {
+    console.error('Error bulk unpinning captures:', error)
+    return { success: false, error: 'Failed to unpin captures' }
+  }
+
+  revalidatePath('/dashboard/journal')
+  return { success: true, unpinned: data?.length ?? 0 }
+}
+
+/**
+ * Bulk add tags to entries (append + deduplicate, don't replace)
+ * Fetches current tags per entry, merges in new tags, writes back
+ */
+export async function bulkAddTags(ids: string[], tags: string[]): Promise<{ success: boolean; tagged?: number; error?: string }> {
+  const supabase = await createClient()
+
+  if (!supabase) {
+    return { success: false, error: 'Database connection not configured' }
+  }
+
+  const { data: { user }, error: authError } = await supabase.auth.getUser()
+  if (authError || !user) {
+    return { success: false, error: 'Not authenticated' }
+  }
+
+  if (!ids || ids.length === 0) {
+    return { success: false, error: 'No IDs provided' }
+  }
+
+  if (!tags || tags.length === 0) {
+    return { success: false, error: 'No tags provided' }
+  }
+
+  // Fetch current tags for each entry
+  const { data: entries, error: fetchError } = await supabase
+    .from('journal_entries')
+    .select('id, tags')
+    .in('id', ids)
+    .eq('user_id', user.id)
+    .is('deleted_at', null)
+
+  if (fetchError) {
+    console.error('Error fetching entries for bulk tag:', fetchError)
+    return { success: false, error: 'Failed to fetch entries' }
+  }
+
+  if (!entries || entries.length === 0) {
+    return { success: false, error: 'No matching entries found' }
+  }
+
+  let tagged = 0
+
+  for (const entry of entries) {
+    const existingTags: string[] = entry.tags || []
+    // Merge and deduplicate
+    const mergedTags = [...new Set([...existingTags, ...tags])]
+
+    // Skip update if no new tags were actually added
+    if (mergedTags.length === existingTags.length) {
+      tagged++ // Still count it as processed
+      continue
+    }
+
+    const { error: updateError } = await supabase
+      .from('journal_entries')
+      .update({ tags: mergedTags })
+      .eq('id', entry.id)
+      .eq('user_id', user.id)
+
+    if (!updateError) {
+      tagged++
+    }
+  }
+
+  revalidatePath('/dashboard/journal')
+  return { success: true, tagged }
+}
+
+/**
+ * Bulk move entries to a new parent (or root if parentId is null)
+ * Validates parent exists and is a 'page' type; prevents self-referencing
+ */
+export async function bulkMoveToParent(ids: string[], parentId: string | null): Promise<{ success: boolean; moved?: number; error?: string }> {
+  const supabase = await createClient()
+
+  if (!supabase) {
+    return { success: false, error: 'Database connection not configured' }
+  }
+
+  const { data: { user }, error: authError } = await supabase.auth.getUser()
+  if (authError || !user) {
+    return { success: false, error: 'Not authenticated' }
+  }
+
+  if (!ids || ids.length === 0) {
+    return { success: false, error: 'No IDs provided' }
+  }
+
+  // Filter out parentId from ids to prevent self-referencing
+  const safeIds = parentId ? ids.filter(id => id !== parentId) : ids
+
+  if (safeIds.length === 0) {
+    return { success: false, error: 'No valid IDs after filtering self-reference' }
+  }
+
+  // If parentId is provided, verify it exists and is a 'page' type
+  if (parentId) {
+    const { data: parent, error: parentError } = await supabase
+      .from('journal_entries')
+      .select('id, entry_type')
+      .eq('id', parentId)
+      .eq('user_id', user.id)
+      .is('deleted_at', null)
+      .single()
+
+    if (parentError || !parent) {
+      return { success: false, error: 'Parent page not found' }
+    }
+
+    if (parent.entry_type !== 'page') {
+      return { success: false, error: 'Parent must be a page, not a capture' }
+    }
+  }
+
+  const { data, error } = await supabase
+    .from('journal_entries')
+    .update({ parent_id: parentId, updated_at: new Date().toISOString() })
+    .in('id', safeIds)
+    .eq('user_id', user.id)
+    .is('deleted_at', null)
+    .select('id')
+
+  if (error) {
+    console.error('Error bulk moving entries:', error)
+    return { success: false, error: 'Failed to move entries' }
+  }
+
+  revalidatePath('/dashboard/journal')
+  return { success: true, moved: data?.length ?? 0 }
+}

@@ -1,8 +1,8 @@
 'use client'
 
-import { useState, useMemo } from "react"
+import { useState, useMemo, useEffect } from "react"
 import Link from "next/link"
-import { Plus, Search, Filter, Sparkles, Trash2, FolderInput, Users } from "lucide-react"
+import { Plus, Search, Filter, Sparkles, Trash2, FolderInput, Users, BookOpen } from "lucide-react"
 import { 
   getContentTypeConfig,
   FILTER_OPTIONS 
@@ -25,6 +25,8 @@ import {
 import { toast } from "sonner"
 import { useRouter } from "next/navigation"
 import { CreateContentModal } from "./create-content-modal"
+import { getRootPagesWithPreview } from "@/app/actions/journal-pages"
+import type { RootPageWithPreview } from "@/app/actions/journal-pages"
 
 // ============================================================================
 // TYPES
@@ -75,7 +77,35 @@ export function ContentPageContent({ initialContent, initialClients, initialProj
   const [moving, setMoving] = useState(false)
   const [reassigning, setReassigning] = useState(false)
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)
+  const [journalPages, setJournalPages] = useState<RootPageWithPreview[]>([])
+  const [loadingJournal, setLoadingJournal] = useState(false)
   const router = useRouter()
+
+  // Fetch journal pages when journal filter is active
+  useEffect(() => {
+    if (typeFilter === 'journal_page') {
+      setLoadingJournal(true)
+      setSelectedItems([])
+      getRootPagesWithPreview()
+        .then(pages => setJournalPages(pages))
+        .catch(err => {
+          console.error('Failed to load journal pages:', err)
+          setJournalPages([])
+        })
+        .finally(() => setLoadingJournal(false))
+    }
+  }, [typeFilter])
+
+  // Filtered journal pages (search only — client/AI filters don't apply)
+  const filteredJournalPages = useMemo(() => {
+    if (typeFilter !== 'journal_page') return []
+    return journalPages.filter(page => {
+      const matchesSearch =
+        page.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        page.content_preview.toLowerCase().includes(searchQuery.toLowerCase())
+      return matchesSearch
+    })
+  }, [journalPages, searchQuery, typeFilter])
 
   // Memoized filtered content
   const filteredContent = useMemo(() => {
@@ -234,149 +264,220 @@ export function ContentPageContent({ initialContent, initialClients, initialProj
         </div>
       </div>
 
-      {/* Select All */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <Checkbox
-            checked={selectedItems.length === filteredContent.length && filteredContent.length > 0}
-            onCheckedChange={toggleSelectAll}
-          />
-          <span className="text-sm text-muted-foreground">Select All</span>
-        </div>
-        <span className="text-sm text-muted-foreground">
-          Showing {filteredContent.length} of {content.length}
-        </span>
-      </div>
+      {typeFilter === 'journal_page' ? (
+        <>
+          {/* Journal Pages Counter */}
+          <div className="flex items-center justify-end">
+            <span className="text-sm text-muted-foreground">
+              {loadingJournal
+                ? 'Loading journal pages...'
+                : `Showing ${filteredJournalPages.length} journal page${filteredJournalPages.length !== 1 ? 's' : ''}`}
+            </span>
+          </div>
 
-      {/* Content List */}
-      <div className="space-y-2">
-        {filteredContent.map((item) => {
-          const config = getContentTypeConfig(item.asset_type)
-          const TypeIcon = config.icon
-          return (
-            <div
-              key={item.id}
-              className={cn(
-                "flex items-start gap-4 rounded-lg border border-border bg-card p-4 transition-all hover:border-primary/50",
-                selectedItems.includes(item.id) && "border-primary bg-primary/5",
-              )}
-            >
-              <Checkbox 
-                checked={selectedItems.includes(item.id)} 
-                onCheckedChange={() => toggleSelect(item.id)}
-                onClick={(e) => e.stopPropagation()} 
-              />
-              <Link 
-                href={`/dashboard/content/${item.id}`}
-                className="flex-1 min-w-0 hover:opacity-80 transition-opacity"
-                onClick={(e) => {
-                  // Prevent navigation if checkbox was clicked
-                  if (selectedItems.includes(item.id)) {
-                    e.preventDefault()
-                  }
-                }}
-              >
-                <div className="flex items-start justify-between gap-4">
-                  <div className="flex items-center gap-2">
-                    <TypeIcon className={cn("h-4 w-4 shrink-0", config.color)} />
-                    <h3 className="font-medium truncate">{item.title}</h3>
-                    {item.aiGenerated && (
-                      <Badge variant="outline" className="shrink-0 bg-primary/10 text-primary border-primary/20">
-                        <Sparkles className="mr-1 h-3 w-3" />
-                        AI
-                      </Badge>
+          {/* Journal Pages List */}
+          <div className="space-y-2">
+            {loadingJournal ? (
+              <div className="text-center py-12 text-muted-foreground">
+                Loading journal pages...
+              </div>
+            ) : filteredJournalPages.length === 0 ? (
+              <div className="text-center py-12 text-muted-foreground">
+                {searchQuery ? 'No journal pages match your search' : 'No journal pages yet'}
+              </div>
+            ) : (
+              filteredJournalPages.map((page) => (
+                <div
+                  key={page.id}
+                  onClick={() => router.push(`/dashboard/journal?page=${page.id}`)}
+                  className="flex items-start gap-4 rounded-lg border border-border bg-card p-4 transition-all hover:border-amber-500/50 cursor-pointer"
+                >
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="flex items-center gap-2">
+                        <span className="text-lg shrink-0">{page.icon || '📄'}</span>
+                        <BookOpen className="h-4 w-4 shrink-0 text-amber-500" />
+                        <h3 className="font-medium truncate">{page.title}</h3>
+                        {page.child_count > 0 && (
+                          <Badge variant="outline" className="shrink-0">
+                            {page.child_count} subpage{page.child_count !== 1 ? 's' : ''}
+                          </Badge>
+                        )}
+                      </div>
+                    </div>
+                    <div className="mt-1 flex items-center gap-2 text-sm text-muted-foreground">
+                      <span>Journal Page</span>
+                      {page.updated_at && (
+                        <>
+                          <span>•</span>
+                          <span>
+                            {new Date(page.updated_at).toLocaleDateString("en-US", {
+                              month: "short",
+                              day: "numeric",
+                              year: "numeric",
+                            })}
+                          </span>
+                        </>
+                      )}
+                    </div>
+                    {page.content_preview && (
+                      <p className="mt-2 text-sm text-muted-foreground truncate">
+                        &ldquo;{page.content_preview}&rdquo;
+                      </p>
                     )}
                   </div>
                 </div>
-                <div className="mt-1 flex items-center gap-2 text-sm text-muted-foreground">
-                  <span>{item.client}</span>
-                  <span>•</span>
-                  <span>{config.label}</span>
-                  <span>•</span>
-                  <span>
-                    {item.createdAt.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
-                  </span>
-                </div>
-                <p className="mt-2 text-sm text-muted-foreground truncate">"{item.preview}"</p>
-              </Link>
+              ))
+            )}
+          </div>
+        </>
+      ) : (
+        <>
+          {/* Select All */}
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Checkbox
+                checked={selectedItems.length === filteredContent.length && filteredContent.length > 0}
+                onCheckedChange={toggleSelectAll}
+              />
+              <span className="text-sm text-muted-foreground">Select All</span>
             </div>
-          )
-        })}
-      </div>
+            <span className="text-sm text-muted-foreground">
+              Showing {filteredContent.length} of {content.length}
+            </span>
+          </div>
 
-      {/* Bulk Actions */}
-      {selectedItems.length > 0 && (
-        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 flex items-center gap-4 rounded-lg border border-border bg-card px-6 py-3 shadow-lg">
-          <span className="text-sm font-medium">{selectedItems.length} selected</span>
-          <div className="h-4 w-px bg-border" />
-          <Button variant="outline" size="sm" onClick={handleBulkDelete} disabled={deleting}>
-            <Trash2 className="mr-2 h-4 w-4" />
-            {deleting ? 'Deleting...' : 'Delete'}
-          </Button>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="sm" disabled={moving}>
-                <FolderInput className="mr-2 h-4 w-4" />
-                {moving ? 'Moving...' : 'Move to...'}
+          {/* Content List */}
+          <div className="space-y-2">
+            {filteredContent.map((item) => {
+              const config = getContentTypeConfig(item.asset_type)
+              const TypeIcon = config.icon
+              return (
+                <div
+                  key={item.id}
+                  className={cn(
+                    "flex items-start gap-4 rounded-lg border border-border bg-card p-4 transition-all hover:border-primary/50",
+                    selectedItems.includes(item.id) && "border-primary bg-primary/5",
+                  )}
+                >
+                  <Checkbox 
+                    checked={selectedItems.includes(item.id)} 
+                    onCheckedChange={() => toggleSelect(item.id)}
+                    onClick={(e) => e.stopPropagation()} 
+                  />
+                  <Link 
+                    href={`/dashboard/content/${item.id}`}
+                    className="flex-1 min-w-0 hover:opacity-80 transition-opacity"
+                    onClick={(e) => {
+                      // Prevent navigation if checkbox was clicked
+                      if (selectedItems.includes(item.id)) {
+                        e.preventDefault()
+                      }
+                    }}
+                  >
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="flex items-center gap-2">
+                        <TypeIcon className={cn("h-4 w-4 shrink-0", config.color)} />
+                        <h3 className="font-medium truncate">{item.title}</h3>
+                        {item.aiGenerated && (
+                          <Badge variant="outline" className="shrink-0 bg-primary/10 text-primary border-primary/20">
+                            <Sparkles className="mr-1 h-3 w-3" />
+                            AI
+                          </Badge>
+                        )}
+                      </div>
+                    </div>
+                    <div className="mt-1 flex items-center gap-2 text-sm text-muted-foreground">
+                      <span>{item.client}</span>
+                      <span>•</span>
+                      <span>{config.label}</span>
+                      <span>•</span>
+                      <span>
+                        {item.createdAt.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+                      </span>
+                    </div>
+                    <p className="mt-2 text-sm text-muted-foreground truncate">&ldquo;{item.preview}&rdquo;</p>
+                  </Link>
+                </div>
+              )
+            })}
+          </div>
+
+          {/* Bulk Actions */}
+          {selectedItems.length > 0 && (
+            <div className="fixed bottom-6 left-1/2 -translate-x-1/2 flex items-center gap-4 rounded-lg border border-border bg-card px-6 py-3 shadow-lg">
+              <span className="text-sm font-medium">{selectedItems.length} selected</span>
+              <div className="h-4 w-px bg-border" />
+              <Button variant="outline" size="sm" onClick={handleBulkDelete} disabled={deleting}>
+                <Trash2 className="mr-2 h-4 w-4" />
+                {deleting ? 'Deleting...' : 'Delete'}
               </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="start" className="w-64">
-              <DropdownMenuLabel>Move to project</DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem 
-                className="text-muted-foreground"
-                onClick={() => handleBulkMove(null)}
-                disabled={moving}
-              >
-                Remove from project
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              {projects.length === 0 ? (
-                <DropdownMenuItem disabled>No projects available</DropdownMenuItem>
-              ) : (
-                projects.map((project) => (
-                  <DropdownMenuItem
-                    key={project.id}
-                    onClick={() => handleBulkMove(project.id)}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="sm" disabled={moving}>
+                    <FolderInput className="mr-2 h-4 w-4" />
+                    {moving ? 'Moving...' : 'Move to...'}
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="start" className="w-64">
+                  <DropdownMenuLabel>Move to project</DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem 
+                    className="text-muted-foreground"
+                    onClick={() => handleBulkMove(null)}
                     disabled={moving}
                   >
-                    <span className="truncate">{project.name}</span>
-                    {project.clientName && (
-                      <span className="ml-auto text-xs text-muted-foreground">
-                        {project.clientName}
-                      </span>
-                    )}
+                    Remove from project
                   </DropdownMenuItem>
-                ))
-              )}
-            </DropdownMenuContent>
-          </DropdownMenu>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="sm" disabled={reassigning}>
-                <Users className="mr-2 h-4 w-4" />
-                {reassigning ? 'Reassigning...' : 'Change Client...'}
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-56">
-              <DropdownMenuLabel>Reassign to client</DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              {clients.filter(c => c.id !== 'all').length === 0 ? (
-                <DropdownMenuItem disabled>No clients available</DropdownMenuItem>
-              ) : (
-                clients.filter(c => c.id !== 'all').map((client) => (
-                  <DropdownMenuItem
-                    key={client.id}
-                    onClick={() => handleBulkReassign(client.id)}
-                    disabled={reassigning}
-                  >
-                    {client.name}
-                  </DropdownMenuItem>
-                ))
-              )}
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
+                  <DropdownMenuSeparator />
+                  {projects.length === 0 ? (
+                    <DropdownMenuItem disabled>No projects available</DropdownMenuItem>
+                  ) : (
+                    projects.map((project) => (
+                      <DropdownMenuItem
+                        key={project.id}
+                        onClick={() => handleBulkMove(project.id)}
+                        disabled={moving}
+                      >
+                        <span className="truncate">{project.name}</span>
+                        {project.clientName && (
+                          <span className="ml-auto text-xs text-muted-foreground">
+                            {project.clientName}
+                          </span>
+                        )}
+                      </DropdownMenuItem>
+                    ))
+                  )}
+                </DropdownMenuContent>
+              </DropdownMenu>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="sm" disabled={reassigning}>
+                    <Users className="mr-2 h-4 w-4" />
+                    {reassigning ? 'Reassigning...' : 'Change Client...'}
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-56">
+                  <DropdownMenuLabel>Reassign to client</DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  {clients.filter(c => c.id !== 'all').length === 0 ? (
+                    <DropdownMenuItem disabled>No clients available</DropdownMenuItem>
+                  ) : (
+                    clients.filter(c => c.id !== 'all').map((client) => (
+                      <DropdownMenuItem
+                        key={client.id}
+                        onClick={() => handleBulkReassign(client.id)}
+                        disabled={reassigning}
+                      >
+                        {client.name}
+                      </DropdownMenuItem>
+                    ))
+                  )}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+          )}
+        </>
       )}
 
       {/* Create Content Modal */}

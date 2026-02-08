@@ -10,7 +10,7 @@ import { cn } from "@/lib/utils"
 import { PageTree } from "./page-tree"
 import { PageView } from "./page-view"
 import { PageLibrary } from "./page-library"
-import { createPage } from "@/app/actions/journal-pages"
+import { createPage, getPage } from "@/app/actions/journal-pages"
 import { getAllTags, getPagesByTag } from "@/app/actions/journal-tags"
 
 // ============================================================================
@@ -109,6 +109,31 @@ export function JournalContent({
     setActiveTag(null)
     setFilteredPageIds(null)
   }, [])
+
+  // Safety guard: if selectedPageId points to a capture, clear it
+  // This prevents captures from ever rendering in PageView
+  useEffect(() => {
+    if (!selectedPageId) return
+
+    let cancelled = false
+
+    async function verifyPageType() {
+      try {
+        const page = await getPage(selectedPageId!)
+        if (cancelled) return
+        if (page && page.entry_type === 'capture') {
+          console.warn('Safety guard: capture ID cannot render in PageView, clearing selection')
+          setSelectedPageId(null)
+        }
+      } catch {
+        // Let PageView handle fetch errors
+      }
+    }
+
+    verifyPageType()
+
+    return () => { cancelled = true }
+  }, [selectedPageId])
 
   // Handle page selection
   const handleSelectPage = useCallback((pageId: string | null) => {

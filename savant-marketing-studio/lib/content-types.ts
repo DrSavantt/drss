@@ -164,6 +164,8 @@ export const FILTER_OPTIONS: FilterOption[] = [
   { value: 'blog_post', label: 'Blog Post' },
   { value: 'landing_page', label: 'Landing Page' },
   { value: 'social_post', label: 'Social Post' },
+  { value: '', label: '', isSeparator: true },
+  { value: 'journal_page', label: 'Journal' },
 ];
 
 /**
@@ -215,6 +217,10 @@ export function getAssetTypeFromMimeType(mimeType: string): 'document' | 'image'
  * getContentTypeConfig('unknown') // { icon: FileText, label: 'Note', color: 'text-blue-500' }
  */
 export function getContentTypeConfig(assetType: string): ContentTypeConfig {
+  // Special virtual type: journal_page is not a real asset_type in content_assets
+  if (assetType === 'journal_page') {
+    return { icon: BookOpen, label: 'Journal Page', color: 'text-amber-500' };
+  }
   if (isValidAssetType(assetType)) {
     return CONTENT_TYPE_CONFIG[assetType];
   }

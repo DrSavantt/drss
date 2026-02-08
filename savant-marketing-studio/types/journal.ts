@@ -1,27 +1,12 @@
 /**
  * Journal System Types
  * 
- * Types for journal entries, chats, and nested pages (Notion-style).
+ * Types for journal entries and nested pages (Notion-style).
  */
 
 // ============================================================================
 // BASE TYPES (matching database schema)
 // ============================================================================
-
-/**
- * Journal chat from database
- */
-export interface JournalChat {
-  id: string
-  user_id: string
-  name: string
-  type: 'inbox' | 'general' | 'client' | 'project' | 'content'
-  linked_id: string | null
-  folder_id: string | null
-  deleted_at: string | null
-  created_at: string | null
-  updated_at: string | null
-}
 
 /**
  * Journal entry from database
@@ -172,17 +157,6 @@ export interface UpdatePageMetaInput {
 export interface MovePageInput {
   pageId: string
   newParentId: string | null  // null = move to root
-}
-
-// ============================================================================
-// HELPER TYPES
-// ============================================================================
-
-/**
- * Chat with its entries loaded
- */
-export interface ChatWithEntries extends JournalChat {
-  entries: JournalEntry[]
 }
 
 // ============================================================================
